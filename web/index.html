@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b3261e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Alerte Feu">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icone-192.png">
+<title>Alerte Incendie</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root{
+  --fond:#12100e; --fond2:#1c1917; --fond3:#252220; --bord:#332e2b;
+  --txt:#f2eeeb; --txt2:#a09892; --txt3:#6f6863;
+  --rouge:#e0453c; --orange:#e9873a; --gris:#7c8a94; --vert:#3fa86b;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:var(--fond);color:var(--txt);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+a{color:inherit}
+button{font:inherit;cursor:pointer;border:0}
+
+/* ---------- structure ---------- */
+header{
+  position:sticky;top:0;z-index:900;background:rgba(18,16,14,.92);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--bord);
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  display:flex;align-items:center;gap:12px;
+}
+.logo{width:32px;height:32px;border-radius:9px;background:var(--fond3);
+  display:grid;place-items:center;flex:0 0 auto}
+.logo svg{width:19px;height:19px}
+header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:-.01em}
+header .sous{font-size:11.5px;color:var(--txt3);margin-top:1px}
+.pastille{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;
+  color:var(--txt2);background:var(--fond3);padding:6px 11px;border-radius:99px;
+  border:1px solid var(--bord)}
+.point{width:7px;height:7px;border-radius:99px;background:var(--gris)}
+.point.ok{background:var(--vert);box-shadow:0 0 0 3px rgba(63,168,107,.18)}
+.point.ko{background:var(--rouge);box-shadow:0 0 0 3px rgba(224,69,60,.18)}
+
+main{max-width:760px;margin:0 auto;padding:16px 16px 40px}
+section{margin-bottom:20px}
+h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);
+  margin:0 0 10px 2px;font-weight:600}
+.carte{background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
+.carte + .carte{margin-top:10px}
+.pad{padding:15px}
+.rangee{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--bord)}
+.rangee:last-child{border-bottom:0}
+.rangee .cr{flex:1;min-width:0}
+.rangee b{display:block;font-weight:600;font-size:14.5px}
+.rangee small{color:var(--txt2);font-size:12.5px;display:block;margin-top:2px}
+
+/* ---------- boutons ---------- */
+.btn{background:var(--fond3);color:var(--txt);border:1px solid var(--bord);
+  padding:10px 15px;border-radius:10px;font-size:14px;font-weight:550;
+  display:inline-flex;align-items:center;gap:7px;transition:.12s}
+.btn:hover{background:#2e2a27}
+.btn:active{transform:scale(.98)}
+.btn.p{background:var(--rouge);border-color:var(--rouge);color:#fff}
+.btn.p:hover{background:#ef534a}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn.g{background:transparent;border-color:transparent;color:var(--txt2);padding:7px 9px}
+.btn.g:hover{color:var(--rouge);background:var(--fond3)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.pleine{width:100%;justify-content:center}
+
+input,select{background:var(--fond3);border:1px solid var(--bord);color:var(--txt);
+  padding:11px 13px;border-radius:10px;font:inherit;width:100%}
+input:focus,select:focus{outline:0;border-color:#4d4642}
+label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
+.grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ---------- carte Leaflet ---------- */
+#map{height:330px;background:var(--fond3)}
+.leaflet-container{background:#1c1917;font:inherit}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#252220;color:var(--txt);
+  box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5}
+.leaflet-bar a{background:#252220;color:var(--txt);border-color:#332e2b}
+.leaflet-bar a:hover{background:#332e2b}
+.leaflet-control-attribution{background:rgba(18,16,14,.75)!important;color:#6f6863!important}
+.leaflet-control-attribution a{color:#8a827c!important}
+
+/* ---------- badges & évènements ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;
+  letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px}
+.badge.critique{background:rgba(224,69,60,.16);color:#ff7b72}
+.badge.alerte{background:rgba(233,135,58,.16);color:#f0a05e}
+.badge.info{background:rgba(124,138,148,.16);color:#9fb0bb}
+.badge.clos{background:var(--fond3);color:var(--txt3)}
+
+.evt{display:flex;gap:13px;padding:14px 15px;border-bottom:1px solid var(--bord);align-items:flex-start}
+.evt:last-child{border-bottom:0}
+.evt .barre{width:3px;border-radius:9px;align-self:stretch;background:var(--gris);flex:0 0 auto}
+.evt.critique .barre{background:var(--rouge)}
+.evt.alerte .barre{background:var(--orange)}
+.evt .t{font-weight:600;font-size:14.5px}
+.evt .d{color:var(--txt2);font-size:12.5px;margin-top:3px;line-height:1.55}
+
+.vide{padding:34px 20px;text-align:center;color:var(--txt3);font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--fond3);border:1px solid var(--bord);border-radius:99px;
+  padding:4px 11px;font-size:12px;color:var(--txt2)}
+
+.note{font-size:12px;color:var(--txt3);line-height:1.6;padding:14px 15px;
+  background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r)}
+.note b{color:var(--txt2)}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%) translateY(140%);
+  bottom:calc(env(safe-area-inset-bottom) + 22px);z-index:2000;max-width:calc(100vw - 32px);
+  background:#f2eeeb;color:#12100e;padding:12px 18px;border-radius:11px;font-size:14px;
+  font-weight:550;box-shadow:0 12px 40px rgba(0,0,0,.5);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#toast.on{transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--rouge);color:#fff}
+
+.rech{position:relative}
+.sugg{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:1000;
+  background:#252220;border:1px solid var(--bord);border-radius:11px;overflow:hidden;
+  box-shadow:0 14px 44px rgba(0,0,0,.55);max-height:270px;overflow-y:auto}
+.sugg div{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--bord);font-size:14px}
+.sugg div:last-child{border-bottom:0}
+.sugg div:hover{background:var(--fond3)}
+.sugg small{color:var(--txt3);font-size:12px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--bord)}
+.stats > div{background:var(--fond2);padding:14px 12px;text-align:center}
+.stats b{display:block;font-size:20px;font-weight:650;letter-spacing:-.02em}
+.stats small{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+
+@media(max-width:560px){ .grille2{grid-template-columns:1fr} #map{height:270px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M12 2c3 4 6 6 6 10a6 6 0 1 1-12 0c0-4 3-6 6-10z" fill="#e0453c"/>
+      <path d="M12 8c1.6 2.2 3 3.3 3 5.4a3 3 0 1 1-6 0C9 11.3 10.4 10.2 12 8z" fill="#e9873a"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Alerte Incendie</h1>
+    <div class="sous">Surveillance satellite — communes et limitrophes</div>
+  </div>
+  <div class="pastille" id="pastille"><span class="point" id="point"></span><span id="pastilleTxt">…</span></div>
+</header>
+
+<main>
+  <!-- ============ ACCUEIL / ONBOARDING ============ -->
+  <section id="vueAccueil" hidden>
+    <div class="carte pad">
+      <h2 style="margin-top:0">Bienvenue</h2>
+      <p style="margin:0 0 16px;color:var(--txt2);font-size:14px">
+        Ce service surveille les points chauds détectés par les satellites de la NASA
+        (VIIRS et MODIS) sur la commune de votre choix, ses communes limitrophes et une
+        marge réglable, puis vous alerte par notification, Telegram et e-mail.
+      </p>
+      <label for="nom">Votre prénom (facultatif)</label>
+      <input id="nom" placeholder="Quentin" autocomplete="given-name">
+      <button class="btn p pleine" style="margin-top:14px" id="btnCommencer">Créer mon espace</button>
+      <p class="note" style="margin:16px 0 0">
+        <b>À savoir.</b> La détection satellite a une latence de 2 à 3 h et une résolution
+        de 375 m : elle repère de façon fiable un feu de végétation d’environ 1 ha ou plus,
+        mais pas un départ de feu de quelques minutes ni un incendie de bâtiment.
+        Ce service complète <b>FR-Alert</b> et ne remplace jamais le <b>18</b> ou le <b>112</b>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ APPLICATION ============ -->
+  <div id="vueApp" hidden>
+
+    <section>
+      <h2>Zones surveillées</h2>
+      <div class="carte"><div id="map"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="carte" id="listeZones"></div>
+      <div class="carte pad">
+        <label for="rechCommune">Ajouter une commune</label>
+        <div class="rech">
+          <input id="rechCommune" placeholder="Nom de commune, ex. Cornebarrieu" autocomplete="off">
+          <div class="sugg" id="sugg" hidden></div>
+        </div>
+        <div class="grille2" style="margin-top:12px">
+          <div>
+            <label for="selSens">Sensibilité</label>
+            <select id="selSens">
+              <option value="equilibre" selected>Équilibré — recommandé</option>
+              <option value="sensible">Très sensible</option>
+              <option value="conservateur">Conservateur</option>
+            </select>
+          </div>
+          <div>
+            <label for="selBuffer">Marge autour des limitrophes</label>
+            <select id="selBuffer">
+              <option value="0">Aucune</option>
+              <option value="1000">1 km</option>
+              <option value="3000" selected>3 km</option>
+              <option value="5000">5 km</option>
+              <option value="10000">10 km</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Canaux d’alerte</h2>
+      <div class="carte" id="listeCanaux"></div>
+      <div class="carte pad">
+        <button class="btn pleine" id="btnPush">Activer les notifications sur cet appareil</button>
+        <div class="grille2" style="margin-top:12px">
+          <button class="btn" id="btnTelegram">Connecter Telegram</button>
+          <button class="btn" id="btnEmail">Ajouter un e-mail</button>
+        </div>
+        <button class="btn pleine" style="margin-top:12px" id="btnTest">Envoyer une alerte de test</button>
+      </div>
+      <p class="note" style="margin-top:10px" id="noteIos" hidden>
+        <b>Sur iPhone / iPad.</b> Les notifications exigent d’installer l’application :
+        bouton Partager, puis « Sur l’écran d’accueil ». Ouvrez-la ensuite depuis l’icône
+        et réessayez.
+      </p>
+    </section>
+
+    <section>
+      <h2>Réglages</h2>
+      <div class="carte pad">
+        <div class="grille2">
+          <div>
+            <label for="selSeuil">Me prévenir à partir de</label>
+            <select id="selSeuil">
+              <option value="info">Tout point chaud (info)</option>
+              <option value="alerte" selected>Alerte confirmée</option>
+              <option value="critique">Alertes critiques uniquement</option>
+            </select>
+          </div>
+          <div>
+            <label>Heures silencieuses <span style="color:var(--txt3)">(sauf critique)</span></label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="time" id="qStart" placeholder="23:00">
+              <span style="color:var(--txt3)">→</span>
+              <input type="time" id="qEnd" placeholder="07:00">
+            </div>
+          </div>
+        </div>
+        <button class="btn pleine" style="margin-top:14px" id="btnReglages">Enregistrer</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Historique — 30 derniers jours</h2>
+      <div class="carte" id="listeEvts"></div>
+    </section>
+
+    <section>
+      <p class="note">
+        <b>Sources.</b> Points chauds NASA FIRMS — VIIRS S-NPP, NOAA-20, NOAA-21 (375 m) et
+        MODIS (1 km), flux Europe rafraîchis plusieurs fois par jour. Contours communaux
+        IGN Admin&nbsp;Express via geo.api.gouv.fr. Collecte toutes les 10 minutes.<br><br>
+        <b>Limites à connaître.</b> Latence satellite de 2 à 3 h. Un feu peut être manqué
+        s’il est masqué par les nuages ou trop petit au moment du passage. Les sources
+        thermiques permanentes (industrie, torchères) sont écartées automatiquement après
+        apprentissage. <b>Ce service ne remplace ni FR-Alert ni le 18/112.</b>
+      </p>
+    </section>
+
+    <section style="text-align:center">
+      <button class="btn g" id="btnJeton">Afficher mon jeton d’accès</button>
+    </section>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* =====================================================================
+   Alerte Incendie — client PWA
+   Toute la logique métier est côté serveur (Supabase Edge Functions).
+   Ce client ne détient qu’un jeton d’abonné, conservé en localStorage.
+   ===================================================================== */
+const API = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api';
+const CLE_JETON = 'alerte-incendie:jeton';
+
+let jeton = localStorage.getItem(CLE_JETON);
+let etat = null, carte = null, coucheZones = null, coucheDet = null, coucheEvts = null;
+
+/* ---------- utilitaires ---------- */
+const $ = (s) => document.querySelector(s);
+
+function toast(msg, err = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'on' + (err ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (t.className = ''), 4200);
+}
+
+async function appel(route, options = {}) {
+  const r = await fetch(`${API}/${route}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(jeton ? { 'x-token': jeton } : {}), ...(options.headers || {}) },
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.erreur || `HTTP ${r.status}`);
+  return j;
+}
+
+const heure = (iso) => new Date(iso).toLocaleString('fr-FR',
+  { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function relatif(iso) {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 60) return `il y a ${m} min`;
+  if (m < 1440) return `il y a ${Math.round(m / 60)} h`;
+  return `il y a ${Math.round(m / 1440)} j`;
+}
+
+/* ---------- carte ---------- */
+function initCarte(centre) {
+  if (carte) return;
+  carte = L.map('map', { zoomControl: true, attributionControl: true }).setView(centre, 11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18, subdomains: 'abcd',
+    attribution: '&copy; OpenStreetMap, &copy; CARTO — points chauds NASA FIRMS',
+  }).addTo(carte);
+  coucheZones = L.layerGroup().addTo(carte);
+  coucheDet = L.layerGroup().addTo(carte);
+  coucheEvts = L.layerGroup().addTo(carte);
+}
+
+function dessinerCarte() {
+  if (!etat.zones.length) return;
+  initCarte(etat.zones[0].centre);
+  [coucheZones, coucheDet, coucheEvts].forEach((c) => c.clearLayers());
+
+  const bornes = [];
+  for (const z of etat.zones) {
+    const l = L.geoJSON(z.geojson, {
+      style: { color: '#e0453c', weight: 1.6, opacity: .75, fillColor: '#e0453c', fillOpacity: .07 },
+    }).addTo(coucheZones);
+    l.bindPopup(`<b>${z.nom}</b><br>${z.surface_km2} km² surveillés<br>
+      <span style="color:#a09892">${z.limitrophes.length} commune(s) limitrophe(s)${z.buffer_m ? ` + ${z.buffer_m / 1000} km de marge` : ''}</span>`);
+    bornes.push(l.getBounds());
+  }
+
+  /* points chauds des 72 dernières heures */
+  for (const d of etat.detections) {
+    const age = (Date.now() - new Date(d.acq_ts)) / 3600000;
+    const c = d.permanente ? '#5b6670' : age < 12 ? '#ff5a4f' : age < 36 ? '#e9873a' : '#8a7f78';
+    L.circleMarker([d.lat, d.lon], {
+      radius: d.permanente ? 3.5 : 5.5, color: c, weight: 1.4,
+      fillColor: c, fillOpacity: d.permanente ? .25 : .6,
+    }).addTo(coucheDet).bindPopup(
+      `<b>${d.permanente ? 'Source thermique permanente' : 'Point chaud'}</b><br>
+       ${d.source} — ${heure(d.acq_ts)}<br>
+       Confiance ${d.confiance || 'n/d'}${d.frp ? ` — ${(+d.frp).toFixed(1)} MW` : ''}`);
+  }
+
+  /* évènements actifs */
+  for (const e of etat.evenements.filter((e) => e.statut === 'actif')) {
+    const c = e.severite === 'critique' ? '#ff3b30' : e.severite === 'alerte' ? '#e9873a' : '#7c8a94';
+    L.circleMarker([e.lat, e.lon], {
+      radius: 12, color: c, weight: 2.5, fillColor: c, fillOpacity: .18,
+    }).addTo(coucheEvts).bindPopup(
+      `<b style="color:${c}">${e.severite.toUpperCase()}</b> — ${e.commune || '—'}<br>
+       ${e.nb_detections} point(s) chaud(s)${e.frp_max ? `, max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
+       <span style="color:#a09892">${heure(e.debut_ts)} · ${relatif(e.debut_ts)}</span>`);
+  }
+
+  if (bornes.length) carte.fitBounds(bornes.reduce((a, b) => a.extend(b)), { padding: [24, 24] });
+}
+
+/* ---------- rendu ---------- */
+function rendre() {
+  /* pastille de santé */
+  const s = etat.sante || {};
+  const min = s.minutes_depuis_poll;
+  const ok = min != null && min <= 45;
+  $('#point').className = 'point ' + (min == null ? 'ko' : ok ? 'ok' : 'ko');
+  $('#pastilleTxt').textContent = min == null ? 'hors service'
+    : ok ? `actif · ${min} min` : `retard ${min} min`;
+
+  /* statistiques */
+  const actifs = etat.evenements.filter((e) => e.statut === 'actif');
+  $('#stats').innerHTML = [
+    [etat.zones.reduce((a, z) => a + (+z.surface_km2), 0).toFixed(0), 'km² suivis'],
+    [etat.detections.filter((d) => !d.permanente).length, 'pts chauds 72 h'],
+    [actifs.length, 'évèn. actifs'],
+    [etat.canaux.filter((c) => c.actif).length, 'canaux'],
+  ].map(([v, l]) => `<div><b>${v}</b><small>${l}</small></div>`).join('');
+
+  /* zones */
+  $('#listeZones').innerHTML = etat.zones.length
+    ? etat.zones.map((z) => `
+      <div class="rangee">
+        <div class="cr">
+          <b>${z.nom}</b>
+          <small>${z.surface_km2} km² · sensibilité ${z.sensibilite}${z.buffer_m ? ` · marge ${z.buffer_m / 1000} km` : ''}</small>
+          <div class="chips">${z.limitrophes.map((n) => `<span class="chip">${n}</span>`).join('') || '<span class="chip">sans limitrophes</span>'}</div>
+        </div>
+        <button class="btn g" data-zone="${z.id}" title="Retirer">✕</button>
+      </div>`).join('')
+    : '<div class="vide">Aucune zone surveillée. Ajoutez une commune ci-dessous.</div>';
+
+  /* canaux */
+  const nomCanal = { webpush: 'Notifications', telegram: 'Telegram', email: 'E-mail' };
+  $('#listeCanaux').innerHTML = etat.canaux.length
+    ? etat.canaux.map((c) => `
+      <div class="rangee">
+        <span class="point ${c.actif && c.verifie ? 'ok' : c.actif ? '' : 'ko'}"></span>
+        <div class="cr">
+          <b>${nomCanal[c.type] || c.type}${c.libelle ? ` — ${c.libelle}` : ''}</b>
+          <small>${!c.actif ? `désactivé — ${c.last_error ? c.last_error.slice(0, 90) : 'trop d’échecs'}`
+            : c.last_ok_at ? `dernier envoi réussi ${relatif(c.last_ok_at)}`
+            : 'en attente d’un premier envoi — faites un test'}</small>
+        </div>
+        <button class="btn g" data-canal="${c.id}" title="Supprimer">✕</button>
+      </div>`).join('')
+    : '<div class="vide">Aucun canal. Activez au moins les notifications ci-dessous.</div>';
+
+  /* évènements */
+  $('#listeEvts').innerHTML = etat.evenements.length
+    ? etat.evenements.map((e) => `
+      <div class="evt ${e.severite}">
+        <div class="barre"></div>
+        <div class="cr">
+          <div class="t">${e.commune || 'Localisation indéterminée'}
+            <span class="badge ${e.statut === 'clos' ? 'clos' : e.severite}">${e.statut === 'clos' ? 'clos' : e.severite}</span>
+          </div>
+          <div class="d">
+            ${e.dans_commune ? `Sur la commune surveillée` : `À ${(e.distance_m / 1000).toFixed(1)} km du centre de ${e.zone}`}
+            · ${e.nb_detections} point(s) chaud(s)${e.frp_max ? ` · max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
+            ${heure(e.debut_ts)} · ${relatif(e.debut_ts)} · ${e.sources.join(', ')}
+            ${e.notifiee ? '· <span style="color:var(--vert)">notifié</span>' : ''}
+          </div>
+        </div>
+        <a class="btn sm" target="_blank" rel="noopener"
+           href="https://www.google.com/maps?q=${e.lat},${e.lon}">Carte</a>
+      </div>`).join('')
+    : '<div class="vide">Aucun évènement sur les 30 derniers jours. C’est une bonne nouvelle.</div>';
+
+  /* réglages */
+  $('#selSeuil').value = etat.abonne.seuil_min;
+  if (etat.abonne.quiet_start) $('#qStart').value = etat.abonne.quiet_start.slice(0, 5);
+  if (etat.abonne.quiet_end) $('#qEnd').value = etat.abonne.quiet_end.slice(0, 5);
+
+  dessinerCarte();
+}
+
+async function recharger() {
+  try {
+    etat = await appel('etat');
+    rendre();
+  } catch (e) {
+    if (String(e).includes('jeton')) { localStorage.removeItem(CLE_JETON); location.reload(); }
+    else toast(String(e).replace('Error: ', ''), true);
+  }
+}
+
+/* ---------- Web Push ---------- */
+function b64ToU8(b64) {
+  const p = '='.repeat((4 - (b64.length % 4)) % 4);
+  const s = (b64 + p).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+}
+
+async function activerPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    $('#noteIos').hidden = false;
+    return toast('Ce navigateur ne gère pas les notifications push.', true);
+  }
+  const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+  await navigator.serviceWorker.ready;
+
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return toast('Notifications refusées par le navigateur.', true);
+
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: b64ToU8(etat.vapid),
+    });
+  }
+  await appel('canal', {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'webpush',
+      destination: JSON.parse(JSON.stringify(sub)),
+      libelle: navigator.platform || 'cet appareil',
+    }),
+  });
+  toast('Notifications activées sur cet appareil.');
+  recharger();
+}
+
+/* ---------- évènements UI ---------- */
+$('#btnCommencer').onclick = async () => {
+  try {
+    const r = await appel('inscription', {
+      method: 'POST',
+      body: JSON.stringify({ nom: $('#nom').value.trim() || null }),
+    });
+    jeton = r.abonne.token;
+    localStorage.setItem(CLE_JETON, jeton);
+    $('#vueAccueil').hidden = true;
+    $('#vueApp').hidden = false;
+    await recharger();
+    toast('Espace créé. Ajoutez votre commune.');
+  } catch (e) { toast(String(e), true); }
+};
+
+$('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace('Error: ', ''), true));
+
+$('#btnEmail').onclick = async () => {
+  const a = prompt('Adresse e-mail à alerter :', etat.abonne.email || '');
+  if (!a) return;
+  try {
+    await appel('canal', { method: 'POST', body: JSON.stringify({ type: 'email', destination: { adresse: a.trim() }, libelle: a.trim() }) });
+    toast('E-mail ajouté. Lancez un test pour vérifier.');
+    recharger();
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
+$('#btnTelegram').onclick = () => {
+  const bot = etat.telegram_bot;
+  if (!bot) return toast('Le bot Telegram n’est pas encore configuré côté serveur.', true);
+  window.open(`https://t.me/${bot}?start=${jeton}`, '_blank', 'noopener');
+  toast('Validez dans Telegram, puis revenez ici.');
+  setTimeout(recharger, 9000);
+};
+
+$('#btnTest').onclick = async () => {
+  try {
+    const r = await appel('test', { method: 'POST', body: '{}' });
+    toast(`Test envoyé sur ${r.canaux} canal(aux).`);
+    setTimeout(recharger, 5000);
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
+$('#btnReglages').onclick = async () => {
+  try {
+    await appel('reglages', {
+      method: 'POST',
+      body: JSON.stringify({
+        seuil_min: $('#selSeuil').value,
+        quiet_start: $('#qStart').value || null,
+        quiet_end: $('#qEnd').value || null,
+      }),
+    });
+    toast('Réglages enregistrés.');
+    recharger();
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
+$('#btnJeton').onclick = () => {
+  prompt('Jeton d’accès — conservez-le pour retrouver vos réglages sur un autre appareil :', jeton);
+};
+
+/* suppression zone / canal */
+document.addEventListener('click', async (ev) => {
+  const bz = ev.target.closest('[data-zone]');
+  const bc = ev.target.closest('[data-canal]');
+  try {
+    if (bz) {
+      if (!confirm('Retirer cette zone de votre surveillance ?')) return;
+      await appel('zone-supprimer', { method: 'POST', body: JSON.stringify({ id: bz.dataset.zone }) });
+      toast('Zone retirée.'); recharger();
+    } else if (bc) {
+      if (!confirm('Supprimer ce canal d’alerte ?')) return;
+      await appel('canal-supprimer', { method: 'POST', body: JSON.stringify({ id: bc.dataset.canal }) });
+      toast('Canal supprimé.'); recharger();
+    }
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+});
+
+/* recherche de commune */
+let tmr;
+$('#rechCommune').oninput = (e) => {
+  clearTimeout(tmr);
+  const q = e.target.value.trim();
+  if (q.length < 2) return ($('#sugg').hidden = true);
+  tmr = setTimeout(async () => {
+    try {
+      const l = await appel(`communes?q=${encodeURIComponent(q)}`);
+      const s = $('#sugg');
+      s.hidden = !l.length;
+      s.innerHTML = l.map((c) => `
+        <div data-code="${c.code}">${c.nom}
+          <small> — ${c.cp || ''} ${c.departement || ''}${c.population ? ` · ${c.population.toLocaleString('fr-FR')} hab.` : ''}</small>
+        </div>`).join('');
+      s.querySelectorAll('[data-code]').forEach((d) => {
+        d.onclick = async () => {
+          s.hidden = true;
+          $('#rechCommune').value = '';
+          toast('Calcul des communes limitrophes…');
+          try {
+            const r = await appel('zone', {
+              method: 'POST',
+              body: JSON.stringify({
+                code: d.dataset.code,
+                sensibilite: $('#selSens').value,
+                buffer_m: +$('#selBuffer').value,
+              }),
+            });
+            toast(`${r.zone.nom} ajoutée — ${r.zone.limitrophes.length} limitrophe(s).`);
+            recharger();
+          } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+        };
+      });
+    } catch { /* silencieux */ }
+  }, 260);
+};
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.rech')) $('#sugg').hidden = true;
+});
+
+/* ---------- démarrage ---------- */
+(async function () {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+  }
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent);
+  const installee = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (ios && !installee) $('#noteIos').hidden = false;
+
+  if (!jeton) {
+    $('#vueAccueil').hidden = false;
+  } else {
+    $('#vueApp').hidden = false;
+    await recharger();
+    setInterval(recharger, 120000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) recharger(); });
+  }
+})();
+</script>
+</body>
+</html>

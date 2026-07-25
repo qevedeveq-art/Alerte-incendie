@@ -1,0 +1,13 @@
+# secrets — ne doivent jamais entrer dans le dépôt
+.env
+.env.*
+*.key
+secrets*.json
+vapid*.json
+
+# outils
+.DS_Store
+node_modules/
+.supabase/
+supabase/.branches/
+supabase/.temp/

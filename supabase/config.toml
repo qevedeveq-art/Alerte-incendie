@@ -1,0 +1,13 @@
+project_id = "alerte-incendie"
+
+[functions.poll-firms]
+verify_jwt = false          # protégée par x-admin-key, appelée par pg_cron
+
+[functions.dispatch]
+verify_jwt = false          # protégée par x-admin-key ou service role
+
+[functions.load-communes]
+verify_jwt = false          # protégée par x-admin-key
+
+[functions.api]
+verify_jwt = false          # protégée par jeton d'abonné (x-token)
