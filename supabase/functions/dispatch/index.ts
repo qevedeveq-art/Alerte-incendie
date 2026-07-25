@@ -28,12 +28,32 @@ async function appPush(cfg: Record<string, any>) {
   return serveurPush;
 }
 
+/** Titre et corps selon le type d'alerte : incendie, panne du système, ou test. */
+function composer(p: Payload, type: string) {
+  if (type === "alerte") {
+    return { sujet: titre(p), texte: corpsTexte(p), html: corpsHtml(p), tg: corpsTelegram(p) };
+  }
+  if (type === "heartbeat") {
+    const m = p?.message ?? "La collecte satellite est interrompue : les alertes peuvent être suspendues.";
+    return {
+      sujet: "Alerte Incendie — surveillance interrompue",
+      texte: `${m}\n\nVérifiez l'état du système dans l'application.`,
+      html: `<p style="font-size:16px"><b>Surveillance interrompue</b></p><p>${m}</p>` +
+        `<p style="color:#777;font-size:12px">Vérifiez l'état du système dans l'application.</p>`,
+      tg: `!!! *Surveillance interrompue*\n\n${m}`,
+    };
+  }
+  const m = p?.message ?? "Ce canal est opérationnel.";
+  return { sujet: "Test — Alerte Incendie", texte: m, html: `<p>${m}</p>`, tg: `*Test — Alerte Incendie*\n\n${m}` };
+}
+
 async function envoyerPush(cfg: any, dest: any, p: Payload, type: string) {
   const app = await appPush(cfg);
   const abonne = app.subscribe(dest);
+  const c = composer(p, type);
   const body = JSON.stringify({
-    titre: type === "alerte" ? titre(p) : type === "heartbeat" ? "Surveillance interrompue" : "Test — Alerte Incendie",
-    corps: type === "alerte" ? corpsTexte(p) : (p?.message ?? "Le canal Web Push fonctionne."),
+    titre: type === "alerte" ? titre(p) : c.sujet,
+    corps: c.texte,
     severite: p?.severite ?? "info",
     url: `./?evt=${p?.evenement_id ?? ""}`,
     lat: p?.lat, lon: p?.lon,
@@ -46,16 +66,11 @@ async function envoyerPush(cfg: any, dest: any, p: Payload, type: string) {
 
 async function envoyerTelegram(cfg: any, dest: any, p: Payload, type: string) {
   if (!cfg.telegram_token) throw new Error("telegram_token non configuré");
-  const texte = type === "alerte"
-    ? corpsTelegram(p)
-    : type === "heartbeat"
-    ? `*Surveillance interrompue*\n\n${p?.message ?? ""}`
-    : "*Test — Alerte Incendie*\n\nLe canal Telegram fonctionne.";
   const r = await fetch(`https://api.telegram.org/bot${cfg.telegram_token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      chat_id: dest.chat_id, text: texte, parse_mode: "Markdown",
+      chat_id: dest.chat_id, text: composer(p, type).tg, parse_mode: "Markdown",
       link_preview_options: { is_disabled: true }, disable_notification: false,
     }),
   });
@@ -75,15 +90,13 @@ async function envoyerEmail(cfg: any, dest: any, p: Payload, type: string) {
     },
   });
   try {
-    const sujet = type === "alerte" ? titre(p)
-      : type === "heartbeat" ? "Alerte Incendie — surveillance interrompue"
-      : "Test — Alerte Incendie";
+    const c = composer(p, type);
     await client.send({
       from: s.from ?? s.user,
       to: dest.adresse,
-      subject: sujet,
-      content: type === "alerte" ? corpsTexte(p) : (p?.message ?? "Le canal e-mail fonctionne."),
-      html: type === "alerte" ? corpsHtml(p) : `<p>${p?.message ?? "Le canal e-mail fonctionne."}</p>`,
+      subject: c.sujet,
+      content: c.texte,
+      html: c.html,
       priority: p?.severite === "critique" ? "high" : "normal",
     });
   } finally {
