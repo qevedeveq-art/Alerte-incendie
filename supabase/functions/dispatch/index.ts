@@ -100,7 +100,7 @@ async function envoyerEmail(cfg: any, dest: any, p: Payload, type: string) {
       priority: p?.severite === "critique" ? "high" : "normal",
     });
   } finally {
-    await client.close().catch(() => {});
+    try { await client.close(); } catch { /* connexion deja fermee */ }
   }
 }
 

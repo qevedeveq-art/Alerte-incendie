@@ -55,3 +55,75 @@ comportement voulu, l'absence de policy **est** la protection.
   d'alertes. La faire tourner via `update public.config set v = … where k = 'admin_key'`.
 - Le **jeton Telegram** permet d'écrire à tous les abonnés du bot. Le révoquer
   auprès de @BotFather en cas de fuite.
+
+## Anti-abus — ouverture au public
+
+Un service d'alerte accessible à tous devient, sans garde-fous, un **relais de
+spam** : n'importe qui pouvait attacher l'adresse e-mail d'un tiers à son compte
+et déclencher un envoi. Au-delà du harcèlement possible, l'adresse d'expédition
+(le Gmail de l'exploitant) aurait rapidement été placée sur liste noire, ce qui
+aurait fait tomber le canal e-mail pour **tous** les utilisateurs.
+
+### Double opt-in sur l'e-mail
+
+Un canal e-mail est créé avec `verifie = false`. Un code à six chiffres, valable
+30 minutes, est envoyé à l'adresse. Tant qu'il n'est pas saisi :
+
+- `mettre_en_file_alertes()` ignore le canal — aucune alerte n'est produite ;
+- la route `test` ne le voit pas.
+
+Cinq essais de code maximum, puis il faut en redemander un.
+
+Push et Telegram sont vérifiés par construction : l'abonnement push est produit
+par l'appareil lui-même, et le `chat_id` Telegram provient d'un `/start` envoyé
+par l'utilisateur depuis son propre compte. Aucun tiers ne peut être ciblé.
+
+### Quotas
+
+| Route | Clé | Plafond |
+|---|---|---|
+| `inscription` | IP | 5 / heure |
+| `communes` | IP | 60 / minute |
+| `canal` | abonné | 10 / heure |
+| `canal` (e-mail) | **adresse visée** | 2 / 24 h, tous abonnés confondus |
+| `canal-verifier` | abonné | 20 / heure |
+| `zone` | abonné | 15 / heure |
+| `test` | abonné | 5 / heure |
+| `reglages` | abonné | 30 / heure |
+| `etat` | abonné | 120 / heure |
+
+Le quota par **adresse visée** est le plus important : il empêche d'utiliser
+plusieurs comptes pour harceler une même personne.
+
+### Plafonds par abonné
+
+10 zones, 8 canaux. Limite la charge de collecte et la surface d'abus.
+
+### Autres durcissements
+
+- Les erreurs internes ne sont plus renvoyées au client (`erreur interne`), pour
+  ne pas divulguer la structure de la base ; le détail va dans les logs.
+- `reglages` vérifie que la zone modifiée est bien rattachée à l'abonné, sinon
+  n'importe qui pouvait changer la sensibilité de la zone d'un autre.
+- Longueurs bornées sur toutes les entrées texte, jeton contrôlé en longueur
+  avant requête.
+- `purger()` supprime les abonnés sans canal ni zone inactifs depuis 60 jours :
+  minimisation des données.
+
+## Ce qui reste à faire avant une ouverture large
+
+1. **Mentions légales et politique de confidentialité** — le service traite des
+   adresses e-mail et des données de localisation approximative (commune
+   surveillée). RGPD applicable : finalité, durée de conservation, droit
+   d'effacement, responsable de traitement identifié.
+2. **Avertissement affiché et accepté** — la latence de 2 à 3 h et le fait que
+   le service ne remplace ni FR-Alert ni le 18/112 doivent être visibles avant
+   toute inscription, pas seulement en bas de page.
+3. **Responsabilité** — faire reposer une décision d'évacuation sur ce service
+   serait dangereux. Le cadre juridique d'un service d'alerte non officiel
+   mérite un avis professionnel avant diffusion large. Ceci n'est pas un conseil
+   juridique.
+4. **Expéditeur e-mail dédié** — un domaine avec SPF, DKIM et DMARC, et un
+   fournisseur transactionnel, plutôt qu'un Gmail personnel qui plafonne à
+   ~500 envois par jour.
+5. **Journal d'audit** des accès administrateur et rotation de `admin_key`.

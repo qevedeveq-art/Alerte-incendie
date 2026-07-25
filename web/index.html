@@ -424,11 +424,15 @@ function rendre() {
       <div class="rangee">
         <span class="point ${c.actif && c.verifie ? 'ok' : c.actif ? '' : 'ko'}"></span>
         <div class="cr">
-          <b>${nomCanal[c.type] || c.type}${c.libelle ? ` — ${c.libelle}` : ''}</b>
+          <b>${nomCanal[c.type] || c.type}${c.libelle ? ` — ${c.libelle}` : ''}
+            ${!c.verifie ? '<span class="badge alerte">à confirmer</span>' : ''}</b>
           <small>${!c.actif ? `désactivé — ${c.last_error ? c.last_error.slice(0, 90) : 'trop d’échecs'}`
+            : !c.verifie ? 'aucune alerte ne partira avant confirmation du code'
             : c.last_ok_at ? `dernier envoi réussi ${relatif(c.last_ok_at)}`
             : 'en attente d’un premier envoi — faites un test'}</small>
         </div>
+        ${!c.verifie && c.type === 'email'
+          ? `<button class="btn sm" data-verif="${c.id}" data-adresse="${c.libelle || ''}">Confirmer</button>` : ''}
         <button class="btn g" data-canal="${c.id}" title="Supprimer">✕</button>
       </div>`).join('')
     : '<div class="vide">Aucun canal. Activez au moins les notifications ci-dessous.</div>';
@@ -527,15 +531,37 @@ $('#btnCommencer').onclick = async () => {
 
 $('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace('Error: ', ''), true));
 
+/* L'e-mail exige un double opt-in : sans le code reçu, aucune alerte ne part.
+   C'est ce qui empêche d'utiliser le service pour spammer un tiers. */
 $('#btnEmail').onclick = async () => {
   const a = prompt('Adresse e-mail à alerter :', etat.abonne.email || '');
   if (!a) return;
   try {
-    await appel('canal', { method: 'POST', body: JSON.stringify({ type: 'email', destination: { adresse: a.trim() }, libelle: a.trim() }) });
-    toast('E-mail ajouté. Lancez un test pour vérifier.');
+    const r = await appel('canal', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'email', destination: { adresse: a.trim().toLowerCase() } }),
+    });
     recharger();
+    if (!r.verification_requise) return toast('E-mail ajouté.');
+    toast('Code de confirmation envoyé par e-mail.');
+    await saisirCode(r.canal_id, a.trim());
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 };
+
+async function saisirCode(canalId, adresse) {
+  for (let essai = 0; essai < 3; essai++) {
+    const code = prompt(
+      `Un code à 6 chiffres a été envoyé à ${adresse}.\n` +
+      `Saisissez-le pour activer les alertes sur cette adresse.\n` +
+      `(vérifiez les indésirables — le code expire dans 30 minutes)`, '');
+    if (code === null) return toast('Adresse non confirmée : elle ne recevra aucune alerte.', true);
+    try {
+      await appel('canal-verifier', { method: 'POST', body: JSON.stringify({ id: canalId, code: code.trim() }) });
+      toast('Adresse confirmée.');
+      return recharger();
+    } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+  }
+}
 
 $('#btnTelegram').onclick = () => {
   const bot = etat.telegram_bot;
@@ -576,8 +602,11 @@ $('#btnJeton').onclick = () => {
 document.addEventListener('click', async (ev) => {
   const bz = ev.target.closest('[data-zone]');
   const bc = ev.target.closest('[data-canal]');
+  const bv = ev.target.closest('[data-verif]');
   try {
-    if (bz) {
+    if (bv) {
+      return saisirCode(bv.dataset.verif, bv.dataset.adresse);
+    } else if (bz) {
       if (!confirm('Retirer cette zone de votre surveillance ?')) return;
       await appel('zone-supprimer', { method: 'POST', body: JSON.stringify({ id: bz.dataset.zone }) });
       toast('Zone retirée.'); recharger();

@@ -7,6 +7,7 @@
 --  seule cle anon (publique par nature).
 -- ===================================================================
 
+-- 1. Aucune fonction de public n'est appelable par defaut
 alter default privileges in schema public revoke execute on functions from public;
 
 do $$
@@ -23,7 +24,7 @@ begin
   end loop;
 end $$;
 
--- search_path fige sur les deux fonctions pures qui en manquaient
+-- 2. search_path fige sur les deux fonctions pures qui en manquaient
 create or replace function public.severite_rang(s text)
 returns integer language sql immutable
 set search_path = ''
@@ -59,6 +60,9 @@ revoke all on function public.calc_severite(text,integer,numeric,integer,boolean
 grant execute on function public.severite_rang(text) to service_role;
 grant execute on function public.calc_severite(text,integer,numeric,integer,boolean,integer) to service_role;
 
--- Les tables restent en deny-all : aucune policy, aucun acces direct.
--- Toute lecture/ecriture passe par les Edge Functions (service role).
-revoke all on all tables in schema public from anon, authenticated;
+-- 3. Outil d'export du depot : plus necessaire une fois le depot cree
+drop function if exists public.dump_migrations();
+
+-- 4. Les tables restent en deny-all : aucune policy, aucun acces direct.
+--    Toute lecture/ecriture passe par les Edge Functions (service role).
+revoke all on all tables in schema public from anon, authenticated;;
