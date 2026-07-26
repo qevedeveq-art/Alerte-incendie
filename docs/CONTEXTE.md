@@ -11,9 +11,10 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `6badd95` sur `main`.
-- Schéma du dépôt : migrations **01 à 37**.
-- État de livraison vérifié : migrations **01 à 37** appliquées et 12 Edge
+- Schéma du dépôt : migrations **01 à 38**.
+- État de livraison vérifié : migrations **01 à 38** appliquées et 12 Edge
   Functions déployées.
+- La migration 38 (`sources_rss_regionales_et_nationales.sql`) peuple le catalogue `sources_contexte` avec 14 flux RSS nationaux et régionaux (Ministère de l'Intérieur, Météo-France, ONF, Copernicus EFFIS, Var-Matin, Sud-Ouest, Midi Libre, France Bleu, Le Progrès, Corse-Matin, etc.) en mode `shadow` (actif=true).
 - La migration 37 enrichit la fonction `feux_carte` avec la restitution explicite
   du champ `rayon_incertitude_m` (2000 m), permettant le tracé des emprises
   spatiales d'incertitude sur la carte Leaflet. La PWA intègre un viseur réticule
