@@ -16,11 +16,16 @@ de corroboration explicable. Le passage à l'échelle, l'outre-mer automatique e
 l'ouverture anonyme complète restent suivis dans
 [`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md).
 
-La prochaine étape est cadrée, mais **pas encore active** : associer à chaque
-feu des communiqués officiels, articles locaux et publications publiques
-pertinentes. Ces éléments resteront du contexte sourcé, sans créer de feu,
-modifier sa sévérité ni déclencher une alerte. Le séquencement, les sources
-envisagées et les garde-fous RGPD sont détaillés dans
+Les **informations locales associées** sont collectées et évaluées, mais **pas
+encore publiées**. Un collecteur lit les flux officiels sous licence ouverte
+toutes les 30 minutes, rapproche chaque publication des feux actifs selon un
+barème explicable, et dépose le résultat dans une file de modération. Rien
+n'apparaît dans l'application avant une validation humaine motivée, source par
+source. Ces éléments resteront du contexte sourcé : ils ne créent pas de feu,
+ne modifient pas sa sévérité et ne déclenchent aucune alerte. Les flux de presse
+régionale sont désactivés jusqu'à validation juridique par source — un flux RSS
+n'autorise pas la reprise de titres de presse payante. Le séquencement, les
+sources et les garde-fous RGPD sont détaillés dans
 [`docs/ETAPE_ACTUALITES_LOCALES.md`](docs/ETAPE_ACTUALITES_LOCALES.md).
 
 L'interface est organisée autour de la carte : plein écran utile, regroupement
@@ -136,7 +141,7 @@ ces trois contrôles sans exposer de donnée d'abonné.
 
 La PWA actualise automatiquement les données publiques toutes les deux minutes
 et au retour au premier plan. Elle conserve au plus les 250 derniers incidents
-publics, 150 tuiles cartographiques et les dépendances nécessaires à la carte
+publics, 450 tuiles cartographiques et les dépendances nécessaires à la carte
 afin d'afficher un état daté en mode hors ligne. La géolocalisation « autour de
 moi » reste dans le navigateur tant que l'utilisateur ne choisit pas
 explicitement d'enregistrer un point de référence.
@@ -194,8 +199,11 @@ Open-Meteo ──> poll-meteo ─> risque/vent       evenements
                                                    v
                                               Web Push
 
+Flux officiels ──> poll-contexte ──> file de modération ──> contexte affiché
+                   (aucun effet sur la sévérité ni sur les alertes)
+
 PWA GitHub Pages ── x-token ──> api / signalement
-pg_cron ──> collectes, santé interne, clôture, purge et autotests
+pg_cron ──> collectes, contexte, santé interne, clôture, purge et autotests
 ```
 
 ### Tables principales
@@ -213,6 +221,7 @@ pg_cron ──> collectes, santé interne, clôture, purge et autotests
 | `creneaux_traites` | créneaux satellite déjà décodés |
 | `meteo` | dernière observation et indice de risque par zone |
 | `observations_aero` | positions d'aéronefs de lutte (ADS-B), corroboration seule |
+| `sources_contexte`, `mentions_contexte`, `evenement_mentions` | contexte local sourcé, séparé des preuves, avec sa file de modération |
 | `alertes` | file d'envoi, idempotente par (évènement, canal, sévérité, type) |
 | `runs` | journal d'exécution, base du contrôle de santé |
 | `audit_admin` | journal minimal des appels humains avec la clé administrateur |
@@ -248,16 +257,17 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   35 migrations SQL — schéma, moteur, cron et conformité
-supabase/functions/    11 Edge Functions Deno + module partagé + tests
+supabase/migrations/   39 migrations SQL — schéma, moteur, cron et conformité
+supabase/functions/    12 Edge Functions Deno + module partagé + tests
 web/                   PWA autonome, confidentialité, service worker et console de modération
-.github/workflows/     publication Pages + vérification et déploiement Supabase
+.github/workflows/     publication Pages, vérification et déploiement Supabase, veille externe
 docs/                  contexte, exploitation et sécurité
 ```
 
-Le déploiement est **subordonné aux tests** : formatage, lint, typage, tests
-unitaires et rejeu de toutes les migrations sur une base vierge s'exécutent
-avant tout `db push`. Pour lancer la vérification en local :
+Le déploiement est **subordonné aux tests**, des deux côtés : formatage, lint,
+typage, tests unitaires et rejeu de toutes les migrations sur une base vierge
+s'exécutent avant tout `db push`, et la publication de la PWA exécute les tests
+d'interface avant tout envoi vers Pages. Pour lancer la vérification en local :
 
 ```bash
 cd supabase/functions && deno task verif
@@ -312,9 +322,15 @@ curl -X POST "$URL/functions/v1/load-communes" \
   ils n'augmentent jamais le nombre de preuves.
 - **geo.api.gouv.fr** — découpage communal IGN Admin Express.
 - **Les utilisateurs eux-mêmes**, pour les signalements.
-- **Actualités et réseaux sociaux** — aucune ingestion actuellement. La
-  prochaine étape commencera par des flux officiels et médias autorisés en mode
-  fantôme ; les publications sociales resteront contextuelles et modérées.
+- **Flux officiels sous licence ouverte** — Ministère de l'Intérieur,
+  Météo-France, ONF, Copernicus EFFIS. Lus toutes les 30 minutes en mode
+  fantôme : associés aux feux actifs et déposés en file de modération, jamais
+  publiés sans validation humaine.
+- **Presse régionale** — catalogue présent mais **désactivé**. La licence
+  déclarée n'est pas ouverte : l'existence d'un flux RSS n'autorise pas la
+  reprise de titres et de chapôs. Réactivation source par source après accord.
+- **Réseaux sociaux** — aucune ingestion. Le pilote restera contextuel, modéré,
+  sans auteur ni texte social brut affichés.
 
 ### Corroboration aérienne
 

@@ -25,6 +25,16 @@ Avant toute modification, lire :
 - Toute nouvelle route publique doit avoir authentification ou quota explicite.
 - Toute nouvelle tâche planifiée doit être déclarée dans une migration et
   documentée dans `docs/CONTEXTE.md` et `docs/EXPLOITATION.md`.
+- **N'afficher à l'utilisateur que des grandeurs mesurées.** Avant d'ajouter un
+  indicateur, écrire d'où vient chaque terme du calcul. Si aucune source ne
+  mesure la grandeur, ne pas l'estimer : ne rien afficher. Ne pas prévoir de
+  valeur de repli rassurante quand une source externe ne répond pas — écrire
+  que la valeur est indisponible. Sur un service d'alerte, un chiffre plausible
+  mais fabriqué est repris tel quel par la personne qui le lit.
+- **Ne pas livrer de calcul côté client que rien ne peut alimenter.** Vérifier
+  que la donnée d'entrée existe vraiment : colonne en base, champ dans la
+  réponse d'API, clé de jointure compatible. Une fonction sophistiquée branchée
+  sur du vide est plus coûteuse à découvrir qu'une fonctionnalité absente.
 
 ## Vérifications minimales
 
@@ -49,6 +59,12 @@ git diff --check
 Si l'environnement local ne possède pas Deno, Docker ou la CLI Supabase,
 indiquer clairement les vérifications non exécutées et laisser GitHub Actions
 les effectuer avant tout déploiement.
+
+Les tests d'interface vivent dans `supabase/functions/_tests` mais portent sur
+`web/` : une modification de la PWA doit donc lancer `deno task verif`, même si
+aucun fichier de `supabase/` n'a bougé. Les deux workflows GitHub le font
+désormais, mais le contrôle local reste plus rapide qu'un aller-retour en
+production.
 
 ## Mise à jour systématique du contexte
 

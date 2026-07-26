@@ -1,12 +1,23 @@
 # Plan d'amélioration — application nationale précise et vérifiable
 
-Revue du **26 juillet 2026**. L'objectif est un service gratuit et accessible
+Revue du **26 juillet 2026, en soirée**. L'objectif est un service gratuit et accessible
 au public français : carte nationale, alertes personnalisées et signalements
 citoyens. Ce document distingue l'existant livré des évolutions proposées.
 
 ## État réel
 
-- Les migrations 01 à 35, les 11 Edge Functions et la PWA sont en production.
+- Le dépôt porte 39 migrations et 12 Edge Functions ; la production en a 38 et
+  12. La migration 39 attend son `db push`.
+- Le contexte local est collecté et évalué, mais **aucune source n'est
+  publiée** : la file de modération se remplit, l'application n'affiche rien.
+  Voir `ETAPE_ACTUALITES_LOCALES.md` pour les conditions d'ouverture.
+- Règle tenue depuis l'audit du 26 juillet au soir : **la PWA n'affiche aucune grandeur
+  qui ne soit pas mesurée**. La « vélocité du front » en km/h, déduite de la
+  puissance thermique par un coefficient arbitraire, a été retirée ; la
+  triangulation optique aussi, faute de position d'observateur.
+- La publication de la PWA est désormais bloquée par les tests d'interface, qui
+  ne tournaient jusqu'ici sur aucun push `web/**`.
+- Les migrations 01 à 35, les Edge Functions et la PWA sont en production.
   Le déploiement du commit `ebceaf6` est vérifié par GitHub Actions et par des
   contrôles externes HTTP.
 - La carte publique corrèle quatre familles indépendantes : polaire,
@@ -139,23 +150,38 @@ le **compagnon d'alerte personnel fondé sur les preuves** :
 
 ## Feuille de route priorisée
 
-### P0 — contexte local sourcé, prochaine étape
+### P0 — contexte local sourcé, mesure de précision
 
-- Constituer une liste blanche de flux de préfectures, SDIS, communes et médias
-  locaux dont l'usage est documenté.
-- Ajouter GDELT comme outil de découverte de liens, sans recopier les articles.
-- Créer un domaine de données séparé et une collecte fantôme fondée uniquement
-  sur les événements existants.
-- Associer par commune, distance, temps et vocabulaire avec des raisons
-  explicables ; dédupliquer les reprises du même contenu.
-- Publier d'abord autorités et médias autorisés, puis tester Bluesky et des
-  comptes Mastodon locaux avec modération systématique.
-- Ne jamais faire d'une actualité ou d'un post une famille de preuve et ne
-  déclencher aucune notification dans ce lot.
+Le mécanisme est livré (migrations 36, 38, 39 et `poll-contexte`). Ce qui reste
+n'est plus du code, c'est de la mesure et du droit :
+
+- étiqueter à la main un échantillon d'associations réelles produites par la
+  file de modération, et calculer la précision par source ;
+- documenter titre par titre l'autorisation de reprise ; les dix flux de presse
+  régionale restent désactivés jusque-là ;
+- mettre à jour `web/confidentialite.html` avant toute première publication ;
+- passer alors la première source en `mode = 'actif'`, et la refermer au moindre
+  doute — la coupure est unitaire et immédiate ;
+- garder GDELT comme outil de découverte de liens, sans recopier les articles ;
+- ne pas ouvrir le pilote social avant que les autorités ne soient stabilisées.
 
 **Sortie :** au moins 90 % d'associations correctes sur le jeu de référence
 autorité/média, 100 % des éléments publics attribués et horodatés, retrait en
 moins de 6 h, et zéro effet sur `severite`, `score` ou `alertes`.
+
+### P0 — n'afficher que des grandeurs mesurées
+
+Leçon de l'audit du 26 juillet au soir : une façade qui affiche un nombre est plus
+dangereuse qu'une fonctionnalité absente. Sur un service d'alerte, un chiffre
+plausible mais fabriqué est repris tel quel par la personne qui le lit.
+
+- avant d'ajouter un indicateur, écrire d'où vient chaque terme du calcul ;
+- si une source ne mesure pas la grandeur, ne pas l'estimer : soit la mesurer
+  autrement, soit ne rien afficher ;
+- pas de valeur de repli rassurante quand une source externe ne répond pas ;
+- la propagation — vitesse et direction du front — reste hors de portée avec
+  les sources actuelles. Elle exigerait des périmètres successifs, pas des
+  centres de regroupement à 2 km.
 
 ### P0 — disponibilité observable de l'extérieur
 

@@ -1,6 +1,6 @@
 # Contexte technique et mémoire du projet
 
-Dernière revue globale : **26 juillet 2026**.
+Dernière revue globale : **26 juillet 2026, en soirée**.
 
 Ce fichier est la mémoire technique maintenue du projet. Il décrit l'état
 réel du dépôt, les invariants à ne pas casser et les points qui doivent être
@@ -11,16 +11,60 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `48ad8d2` sur `main`.
-- Schéma du dépôt : migrations **01 à 38**.
-- État de livraison vérifié : migrations **01 à 38** appliquées et 12 Edge
-  Functions déployées.
-- La PWA intègre le calcul d'accélération par la pente topographique (%) via l'API Altimétrie IGN (`elevation.json`), la capture du cap boussole mobile (`azimut_deg`) et la triangulation optique géométrique par intersection des visées témoins, le calculateur de vélocité du front de feu (km/h) et la matrice de fusion multi-sources.
-- La PWA intègre une refonte UI/UX tactique haut de gamme (typographies Inter & Outfit, palette carbone `#0b0d10`, glassmorphism `backdrop-filter: blur(16px)`), avec des marqueurs cartographiques tactiques ovales (`.marqueur-feu-tactique`) affichant l'icône flamme vectorielle, le nom de la commune et le badge d'état (`Confirmé`, `Probable`, `Témoins`, `Indice`).
+- Schéma du dépôt : migrations **01 à 39**.
+- État de livraison vérifié en production : migrations **01 à 38** appliquées et
+  12 Edge Functions déployées. **La migration 39 est dans le dépôt mais pas
+  encore appliquée** : mettre cette ligne à jour après le prochain `db push`.
+- **Audit du 26 juillet 2026, en soirée** (`docs/COMPTE_RENDU_26072026.md`) : la vague
+  fonctionnelle du 26 juillet avait livré des calculs côté client sans le
+  support serveur qui les rend exploitables. Trois façades ont été corrigées par
+  la migration 39 et la révision de la PWA :
+  1. `poll-contexte` ne parsait aucun RSS et n'insérait rien ; il évaluait un
+     score sur le nom de la source et 200 octets de XML brut. Il lit désormais
+     réellement RSS 2.0 et Atom (`poll-contexte/flux.ts`) et délègue
+     l'association à `public.enregistrer_mention_contexte`.
+  2. La carte n'exposait aucun `evenement_id`, alors que `/api/contexte` filtre
+     `evenement_mentions.evenement_id` : la rubrique de contexte ne pouvait
+     jamais rien afficher. `feux_carte` restitue maintenant l'identifiant de
+     l'évènement rattaché.
+  3. La « vélocité du front » affichée en km/h déduisait une distance parcourue
+     de la puissance thermique via un coefficient arbitraire. Elle est
+     remplacée par `persistanceFeu()` : durée d'activité et cadence
+     d'observation, deux grandeurs réellement mesurées.
+- La pente topographique IGN est calculée sur les **quatre orientations
+  cardinales** en une requête, et la plus forte est retenue avec son
+  orientation. La version précédente ne comparait qu'un voisin au nord-est : un
+  versant sud-ouest ressortait faussement plat. Sans réponse de l'IGN, la PWA
+  affiche « non disponible » et n'invente aucune valeur de repli.
+- La **triangulation optique a été retirée** de la PWA. Le signalement
+  enregistre l'emplacement du feu pointé au viseur, jamais la position du
+  témoin : un cap boussole n'a donc aucune origine géométrique et deux visées
+  sans point de départ ne s'intersectent pas. La colonne
+  `signalements.azimut_deg` et sa validation côté serveur restent en place pour
+  un futur parcours « je vois le feu depuis ici », qui devra enregistrer la
+  position de l'observateur. Tant que ce parcours n'existe pas, rien n'écrit
+  cette colonne.
+- La PWA intègre une refonte UI/UX tactique (typographies Inter & Outfit, palette carbone `#0b0d10`, glassmorphism `backdrop-filter: blur(16px)`), avec des marqueurs cartographiques tactiques ovales (`.marqueur-feu-tactique`) affichant l'icône flamme vectorielle, le nom de la commune et le badge d'état (`Confirmé`, `Probable`, `Témoins`, `Indice`).
+- **La publication de la PWA est désormais subordonnée aux tests.** Le workflow
+  « Publier la PWA » ne se déclenchait que sur `web/**` et n'exécutait aucun
+  test, tandis que les tests d'interface vivent dans `supabase/functions/_tests`
+  et que le workflow Supabase ne se déclenche que sur `supabase/**`. La refonte
+  du 26 juillet a donc cassé deux tests d'interface — libellés de légende et
+  bascule satellite — et a été publiée quand même, avant six commits de
+  rattrapage sur le même écran. Les deux tests sont corrigés et le job
+  `verifier` bloque maintenant l'envoi vers Pages.
 - La PWA intègre un slider temporel 24 h avec animation Play/Pause pour rejouer
   la propagation des détections, la mise en cache hors-ligne des tuiles (IGN, OSM, CARTO)
   dans `web/sw.js` (MAX_TUILES=450), l'affichage du vecteur vent au sol (Open-Meteo API)
   et les notifications push actionnables (`voir`, `confirmer`).
-- La migration 38 (`sources_rss_regionales_et_nationales.sql`) peuple le catalogue `sources_contexte` avec 14 flux RSS nationaux et régionaux (Ministère de l'Intérieur, Météo-France, ONF, Copernicus EFFIS, Var-Matin, Sud-Ouest, Midi Libre, France Bleu, Le Progrès, Corse-Matin, etc.) en mode `shadow` (actif=true).
+- La migration 38 (`sources_rss_regionales_et_nationales.sql`) peuple le
+  catalogue `sources_contexte` avec 14 flux RSS nationaux et régionaux. La
+  **migration 39 désactive les 10 flux de presse régionale** (`actif = false`,
+  `mode = 'desactive'`) : leur licence déclarée « Presse Régionale » n'est pas
+  une licence ouverte, et `ETAPE_ACTUALITES_LOCALES.md` exige une validation
+  juridique par source qui n'a pas eu lieu. Restent collectées les quatre
+  sources sous licence ouverte — Ministère de l'Intérieur, Météo-France, ONF,
+  Copernicus EFFIS — en mode `shadow`.
 - La migration 37 enrichit la fonction `feux_carte` avec la restitution explicite
   du champ `rayon_incertitude_m` (2000 m), permettant le tracé des emprises
   spatiales d'incertitude sur la carte Leaflet. La PWA intègre un viseur réticule
@@ -32,10 +76,11 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Contrôle externe effectué le 26 juillet : `https://qevedeveq-art.github.io/Alerte-incendie/`
   répond HTTP 200 et présente l'interface tactique avec la carte corrélée, ses marqueurs glassmorphic
   et ses filtres interactifs de légende.
-- Les 38 migrations SQL s'appliquent sur Supabase production.
-  Le conteneur Postgres est sain, les 12 tâches `pg_cron` sont présentes, toutes
-  les tables publiques ont RLS active sans aucune policy publique, et les deux
-  contacts RGPD valent `qevedeveq@gmail.com`.
+- Contrôle du 26 juillet : les 38 migrations alors présentes s'appliquent sur
+  Supabase production. Le conteneur Postgres est sain, les 12 tâches `pg_cron`
+  sont présentes — `poll-contexte` comprise —, toutes les tables publiques ont
+  RLS active sans aucune policy publique, et les deux contacts RGPD valent
+  `qevedeveq@gmail.com`. La migration 39 n'était pas encore écrite à ce moment.
 - Le run « Publier la PWA » `30209289005` du commit `b9d1ee8` a réussi. Le run
   Supabase `30209289053` a rencontré un timeout réseau vers le pooler lors de
   sa première tentative, puis sa seconde tentative a appliqué les migrations
@@ -55,13 +100,34 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   destinations et secrets, clôt leurs envois en attente et impose
   `canaux.type = 'webpush'`. L'interface et les Edge Functions ne proposent
   désormais que les notifications sur appareil.
-- Étape **Informations locales associées** implémentée : la **migration 36** ajoute
-  les tables `sources_contexte`, `mentions_contexte`, `evenement_mentions`,
-  `contexte_moderation_audit` et la fonction de purge `purger_contexte_local()`.
-  L'Edge Function `poll-contexte` assure la collecte shadow sans impacter
-  les détections, et `/api/contexte` fournit une route publique limitée (60 req/min/IP).
-  La fiche incident PWA affiche la rubrique « Informations locales associées »
-  avec rendu HTML échappé sans traqueurs tiers.
+- Étape **Informations locales associées** : lots 1 et 2 du plan livrés, lot 3
+  (affichage public) **verrouillé**.
+  - Migration 36 : tables `sources_contexte`, `mentions_contexte`,
+    `evenement_mentions`, `contexte_moderation_audit` et purge
+    `purger_contexte_local()`.
+  - Migration 39 : lecture réelle des flux, barème d'association explicable
+    (`score_association_contexte`), enregistrement et rattachement
+    (`enregistrer_mention_contexte`), file de modération
+    (`moderation_contexte`) et décision auditée (`moderer_mention`).
+  - `poll-contexte` collecte toutes les 30 minutes, dédoublonne par empreinte
+    (source + URL canonique + titre normalisé) et n'écrit que dans les deux
+    tables de contexte.
+  - `/api/contexte` reste public et limité à 60 req/min/IP, et ne restitue que
+    les associations `decision = 'associe'`. `/api/contexte-moderation` et
+    `/api/contexte-moderer` exigent `admin_key` et sont audités.
+  - **Porte de publication** : une association ne devient `associe`
+    automatiquement que si la source est en `mode = 'actif'`. Les quatre
+    sources livrées sont en `shadow` : la file se remplit, rien ne s'affiche.
+    Le passage en `actif` est une décision humaine, source par source, après
+    validation juridique et mesure de précision sur échantillon.
+  - La rubrique « Informations locales associées » de la fiche incident et la
+    pop-up de survol restent **masquées** s'il n'y a rien de publié — plutôt
+    qu'un message d'absence, qui laisserait croire à une panne ou à un calme
+    médiatique alors que rien n'a été validé. Rendu HTML échappé, liens `https`
+    uniquement, sans traqueur tiers.
+  - La console `web/moderation.html` traite les deux files : signalements
+    citoyens et contexte local. Clé administrateur en mémoire de page, motif
+    obligatoire, décision auditée.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
@@ -117,6 +183,7 @@ role et appliquent les contrôles applicatifs.
 | `probe-lsasaf` | diagnostic manuel du décodeur HDF5 | admin |
 | `probe-mtg` | veille mensuelle sur le produit MTG | admin ou service role |
 | `probe-sentinel3` | cherche une collection SLSTR FRP NRT stable dans le STAC CDSE | admin ou service role |
+| `poll-contexte` | lecture des flux officiels, association et file de modération | admin ou service role |
 
 ## Domaines de données
 
@@ -129,16 +196,18 @@ role et appliquent les contrôles applicatifs.
 | Fusion | `evenements`, `evenement_detections` |
 | Notification | `alertes` |
 | Enrichissement | `meteo`, `observations_aero` |
+| Contexte local | `sources_contexte`, `mentions_contexte`, `evenement_mentions`, `contexte_moderation_audit` |
 | Exploitation | `runs`, `config`, `quotas`, `audit_admin` |
 
-Le futur domaine « contexte local » utilisera des tables séparées
-`sources_contexte`, `mentions_contexte`, `evenement_mentions` et
-`contexte_moderation_audit`. Il ne sera ajouté que par une nouvelle migration.
-Il ne doit partager aucune règle de calcul avec les preuves de détection.
+Le domaine « contexte local » est livré par les migrations 36, 38 et 39. Il
+reste strictement séparé : aucune de ses tables n'est lue par le moteur de
+détection, et aucune de ses fonctions n'écrit dans `evenements`, `detections`
+ou `alertes`. Un test vérifie cette séparation sur le texte de la migration et
+du collecteur.
 
 ## Planification déclarative
 
-Les migrations 26 et 32 sont la source de vérité des tâches `pg_cron`.
+Les migrations 26, 32 et 36 sont la source de vérité des tâches `pg_cron`.
 
 | Tâche | Cadence | Fonction |
 |---|---:|---|
@@ -154,6 +223,7 @@ Les migrations 26 et 32 sont la source de vérité des tâches `pg_cron`.
 | `autotest-canaux` | 1er du mois à 09:00 | test des canaux inactifs |
 | `probe-mtg` | 1er du mois à 04:30 | veille MTG |
 | `probe-sentinel3` | 1er du mois à 04:45 | veille catalogue Sentinel-3 |
+| `poll-contexte` | toutes les 30 min | contexte local, sans effet sur les preuves |
 
 Quand l'ADS-B est actif, `poll-adsb` purge aussi les observations aériennes de
 plus de 24 heures.
@@ -190,7 +260,7 @@ plus de 24 heures.
   confirmation officielle.
 - La carte utilise l'orthophotographie IGN/Géoplateforme avec superposition
   des noms de localités en français (couche IGN GEOGRAPHICALNAMES.NAMES) et
-  propose les plans OpenStreetMap France et sombre en repli. Tous les incidents et signalements sont représentés par des marqueurs flammes SVG haute visibilité aux tailles proportionnelles (18 à 44 px). Au survol de la souris (`mouseover`), une pop-up interactive affiche les actualités et dépêches locales rattachées à l'événement.
+  propose les plans OpenStreetMap France et sombre en repli. Tous les incidents et signalements sont représentés par des marqueurs flammes SVG haute visibilité aux tailles proportionnelles (18 à 44 px). Au survol de la souris (`mouseover`), une pop-up affiche le contexte local **publié** de l'évènement, et reste vide de cette rubrique s'il n'y en a pas.
 - `corrobore` exige au moins deux familles indépendantes. Une seule famille,
   même répétée ou très puissante, reste `probable`; VIIRS, MODIS et les
   différents satellites polaires ne se corroborent pas entre eux.
@@ -210,6 +280,21 @@ plus de 24 heures.
 - Une actualité ou une publication sociale est un **contexte**, jamais une
   preuve : elle ne crée, ne corrobore, n'élève et ne clôt aucun événement ou
   alerte. Son volume et sa popularité n'ont aucun poids.
+- Une association de contexte exige un **ancrage géographique** : coordonnée
+  dans le rayon d'incertitude majoré de 1 km, commune exacte reconnue, ou
+  commune limitrophe reconnue. Le vocabulaire incendie et une heure plausible
+  ne suffisent jamais, sinon une dépêche nationale se collerait à tous les feux
+  du jour. Le type de source ne donne aucun point.
+- Une association n'est publiée automatiquement que si la source est en
+  `mode = 'actif'`, non sociale, et que le score atteint 70. Tout le reste part
+  en file de modération. Le passage d'une source en `mode = 'actif'` est une
+  décision humaine, jamais un effet de bord de migration.
+- La PWA n'affiche **aucune grandeur qui ne soit pas mesurée**. Pas de vitesse
+  ni de sens de propagation : aucune source disponible ne les observe. Une
+  valeur indisponible s'affiche comme indisponible, sans repli inventé.
+- Le cap d'observation (`signalements.azimut_deg`) n'a de sens qu'avec la
+  position du témoin. Comme le signalement enregistre la position du feu, rien
+  ne doit écrire cette colonne avant qu'un parcours dédié n'existe.
 - Aucun contenu tiers n'est aspiré sans API, flux, webhook ou accord documenté.
   Le système ne réhéberge ni article, ni image, ni vidéo et synchronise les
   suppressions à la source.
@@ -259,11 +344,24 @@ plus de 24 heures.
 11. **WMS EFFIS trop lent.** Le 26 juillet, le GetMap officiel n'a répondu ni
     dans Leaflet ni en 30 secondes. Il reste un lien contextuel et n'est pas
     chargé dans la carte critique.
-12. **Contexte local non encore intégré.** Les sources, le modèle de données,
-    l'association spatio-temporelle, la rétention et les portes de mise en
-    production sont planifiés dans `ETAPE_ACTUALITES_LOCALES.md`. La validation
-    juridique par source et la mise à jour de la politique de confidentialité
-    restent obligatoires avant toute collecte sociale.
+12. **Contexte local collecté mais non publié.** La chaîne complète est livrée
+    (lecture des flux, barème, file de modération, console, route publique),
+    mais les quatre sources actives sont en `shadow` : rien n'est visible dans
+    l'application. Avant d'ouvrir une source, trois conditions du plan restent
+    à remplir : validation juridique écrite pour cette source, précision
+    mesurée sur un échantillon d'au moins 90 % d'associations correctes, et
+    mise à jour de la politique de confidentialité. Les dix flux de presse
+    régionale sont désactivés jusqu'à accord écrit.
+13. **Barème d'association non encore mesuré.** Le barème suit le plan, mais sa
+    précision réelle n'a pas été évaluée sur un échantillon étiqueté : c'est
+    précisément l'objet de la période fantôme. Points de vigilance connus : un
+    homonyme de commune dans un autre département, et un communiqué
+    préfectoral générique couvrant plusieurs feux du même jour.
+14. **Reconnaissance de toponyme sensible aux homonymes.** `toponyme_present`
+    exige des frontières de mot, ce qui écarte « Aixe-sur-Vienne » pour
+    « Aix », mais ne distingue pas deux communes homonymes de départements
+    différents. Le filtre temporel et la commune de l'évènement limitent la
+    portée du faux rapprochement sans l'éliminer.
 
 Le plan priorisé de réduction de ces risques et d'intégration de nouvelles
 sources est maintenu dans `docs/PLAN_AMELIORATION.md`.
@@ -273,6 +371,8 @@ sources est maintenu dans `docs/PLAN_AMELIORATION.md`.
 | Changement | Fichiers à revoir |
 |---|---|
 | comportement utilisateur | `README.md`, `web/index.html`, tests |
+| grandeur affichée à l'utilisateur | vérifier qu'elle est **mesurée** et non déduite ; sinon ne pas l'afficher |
+| source de contexte activée ou publiée | `ETAPE_ACTUALITES_LOCALES.md`, `SECURITE.md`, ce fichier, politique de confidentialité |
 | schéma ou règle SQL | nouvelle migration, ce fichier, `EXPLOITATION.md` |
 | route, authentification ou donnée personnelle | `SECURITE.md`, ce fichier |
 | source ou cadence | migration cron, `README.md`, `EXPLOITATION.md`, ce fichier |

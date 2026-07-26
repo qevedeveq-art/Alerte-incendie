@@ -13,8 +13,10 @@ appliquent leurs propres contrôles.
 | `signalement` | lecture publique limitée par IP ; écriture par `x-token`, appareil Web Push actif et quotas personne/réseau |
 | `signalement/moderation` | `x-admin-key`, audit de chaque lecture/décision, données agrégées sans identité |
 | `api/sante-publique` | lecture publique limitée ; fraîcheur agrégée sans secret, jeton ni donnée d'abonné |
-| `api/contexte` | lecture publique limitée (60 req/min/IP) ; restitue les mentions publiables sans PII ni texte social brut |
-| collecteurs (`poll-*`), sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role ; validation d'URL anti-SSRF (`poll-contexte`) |
+| `api/contexte` | lecture publique limitée (60 req/min/IP) ; exige un uuid d'évènement, ne restitue que `decision = 'associe'`, sans PII ni texte social brut |
+| `api/contexte-moderation`, `api/contexte-moderer` | `x-admin-key`, audit de chaque lecture et décision, motif obligatoire, acteur identifié par IP hachée |
+| collecteurs (`poll-*`), sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
+| `poll-contexte` | anti-SSRF à deux niveaux : URL du flux et URL de chaque article vérifiées (https obligatoire, refus de `localhost`, `.local`, 10/8, 172.16/12, 192.168/16, 169.254/16 et IPv6 littérales) ; corps tronqué à 400 ko, 40 articles et 20 sources par passage ; balises et entités du flux mises à plat avant stockage |
 | `load-communes` | `x-admin-key`, ou service role pour le chargement à la demande depuis `api` |
 | Tables `public.*` | RLS active, zéro policy, `revoke all` sur `anon`/`authenticated` |
 | Fonctions `public.*` | `revoke all from public, anon, authenticated` — `service_role` uniquement |

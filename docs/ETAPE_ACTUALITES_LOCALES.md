@@ -1,8 +1,32 @@
 # Étape suivante — informations locales associées aux feux
 
-Plan arrêté le **26 juillet 2026**. Cette capacité est **planifiée mais non
-active** : aucun article, flux social ou contenu tiers n'est encore collecté,
-stocké ou affiché par l'application.
+Plan arrêté le **26 juillet 2026**, avancement revu le même jour en soirée.
+
+## Avancement
+
+| Lot | État |
+|---|---|
+| Lot 0 — cadrage et autorisations | partiel : matrice des sources à compléter titre par titre |
+| Lot 1 — stockage et collecte fantôme | **livré** (migrations 36 et 38, `poll-contexte`) |
+| Lot 2 — association et modération | **livré** (migration 39, console opérateur), précision **non encore mesurée** |
+| Lot 3 — affichage public contrôlé | **verrouillé** : aucune source en `mode = 'actif'` |
+| Lot 4 — pilote social | non commencé |
+
+Concrètement : quatre flux officiels sous licence ouverte sont lus toutes les
+30 minutes, rapprochés des feux actifs selon le barème ci-dessous et déposés en
+file de modération. **Rien n'est affiché dans l'application.** Les dix flux de
+presse régionale du catalogue sont désactivés : leur licence déclarée n'est pas
+ouverte, et un flux RSS n'autorise pas la reprise de titres.
+
+Ce qui reste à faire avant d'ouvrir la première source, dans l'ordre :
+
+1. étiqueter un échantillon d'associations réelles et mesurer la précision ;
+   la porte de sortie du lot 2 exige au moins 90 % d'associations correctes ;
+2. obtenir et consigner l'autorisation écrite par source ;
+3. mettre à jour `web/confidentialite.html` ;
+4. passer la source en `mode = 'actif'` (voir `EXPLOITATION.md`).
+
+La procédure est volontairement manuelle et réversible source par source.
 
 ## Objectif
 
