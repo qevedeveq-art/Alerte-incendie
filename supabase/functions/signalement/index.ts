@@ -22,7 +22,7 @@
 //  positifs suffisent à ce que les gens cessent de croire aux vraies
 //  alertes. Le risque n'est pas le spam, c'est la perte de confiance.
 //
-//    POST /signalement          { lat, lon, nature, commentaire }  x-token
+//    POST /signalement          { lat, lon, nature, commentaire, azimut_deg }  x-token
 //    POST /signalement/contester { groupe_id, motif }               x-token
 //    GET  /signalement/carte    couche publique, 24 h par défaut
 //    GET  /signalement/mes-signalements historique privé            x-token
@@ -178,6 +178,13 @@ Deno.serve(async (req) => {
       }, 400);
     }
 
+    // Cap boussole facultatif : sert à la triangulation optique entre deux
+    // témoins. Tout ce qui n'est pas un entier de 0 à 359 est écarté.
+    const azimutBrut = Number(body.azimut_deg);
+    const azimut = Number.isFinite(azimutBrut)
+      ? ((Math.round(azimutBrut) % 360) + 360) % 360
+      : null;
+
     const intensite = INTENSITES.includes(body.intensite_percue) ? body.intensite_percue : null;
     const vegetation = VEGETATIONS.includes(body.vegetation) ? body.vegetation : null;
     const certitude = CERTITUDES.includes(body.certitude) ? body.certitude : null;
@@ -208,6 +215,7 @@ Deno.serve(async (req) => {
         vegetation,
         proximite_habitations: body.proximite_habitations === true,
         certitude,
+        azimut_deg: azimut,
       }).eq("id", data.signalement_id).eq("abonne_id", ab.id);
       if (erreurStructure) throw new Error(erreurStructure.message);
     }

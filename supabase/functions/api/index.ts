@@ -10,6 +10,9 @@
 //    GET  /api/informations     informations légales publiques
 //    GET  /api/carte            indices de feu nationaux corrélés
 //    GET  /api/sante-publique   fraîcheur des collectes et de pg_cron
+//    GET  /api/contexte         informations locales publiées d'un évènement
+//    GET  /api/contexte-moderation  file d'associations à valider (admin_key)
+//    POST /api/contexte-moderer     décision motivée et auditée (admin_key)
 //    GET  /api/communes?q=      recherche de commune (France entière)
 //    POST /api/inscription      crée un abonné, renvoie son jeton
 //    POST /api/canal            ajoute un appareil (Web Push)
@@ -28,6 +31,7 @@
 //    - plafond : 10 zones et 8 appareils par abonne
 // =====================================================================
 import {
+  autoriserOperation,
   config,
   CORS,
   ipAppelant,
@@ -41,6 +45,14 @@ import {
 const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CONDITIONS_VERSION = "2026-07-26";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Empreinte d'acteur pour la trace de modération : jamais l'IP en clair. */
+async function acteurHash(req: Request, sel: unknown): Promise<string> {
+  const brut = `${ipAppelant(req)}|${String(sel ?? "")}`;
+  const empreinte = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(brut));
+  return [...new Uint8Array(empreinte)].map((o) => o.toString(16).padStart(2, "0")).join("");
+}
 
 async function abonneParJeton(req: Request) {
   const t = req.headers.get("x-token") ?? new URL(req.url).searchParams.get("token");
@@ -106,20 +118,27 @@ Deno.serve(async (req) => {
 
     if (route === "contexte") {
       if (!await quota(`contexte:${ip}`, 60, 60)) return json(TROP_DE_REQUETES, 429);
-      const groupeId = url.searchParams.get("groupe") || url.searchParams.get("evenement_id");
-      if (!groupeId || groupeId.length < 10) return json({ mentions: [], total: 0 });
+      // La clé attendue est un identifiant d'évènement. La carte envoyait
+      // auparavant son identifiant d'affichage (« sat-… », « cit-… ») : la
+      // jointure ne pouvait jamais aboutir. On refuse explicitement tout ce
+      // qui n'est pas un uuid plutôt que de laisser une erreur SQL se
+      // traduire en rubrique vide et silencieuse.
+      const evenementId = url.searchParams.get("evenement") ??
+        url.searchParams.get("evenement_id") ?? url.searchParams.get("groupe") ?? "";
+      if (!UUID.test(evenementId)) return json({ mentions: [], total: 0 });
 
       const { data, error } = await sb
         .from("evenement_mentions")
         .select(
           "score, raisons, distance_km, ecart_heures, mentions_contexte (titre, resume, url_canonical, date_publication, sources_contexte (nom, type, attribution))",
         )
-        .eq("evenement_id", groupeId)
+        .eq("evenement_id", evenementId)
         .eq("decision", "associe")
         .order("score", { ascending: false })
         .limit(5);
 
       if (error) {
+        console.error("api contexte", error.message);
         return json({ mentions: [], total: 0 });
       }
 
@@ -140,6 +159,43 @@ Deno.serve(async (req) => {
       });
 
       return json({ mentions, total: mentions.length });
+    }
+
+    // ---------- file de modération du contexte, clé admin et audit ----------
+    //  Une association proposée par le barème n'est publiée qu'après
+    //  décision humaine motivée. La file ne contient ni auteur, ni
+    //  identité, ni empreinte réseau : uniquement le contenu public, sa
+    //  source et la raison du rapprochement.
+    if (req.method === "GET" && route === "contexte-moderation") {
+      if (!await autoriserOperation(req, "contexte:moderation:lire", false)) {
+        return json({ erreur: "non autorisé" }, 401);
+      }
+      const { data, error } = await sb.rpc("moderation_contexte", { p_limite: 100 });
+      if (error) throw new Error(`moderation contexte: ${error.message}`);
+      return json({ ok: true, associations: data ?? [] });
+    }
+
+    if (req.method === "POST" && route === "contexte-moderer") {
+      if (!await autoriserOperation(req, "contexte:moderation:decider", false)) {
+        return json({ erreur: "non autorisé" }, 401);
+      }
+      const lien = String(body.lien_id ?? "");
+      if (!UUID.test(lien)) return json({ erreur: "association invalide" }, 400);
+      const decision = String(body.decision ?? "");
+      if (!["associe", "rejete", "retire"].includes(decision)) {
+        return json({ erreur: "décision inconnue" }, 400);
+      }
+      const motif = String(body.motif ?? "").trim().slice(0, 500);
+      if (motif.length < 5) return json({ erreur: "motif obligatoire" }, 400);
+
+      const { data, error } = await sb.rpc("moderer_mention", {
+        p_lien: lien,
+        p_decision: decision,
+        p_motif: motif,
+        p_acteur_hash: await acteurHash(req, cfg.sel_ip),
+      });
+      if (error) throw new Error(`moderer mention: ${error.message}`);
+      return json(data ?? { ok: false }, data?.ok === false ? 400 : 200);
     }
 
     if (route === "carte") {
