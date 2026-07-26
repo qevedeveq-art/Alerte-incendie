@@ -1189,18 +1189,18 @@ function apparenceFeu(f) {
   }
 
   if (citoyenVerifie) {
-    return { couleur: '#a78bfa', taille: [18, 23, 29][importance - 1],
+    return { couleur: '#a78bfa', taille: [20, 26, 33][importance - 1],
       libelle: 'Déclarations citoyennes vérifiées', importance, type: 'citoyen', niveau };
   }
   if (niveau === 'corrobore') {
-    return { couleur: '#ef3829', taille: [22, 29, 36][importance - 1],
+    return { couleur: '#ef3829', taille: [26, 34, 44][importance - 1],
       libelle: 'Feu corroboré par plusieurs familles', importance, type: 'corrobore', niveau };
   }
   if (niveau === 'probable') {
-    return { couleur: '#ff8c32', taille: [19, 25, 32][importance - 1],
+    return { couleur: '#ff8c32', taille: [22, 28, 36][importance - 1],
       libelle: 'Signal thermique fort ou répété', importance, type: 'probable', niveau };
   }
-  return { couleur: '#ffd43b', taille: [16, 21, 27][importance - 1],
+  return { couleur: '#ffd43b', taille: [18, 24, 30][importance - 1],
     libelle: 'Indice automatique isolé', importance, type: 'indice', niveau };
 }
 
@@ -1379,7 +1379,7 @@ function creerMarqueurFeu(f) {
   const r = Number(f.rayon_incertitude_m) || 2000;
   const groupe = L.featureGroup();
 
-  const cer = L.circle([f.lat, f.lon], {
+  L.circle([f.lat, f.lon], {
     radius: r,
     color: aspect.couleur,
     weight: 1.2,
@@ -1398,6 +1398,56 @@ function creerMarqueurFeu(f) {
     title: `${aspect.libelle}${f.commune ? ` · ${f.commune}` : ''}`,
     alt: aspect.libelle,
   }).addTo(groupe);
+
+  const idSec = String(f.id || f._cle || '').replace(/[^a-zA-Z0-9]/g, '_');
+  const contenuPopup = `
+    <div class="popup-actualites-feu">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span>${svgFlamme(aspect.couleur, 24, aspect.type)}</span>
+        <div>
+          <b style="font-size:14px;color:#fff;display:block">${html(f.commune || aspect.libelle)}</b>
+          <small style="color:${aspect.couleur}">${html(aspect.libelle)}</small>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">Dernier indice : ${relatif(f.dernier_at)} · ${Number(f.nb_observations) || 1} obs.</div>
+      <div class="liste-actu" id="actuPopup_${idSec}">
+        <small style="color:var(--txt3)">Recherche d’actualités locales…</small>
+      </div>
+      <button type="button" class="btn sm p" style="margin-top:8px;width:100%" data-voir-incident="${html(f._cle || cleFeu(f))}">Fiche complète & preuves</button>
+    </div>`;
+
+  marker.bindPopup(contenuPopup, { maxWidth: 300, className: 'popup-feu-glass' });
+
+  let actuChargee = false;
+  const chargerActus = () => {
+    if (actuChargee) return;
+    actuChargee = true;
+    fetch(`${API_BASE}/contexte?groupe=${encodeURIComponent(f.id || f._cle || '')}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const el = document.getElementById(`actuPopup_${idSec}`);
+        if (!el) return;
+        if (!data.mentions || data.mentions.length === 0) {
+          el.innerHTML = '<small style="color:var(--txt3)">Aucune actualité spécifique rattachée.</small>';
+          return;
+        }
+        el.innerHTML = '<b style="font-size:11px;color:var(--txt2)">Actualités & dépêches liées :</b>' +
+          data.mentions.slice(0, 2).map((m) => `
+            <div style="margin-top:4px;font-size:11px">
+              <span style="color:var(--txt3)">${html(m.source_nom)}</span><br>
+              <a href="${html(m.url)}" target="_blank" rel="noopener" style="color:#79c0ff;font-weight:600">${html(m.titre)}</a>
+            </div>`).join('');
+      })
+      .catch(() => {
+        const el = document.getElementById(`actuPopup_${idSec}`);
+        if (el) el.innerHTML = '<small style="color:var(--txt3)">Actualités indisponibles.</small>';
+      });
+  };
+
+  marker.on('mouseover', () => {
+    marker.openPopup();
+    chargerActus();
+  });
 
   marker.on('click', () => ouvrirIncident(f));
   return groupe;
@@ -1478,20 +1528,23 @@ function dessinerSignalements() {
   coucheSig.clearLayers();
   for (const s of signalements) {
     if (s.confirme) continue;
-    /* Seules les déclarations encore non vérifiées restent des points gris. */
     const c = '#8a8a8a';
-    L.circleMarker([s.lat, s.lon], {
-      radius: 6,
-      color: c, weight: 2, fillColor: c,
-      fillOpacity: .15,
-      dashArray: '3,3',
+    L.marker([s.lat, s.lon], {
+      icon: L.divIcon({
+        className: 'marqueur-feu',
+        html: svgFlamme(c, 20, 'indice'),
+        iconSize: [16, 20],
+        iconAnchor: [8, 20],
+      }),
+      title: `Signalement non vérifié · ${s.commune || 'commune inconnue'}`,
     }).addTo(coucheSig).bindPopup(
-      `<b style="color:${c}">Signalement non vérifié</b><br>
-       ${Number(s.nb_personnes) || 0} personne(s) — ${html((s.natures || []).join(', '))}<br>
-       ${html(s.commune || 'commune inconnue')}<br>
-       <span style="color:#a09892">${heure(s.dernier_at)} · ${relatif(s.dernier_at)}</span>
-       <br><span style="color:#a09892;font-size:12px">Une confirmation indépendante supplémentaire est nécessaire.</span>
-       ${jeton ? `<br><button class="btn sm" data-contester="${html(s.id)}" style="margin-top:8px">Signaler comme erroné</button>` : ''}`);
+      `<div class="popup-actualites-feu">
+         <h4 style="color:${c}">${svgFlamme(c, 18, 'indice')} Signalement citoyen non vérifié</h4>
+         <div class="meta">${html(s.commune || 'Localisation déclarée')} · ${relatif(s.dernier_at)}</div>
+         <p style="margin:4px 0 6px">${Number(s.nb_personnes) || 1} personne(s) — ${html((s.natures || []).join(', '))}</p>
+         <small style="color:var(--txt3);font-size:11px">Une confirmation indépendante supplémentaire est nécessaire.</small>
+         ${jeton ? `<br><button class="btn sm" data-contester="${html(s.id)}" style="margin-top:8px">Signaler comme erroné</button>` : ''}
+       </div>`, { maxWidth: 280, className: 'popup-feu-glass' });
   }
 }
 
@@ -2123,12 +2176,16 @@ $('#btnSupprimerCompte').onclick = async () => {
 
 /* suppression zone / appareil */
 document.addEventListener('click', async (ev) => {
+  const bv = ev.target.closest('[data-voir-incident]');
   const bz = ev.target.closest('[data-zone]');
   const bc = ev.target.closest('[data-canal]');
   const bs = ev.target.closest('[data-contester]');
   const be = ev.target.closest('[data-etape]');
   try {
-    if (be) {
+    if (bv) {
+      const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === bv.dataset.voirIncident);
+      if (f) ouvrirIncident(f);
+    } else if (be) {
       if (be.dataset.etape === 'zone') {
         $('#rechCommune').scrollIntoView({ behavior: 'smooth', block: 'center' });
         $('#rechCommune').focus();

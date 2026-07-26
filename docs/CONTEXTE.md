@@ -196,11 +196,7 @@ plus de 24 heures.
   confirmation officielle.
 - La carte utilise l'orthophotographie IGN/Géoplateforme avec superposition
   des noms de localités en français (couche IGN GEOGRAPHICALNAMES.NAMES) et
-  propose les plans OpenStreetMap France et sombre en repli. Les indices
-  automatiques sont des flammes jaunes/orange/rouges, les groupes citoyens
-  vérifiés des flammes violettes et seuls les signalements non vérifiés restent
-  des points gris discontinus. La taille 1–3 combine score, FRP et répétition ;
-  elle ne représente jamais une surface brûlée.
+  propose les plans OpenStreetMap France et sombre en repli. Tous les incidents et signalements sont représentés par des marqueurs flammes SVG haute visibilité aux tailles proportionnelles (18 à 44 px). Au survol de la souris (`mouseover`), une pop-up interactive affiche les actualités et dépêches locales rattachées à l'événement.
 - `corrobore` exige au moins deux familles indépendantes. Une seule famille,
   même répétée ou très puissante, reste `probable`; VIIRS, MODIS et les
   différents satellites polaires ne se corroborent pas entre eux.
