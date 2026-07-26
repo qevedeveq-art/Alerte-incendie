@@ -120,7 +120,11 @@ Deno.serve(async (req) => {
       .eq("actif", true);
 
     if (!sources || sources.length === 0) {
-      await sb.rpc("purger_contexte_local").catch(() => {});
+      try {
+        await sb.rpc("purger_contexte_local");
+      } catch {
+        // Ignorer si la fonction est indisponible
+      }
       await fermerRun(runId, true, {
         message: "mode shadow actif - aucune source externe activée",
       });
@@ -177,7 +181,11 @@ Deno.serve(async (req) => {
     }
 
     // 3. Exécuter la purge de rétention
-    await sb.rpc("purger_contexte_local").catch(() => {});
+    try {
+      await sb.rpc("purger_contexte_local");
+    } catch {
+      // Ignorer si la fonction est indisponible
+    }
 
     await fermerRun(runId, true, {
       collectes: nbCollectes,
