@@ -10,33 +10,32 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État Git publié : commit `689596d` sur `main` et `origin/main`.
+- État Git publié : commit fonctionnel `689596d`, mémoire `3f05437`, sur
+  `main` et `origin/main`.
 - Schéma du dépôt : migrations **01 à 29**.
-- Dernier état de production communiqué : migrations **01 à 22** appliquées ;
-  migrations **23 à 29** encore en attente.
+- État de production vérifié : migrations **01 à 29** appliquées et Edge
+  Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
   migration distincte `conformite_moderation_audit`.
 - Le run GitHub Actions `30206844189` du commit `689596d` a passé formatage,
   lint, typage, 28 tests unitaires et le rejeu Docker intégral des 29
-  migrations. Le job de production s'est ensuite arrêté avant toute mutation :
-  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et `SUPABASE_DB_PASSWORD`
-  sont tous absents des secrets Actions. La machine locale n'a pas non plus de
-  session Supabase authentifiée ; aucun contournement manuel n'est possible.
+  migrations. Après ajout des trois secrets Actions, la relance manuelle
+  « Déployer Supabase » a réussi. Contrôle externe effectué le 26 juillet :
+  `GET /functions/v1/api/carte?heures=24&limite=5` répond HTTP 200 et expose
+  les quatre familles `polaire`, `geostationnaire`, `citoyen`, `aerien`.
 - Le workflow PWA échoue séparément dans `actions/configure-pages` parce que
   GitHub Pages n'est pas encore activé et configuré avec « GitHub Actions »
   comme source de publication.
-- Après ajout des trois secrets, relancer manuellement le workflow
-  « Déployer Supabase » sur `main`; ses vérifications déjà passées précéderont
-  à nouveau `db push` et le déploiement des Edge Functions.
+- Les secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et
+  `SUPABASE_DB_PASSWORD` sont désormais configurés dans GitHub Actions.
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
   de déploiement signale explicitement lequel des trois secrets manque.
 - Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
   2.109.1 : les **29 migrations** se rejouent intégralement sur une base neuve.
   Le conteneur Postgres est sain, les 11 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
-  contacts RGPD valent `qevedeveq@gmail.com`. Cette validation locale ne change
-  pas l'état de production, toujours connu jusqu'à la migration 22.
+  contacts RGPD valent `qevedeveq@gmail.com`.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
