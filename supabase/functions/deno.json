@@ -12,6 +12,6 @@
   },
   "tasks": {
     "test": "deno test _tests/",
-    "verif": "deno lint && deno test _tests/"
+    "verif": "deno fmt --check && deno lint && deno check **/index.ts _tests/*.ts && deno test _tests/"
   }
 }

@@ -50,7 +50,7 @@ create or replace function public.corroborer_par_aeronefs()
 returns jsonb
 language plpgsql security definer set search_path = public, extensions
 as $$
-declare e record; v_nb integer; v_maj integer := 0; v_appareils text[];
+declare e record; v_nb integer; v_maj integer := 0;
 begin
   for e in
     select * from public.evenements
@@ -58,11 +58,17 @@ begin
        and derniere_maj > now() - interval '6 hours'
        and not ('ADSB' = any(sources))
   loop
-    select count(*), array_agg(distinct coalesce(o.indicatif, o.icao24))
-      into v_nb, v_appareils
-      from public.observations_aero o
-     where o.vu_at > now() - interval '30 minutes'
-       and st_dwithin(o.geom, e.centre, 4000);
+    -- On exige deux positions du MEME appareil. Deux appareils en simple
+    -- transit ne doivent pas satisfaire accidentellement le seuil.
+    select coalesce(max(x.nb), 0)::integer
+      into v_nb
+      from (
+        select count(*) as nb
+          from public.observations_aero o
+         where o.vu_at > now() - interval '30 minutes'
+           and st_dwithin(o.geom, e.centre, 4000)
+         group by o.icao24
+      ) x;
 
     if v_nb >= 2 then
       update public.evenements

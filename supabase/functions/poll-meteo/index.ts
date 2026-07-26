@@ -24,21 +24,20 @@
 //  l'API est limitee en volume.
 // =====================================================================
 import {
+  autoriserOperation,
   CORS,
-  estInterne,
   fermerRun,
   fetchRetry,
   json,
   ouvrirRun,
   sb,
-  verifierAdmin,
 } from "../_shared/mod.ts";
 
 const API = "https://api.open-meteo.com/v1/forecast";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "poll-meteo")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-meteo");
   const stats: Record<string, any> = { zones: {} };
@@ -58,9 +57,14 @@ Deno.serve(async (req) => {
           `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,` +
           `wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=UTC`;
 
-        const r = await fetchRetry(url, {
-          headers: { "User-Agent": "alerte-incendie/1.0 (surveillance communale)" },
-        }, 3, 15_000);
+        const r = await fetchRetry(
+          url,
+          {
+            headers: { "User-Agent": "alerte-incendie/1.0 (surveillance communale)" },
+          },
+          3,
+          15_000,
+        );
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
         const j = await r.json();

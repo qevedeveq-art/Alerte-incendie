@@ -21,15 +21,14 @@
 //     where kind = 'probe-mtg' order by started_at desc limit 6;
 // =====================================================================
 import {
+  autoriserOperation,
   config,
   CORS,
-  estInterne,
   fermerRun,
   fetchRetry,
   json,
   ouvrirRun,
   sb,
-  verifierAdmin,
 } from "../_shared/mod.ts";
 
 const BASE = "https://datalsasaf.lsasvcs.ipma.pt/PRODUCTS/MTG/MTFRPPixel/NATIVE";
@@ -43,7 +42,7 @@ function entrees(html: string): string[] {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "probe-mtg")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("probe-mtg");
   const stats: Record<string, any> = {};
@@ -80,9 +79,14 @@ Deno.serve(async (req) => {
     // Fraicheur intra-journaliere : combien de creneaux pour ce jour ?
     let creneaux = 0, dernierCreneau: string | null = null;
     try {
-      const rj = await fetchRetry(`${BASE}/${AAAA}/${MM}/${dernierJour}/`, {
-        headers: entetes,
-      }, 2, 20_000);
+      const rj = await fetchRetry(
+        `${BASE}/${AAAA}/${MM}/${dernierJour}/`,
+        {
+          headers: entetes,
+        },
+        2,
+        20_000,
+      );
       if (rj.ok) {
         const fichiers = entrees(await rj.text()).filter((x) => /\d{12}/.test(x));
         creneaux = fichiers.length;

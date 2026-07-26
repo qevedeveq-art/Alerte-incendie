@@ -23,29 +23,41 @@
 //  vite, les fichiers amont sont régénérés environ une fois par heure.
 // =====================================================================
 import {
+  autoriserOperation,
   CORS,
-  estInterne,
+  empriseFranceEtZones,
   fermerRun,
   fetchRetry,
   json,
   ouvrirRun,
   sb,
-  verifierAdmin,
 } from "../_shared/mod.ts";
 import { horodatage, nombreOuNull, normaliserConfiance, parserCsv } from "./parsers.ts";
 
 const BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire";
 
 const FLUX = [
-  { source: "VIIRS_SNPP",   res: 375,  url: `${BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Europe_24h.csv` },
-  { source: "VIIRS_NOAA20", res: 375,  url: `${BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Europe_24h.csv` },
-  { source: "VIIRS_NOAA21", res: 375,  url: `${BASE}/noaa-21-viirs-c2/csv/J2_VIIRS_C2_Europe_24h.csv` },
-  { source: "MODIS",        res: 1000, url: `${BASE}/c6.1/csv/MODIS_C6_1_Europe_24h.csv` },
+  {
+    source: "VIIRS_SNPP",
+    res: 375,
+    url: `${BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Europe_24h.csv`,
+  },
+  {
+    source: "VIIRS_NOAA20",
+    res: 375,
+    url: `${BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Europe_24h.csv`,
+  },
+  {
+    source: "VIIRS_NOAA21",
+    res: 375,
+    url: `${BASE}/noaa-21-viirs-c2/csv/J2_VIIRS_C2_Europe_24h.csv`,
+  },
+  { source: "MODIS", res: 1000, url: `${BASE}/c6.1/csv/MODIS_C6_1_Europe_24h.csv` },
 ];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "poll-firms")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-firms");
   const stats: Record<string, any> = { flux: {} };
@@ -54,10 +66,8 @@ Deno.serve(async (req) => {
     // 1. Emprise à surveiller
     const { data: bbox, error: eb } = await sb.rpc("bbox_surveillance", { p_marge_deg: 0.05 });
     if (eb) throw new Error(`bbox: ${eb.message}`);
-    if (!bbox) {
-      await fermerRun(runId, true, { note: "aucune zone active" });
-      return json({ ok: true, note: "aucune zone active" });
-    }
+    const emprise = empriseFranceEtZones(bbox);
+    stats.emprise = emprise;
 
     // 2. Téléchargement + filtrage des 4 flux, en parallèle
     const lots = await Promise.all(FLUX.map(async (f) => {
@@ -65,9 +75,14 @@ Deno.serve(async (req) => {
         // Reessais : les serveurs NASA rendent regulierement des 5xx
         // passagers, et un seul essai transforme un hoquet de trois
         // secondes en creneau de collecte perdu.
-        const r = await fetchRetry(f.url, {
-          headers: { "User-Agent": "alerte-incendie/1.0 (surveillance communale)" },
-        }, 3, 30_000);
+        const r = await fetchRetry(
+          f.url,
+          {
+            headers: { "User-Agent": "alerte-incendie/1.0 (surveillance communale)" },
+          },
+          3,
+          30_000,
+        );
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const lignes = parserCsv(await r.text());
 
@@ -75,12 +90,16 @@ Deno.serve(async (req) => {
         for (const l of lignes) {
           const lat = Number(l.latitude), lon = Number(l.longitude);
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-          if (lat < bbox.sud || lat > bbox.nord || lon < bbox.ouest || lon > bbox.est) continue;
+          if (
+            lat < emprise.sud || lat > emprise.nord ||
+            lon < emprise.ouest || lon > emprise.est
+          ) continue;
 
           retenues.push({
             source: f.source,
             acq_ts: horodatage(l.acq_date, l.acq_time),
-            lat, lon,
+            lat,
+            lon,
             geom: `SRID=4326;POINT(${lon} ${lat})`,
             confiance: (l.confidence ?? "").trim(),
             confiance_num: normaliserConfiance(l.confidence),
@@ -90,7 +109,9 @@ Deno.serve(async (req) => {
             brillance: nombreOuNull(l.bright_ti4 ?? l.brightness),
             daynight: (l.daynight ?? "").trim().slice(0, 1) || null,
             resolution_m: f.res,
-            fingerprint: `${f.source}|${lat.toFixed(5)}|${lon.toFixed(5)}|${l.acq_date}|${l.acq_time}`,
+            fingerprint: `${f.source}|${lat.toFixed(5)}|${
+              lon.toFixed(5)
+            }|${l.acq_date}|${l.acq_time}`,
           });
         }
         stats.flux[f.source] = { lignes: lignes.length, retenues: retenues.length };

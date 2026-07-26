@@ -10,7 +10,9 @@ appliquent leurs propres contrôles.
 | Surface | Contrôle |
 |---|---|
 | `api` | jeton d'abonné aléatoire de 24 octets (`x-token`), portée limitée à ses propres zones et canaux |
-| `poll-firms`, `dispatch`, `load-communes` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
+| `signalement` | lecture publique limitée par IP ; écriture par `x-token`, canal actif vérifié et quotas personne/réseau |
+| collecteurs, sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
+| `load-communes` | `x-admin-key`, ou service role pour le chargement à la demande depuis `api` |
 | Tables `public.*` | RLS active, zéro policy, `revoke all` sur `anon`/`authenticated` |
 | Fonctions `public.*` | `revoke all from public, anon, authenticated` — `service_role` uniquement |
 | Secrets | table `config`, jamais dans le dépôt (`.gitignore` couvre `.env` et `vapid*.json`) |
@@ -52,9 +54,14 @@ comportement voulu, l'absence de policy **est** la protection.
   zones et canaux de cet abonné. Il ne donne accès à aucune donnée d'un autre
   abonné, ni à l'administration.
 - La **clé d'administration** permet de déclencher la collecte et l'envoi
-  d'alertes. La faire tourner via `update public.config set v = … where k = 'admin_key'`.
+  d'alertes. Elle est acceptée uniquement dans l'en-tête `x-admin-key`, jamais
+  dans l'URL. La faire tourner via
+  `update public.config set v = … where k = 'admin_key'`.
 - Le **jeton Telegram** permet d'écrire à tous les abonnés du bot. Le révoquer
   auprès de @BotFather en cas de fuite.
+- Le webhook Telegram exige le secret généré dans
+  `config.telegram_webhook_secret`. Il faut le transmettre à `setWebhook`
+  après la migration 28 ; une requête sans cet en-tête est refusée.
 
 ## Anti-abus — ouverture au public
 
@@ -75,8 +82,9 @@ Un canal e-mail est créé avec `verifie = false`. Un code à six chiffres, vala
 Cinq essais de code maximum, puis il faut en redemander un.
 
 Push et Telegram sont vérifiés par construction : l'abonnement push est produit
-par l'appareil lui-même, et le `chat_id` Telegram provient d'un `/start` envoyé
-par l'utilisateur depuis son propre compte. Aucun tiers ne peut être ciblé.
+par l'appareil lui-même et son endpoint HTTPS est validé ; le `chat_id` Telegram
+provient exclusivement d'un `/start` envoyé depuis le compte de l'utilisateur.
+La route générique `canal` refuse donc le type `telegram`.
 
 ### Quotas
 
@@ -91,6 +99,15 @@ par l'utilisateur depuis son propre compte. Aucun tiers ne peut être ciblé.
 | `test` | abonné | 5 / heure |
 | `reglages` | abonné | 30 / heure |
 | `etat` | abonné | 120 / heure |
+| `informations` | IP | 120 / heure |
+| `carte` (indices corrélés) | IP | 120 / minute |
+| `compte-exporter` | abonné | 3 / 24 h |
+| `compte-supprimer` | abonné | 3 / 24 h |
+| carte des signalements | IP | 120 / minute |
+| création de signalement | abonné | 3 / heure |
+| création de signalement | IP/réseau | 6 / heure |
+| contestation | abonné | 10 / heure |
+| contestation | IP/réseau | 20 / heure |
 
 Le quota par **adresse visée** est le plus important : il empêche d'utiliser
 plusieurs comptes pour harceler une même personne.
@@ -107,26 +124,44 @@ plusieurs comptes pour harceler une même personne.
   n'importe qui pouvait changer la sensibilité de la zone d'un autre.
 - Longueurs bornées sur toutes les entrées texte, jeton contrôlé en longueur
   avant requête.
+- Les libellés et erreurs renvoyés par le serveur sont échappés avant toute
+  insertion dans `innerHTML` dans la PWA.
+- La carte corrélée n'expose que des pixels satellites, des groupes citoyens
+  déjà confirmés et des mentions de corroboration. Elle n'expose ni identité,
+  ni canal, ni IP, ni trajectoire aérienne brute. Les requêtes sont bornées à
+  72 h, 500 groupes et un quota par IP.
+- Un canal Telegram ne peut plus être créé en fournissant directement un
+  `chat_id`; seul le webhook Telegram peut le lier.
+- Les abonnements Web Push refusent les endpoints non HTTPS, les hôtes locaux,
+  les adresses IP littérales et les clés cryptographiques mal formées.
 - `purger()` supprime les abonnés sans canal ni zone inactifs depuis 60 jours :
   minimisation des données.
+- L'inscription exige un consentement explicite et stocke la version acceptée
+  et sa date.
+- L'abonné peut exporter ses données ou supprimer son compte. La suppression
+  recalcule les preuves citoyennes et les contestations afin qu'une action
+  effacée ne continue ni à produire ni à rejeter une alerte. Les clés de quota
+  contenant son identifiant sont également retirées.
+- Les appels humains par `admin_key` sont journalisés avec une IP hachée et un
+  user-agent pendant 180 jours. Un échec d'écriture du journal ne bloque pas une
+  opération de sécurité urgente, mais est consigné dans les logs.
 
 ## Ce qui reste à faire avant une ouverture large
 
-1. **Mentions légales et politique de confidentialité** — le service traite des
-   adresses e-mail et des données de localisation approximative (commune
-   surveillée). RGPD applicable : finalité, durée de conservation, droit
-   d'effacement, responsable de traitement identifié.
-2. **Avertissement affiché et accepté** — la latence de 2 à 3 h et le fait que
-   le service ne remplace ni FR-Alert ni le 18/112 doivent être visibles avant
-   toute inscription, pas seulement en bas de page.
-3. **Responsabilité** — faire reposer une décision d'évacuation sur ce service
+1. **Identité et validation juridique** — la politique de confidentialité et
+   les droits techniques existent et le contact public
+   `qevedeveq@gmail.com` est livré par la migration 28. L'identité légale
+   complète de l'exploitant et le texte doivent encore être validés pour le
+   contexte réel de diffusion.
+2. **Responsabilité** — faire reposer une décision d'évacuation sur ce service
    serait dangereux. Le cadre juridique d'un service d'alerte non officiel
    mérite un avis professionnel avant diffusion large. Ceci n'est pas un conseil
    juridique.
-4. **Expéditeur e-mail dédié** — un domaine avec SPF, DKIM et DMARC, et un
+3. **Expéditeur e-mail dédié** — un domaine avec SPF, DKIM et DMARC, et un
    fournisseur transactionnel, plutôt qu'un Gmail personnel qui plafonne à
    ~500 envois par jour.
-5. **Journal d'audit** des accès administrateur et rotation de `admin_key`.
+4. **Rotation de `admin_key`** — définir une cadence opératoire et révoquer
+   immédiatement la valeur en cas de fuite.
 
 ## Signalements citoyens — surface d'abus spécifique
 
@@ -134,11 +169,16 @@ Ouvrir le signalement à tous crée un risque différent du spam : **quelques fa
 positifs suffisent à ce que les gens cessent de croire aux vraies alertes.** Sur
 un service de sécurité, la perte de confiance est plus grave qu'une nuisance.
 
+La création et la contestation exigent un compte actif possédant au moins un
+canal actif et vérifié. Une inscription avec un simple jeton local ne suffit
+donc pas. Sont acceptés : Push créé par le navigateur, Telegram lié par son
+webhook, ou e-mail après validation du code de double opt-in.
+
 ### Ce qui est en place
 
 | Garde-fou | Effet |
 |---|---|
-| Jeton d'abonné requis | rend les quotas et la détection d'auto-confirmation possibles ; reste gratuit et instantané |
+| Compte et canal vérifié requis | rend le déclarant joignable et bloque les comptes créés sans aucune vérification |
 | Index unique `(abonne_id, groupe_id)` | un abonné ne compte qu'une fois par départ de feu |
 | 2 personnes **et** 2 réseaux, ou 3 personnes | bloque l'auto-confirmation à deux appareils sur le même réseau |
 | 3 signalements/h par personne, 6/h par réseau | dissuade la fabrication de comptes en série |
@@ -146,6 +186,9 @@ un service de sécurité, la perte de confiance est plus grave qu'une nuisance.
 | Sévérité plafonnée à `alerte` | un signalement, même confirmé, ne réveille pas pendant les heures silencieuses |
 | Étiquetage explicite | tout message dit « signalement de témoins, non vérifié » |
 | IP hachée avec un sel | jamais stockée en clair — minimisation RGPD |
+| Contestation collective | un tiers peut signaler une erreur ; rejet au même quorum que la confirmation |
+| Auto-contestation interdite | l'auteur d'un groupe ne peut pas contribuer à son rejet |
+| Fiabilité agrégée | l'export restitue confirmés, corroborés et rejetés sans profilage caché |
 
 ### Ce qui reste ouvert
 
@@ -153,12 +196,9 @@ un service de sécurité, la perte de confiance est plus grave qu'une nuisance.
   qui rend le signalement utilisable au moment où ça compte. Un attaquant
   déterminé peut créer trois comptes depuis trois réseaux. Les quotas ralentissent
   sans empêcher.
-- **Pas de modération.** Aucun mécanisme ne permet à un tiers de rejeter un
-  signalement manifestement faux. À prévoir si l'usage s'élargit : un bouton
-  « ce signalement est erroné » avec le même seuil de confirmation.
-- **Pas d'historique de fiabilité.** Un compte qui a déjà produit des
-  signalements infirmés par le satellite devrait peser moins. Piste naturelle
-  d'amélioration.
+- **Réputation non pondérée.** L'historique de fiabilité est calculé et
+  exportable, mais ne modifie volontairement pas encore le vote : une règle de
+  pondération opaque pourrait défavoriser un témoin légitime après une erreur.
 
 ### Recommandation avant une ouverture large
 

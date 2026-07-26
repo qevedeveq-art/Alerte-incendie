@@ -30,6 +30,10 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Formatage
+        working-directory: supabase/functions
+        run: deno fmt --check
+
       - name: Style et règles de lint
         working-directory: supabase/functions
         run: deno lint
@@ -50,6 +54,7 @@ jobs:
         with:
           version: latest
       - name: Rejouer toutes les migrations sur une base neuve
+        timeout-minutes: 15
         run: supabase db start
 
   deployer:
@@ -64,6 +69,15 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+      - name: Vérifier les secrets de déploiement
+        shell: bash
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::SUPABASE_ACCESS_TOKEN absent"; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo "::error::SUPABASE_PROJECT_REF absent"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::SUPABASE_DB_PASSWORD absent"; exit 1; }
       - name: Lier le projet
         run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:

@@ -22,4 +22,3 @@ export function assertStringIncludes(reel: string, morceau: string, msg?: string
     throw new Error(msg ?? `« ${morceau} » absent de :\n${reel}`);
   }
 }
-

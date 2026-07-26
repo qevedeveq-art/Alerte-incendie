@@ -50,6 +50,7 @@ header .sous{font-size:11.5px;color:var(--txt3);margin-top:1px}
 
 main{max-width:760px;margin:0 auto;padding:16px 16px 40px}
 section{margin-bottom:20px}
+.anonyme [data-prive]{display:none!important}
 h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);
   margin:0 0 10px 2px;font-weight:600}
 .carte{background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
@@ -83,6 +84,16 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 
 /* ---------- carte Leaflet ---------- */
 #map{height:330px;background:var(--fond3)}
+.filtres-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  padding:12px;border-top:1px solid var(--bord);background:rgba(18,16,14,.45)}
+.filtre-source{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;margin:0;
+  border:1px solid var(--bord);border-radius:10px;background:var(--fond3);cursor:pointer}
+.filtre-source input{width:auto;margin:2px 0 0;accent-color:var(--rouge)}
+.filtre-source b{display:block;color:var(--txt);font-size:12.5px}
+.filtre-source small{display:block;color:var(--txt3);font-size:11px;line-height:1.35;margin-top:2px}
+.source-note{grid-column:1/-1;font-size:11.5px;line-height:1.5;color:var(--txt3);padding:3px 2px}
+.source-note a{font-weight:600}
+@media(max-width:560px){.filtres-sources{grid-template-columns:1fr}}
 .leaflet-container{background:#1c1917;font:inherit}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#252220;color:var(--txt);
   box-shadow:0 8px 30px rgba(0,0,0,.5)}
@@ -171,11 +182,19 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
       <input id="nom" placeholder="Quentin" autocomplete="given-name">
       <button class="btn p pleine" style="margin-top:14px" id="btnCommencer">Créer mon espace</button>
       <p class="note" style="margin:16px 0 0">
-        <b>À savoir.</b> La détection satellite a une latence de 2 à 3 h et une résolution
-        de 375 m : elle repère de façon fiable un feu de végétation d’environ 1 ha ou plus,
-        mais pas un départ de feu de quelques minutes ni un incendie de bâtiment.
+        <b>À savoir.</b> Meteosat apporte une première détection en environ 25 minutes
+        avec une résolution de 3 km ; VIIRS/MODIS confirment généralement en 2 à 3 h,
+        avec une résolution de 375 m à 1 km. Un feu petit, très récent ou masqué par
+        les nuages peut rester invisible.
         Ce service complète <b>FR-Alert</b> et ne remplace jamais le <b>18</b> ou le <b>112</b>.
       </p>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px">
+        <input type="checkbox" id="consentement" style="width:auto;margin-top:2px">
+        <span>J’ai lu et j’accepte les
+          <a href="./confidentialite.html" target="_blank" rel="noopener">informations de confidentialité,
+          les durées de conservation et les limites du service</a>.
+        </span>
+      </label>
     </div>
   </section>
 
@@ -183,21 +202,52 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
   <div id="vueApp" hidden>
 
     <section>
-      <h2>Zones surveillées</h2>
+      <h2>Carte des feux et indices récents</h2>
       <div class="carte"><div id="map"></div>
-        <div class="pad" style="border-top:1px solid var(--bord)">
+        <div class="filtres-sources" aria-label="Filtres des sources de la carte">
+          <label class="filtre-source">
+            <input type="checkbox" data-famille="polaire" checked>
+            <span><b>VIIRS &amp; MODIS</b><small>Satellites polaires · 375 m à 1 km · latence habituelle 2–3 h</small></span>
+          </label>
+          <label class="filtre-source">
+            <input type="checkbox" data-famille="geostationnaire" checked>
+            <span><b>Meteosat</b><small>Géostationnaire · environ 3 km · mise à jour proche de 25 min</small></span>
+          </label>
+          <label class="filtre-source">
+            <input type="checkbox" data-famille="citoyen" checked>
+            <span><b>Témoins vérifiés</b><small>Au moins deux comptes concordants · information non officielle</small></span>
+          </label>
+          <label class="filtre-source">
+            <input type="checkbox" data-famille="aerien" checked>
+            <span><b>Corroboration aérienne</b><small>Avion spécialisé proche · preuve complémentaire, jamais suffisante seule</small></span>
+          </label>
+          <div class="source-note">
+            Les observations à moins de 2 km et 12 h sont regroupées. VIIRS et MODIS
+            restent une seule famille de preuve afin de ne pas gonfler artificiellement
+            la confiance. <span id="etatCarteSources">Chargement des indices récents…</span><br>
+            <a href="https://feuxdeforet.fr/cartes/feux/" target="_blank" rel="noopener noreferrer">
+              Consulter aussi la carte FeuxDeForet.fr
+            </a>
+            · données non fusionnées tant qu’un accord de réutilisation et un flux partenaire
+            documenté ne sont pas obtenus.
+          </div>
+        </div>
+        <div class="pad" data-prive style="border-top:1px solid var(--bord)">
           <button class="btn pleine" id="btnSignaler">Signaler un départ de feu</button>
           <p style="margin:10px 0 0;font-size:12px;color:var(--txt3);line-height:1.55">
-            Un signalement est confirmé dès que deux personnes distinctes pointent le même
-            endroit à moins de 50 m. Les abonnés du secteur sont alors prévenus, avec la
-            mention explicite qu’il s’agit d’un signalement non vérifié.
+            Un compte avec au moins un canal actif et vérifié est obligatoire
+            pour créer ou contester un signalement.
+            Un signalement est confirmé quand deux personnes sur deux réseaux distincts,
+            ou trois personnes quel que soit le réseau, pointent le même endroit à moins
+            de 50 m. Les abonnés du secteur sont alors prévenus, avec la mention explicite
+            qu’il s’agit d’un signalement non vérifié.
             <b>Cela ne prévient pas les secours : appelez le 18 ou le 112.</b>
           </p>
         </div>
-        <div class="stats" id="stats"></div>
+        <div class="stats" id="stats" data-prive></div>
       </div>
-      <div class="carte" id="listeZones"></div>
-      <div class="carte pad">
+      <div class="carte" id="listeZones" data-prive></div>
+      <div class="carte pad" data-prive>
         <label for="rechCommune">Ajouter une commune</label>
         <div class="rech">
           <input id="rechCommune" placeholder="Nom de commune, ex. Cornebarrieu" autocomplete="off">
@@ -226,7 +276,7 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
       </div>
     </section>
 
-    <section>
+    <section data-prive>
       <h2>Canaux d’alerte</h2>
       <div class="carte" id="listeCanaux"></div>
       <div class="carte pad">
@@ -244,7 +294,7 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
       </p>
     </section>
 
-    <section>
+    <section data-prive>
       <h2>Réglages</h2>
       <div class="carte pad">
         <div class="grille2">
@@ -286,9 +336,26 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
       </div>
     </section>
 
-    <section>
+    <section data-prive>
       <h2>Historique — 30 derniers jours</h2>
       <div class="carte" id="listeEvts"></div>
+    </section>
+
+    <section data-prive>
+      <h2>Mes données</h2>
+      <div class="carte pad">
+        <p class="note" style="margin-top:0">
+          Vous pouvez télécharger les données rattachées à ce jeton ou supprimer
+          définitivement le compte et ses informations personnelles.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="btnExporter">Télécharger mes données</button>
+          <button class="btn g" id="btnSupprimerCompte">Supprimer mon compte</button>
+          <a class="btn g" href="./confidentialite.html" target="_blank" rel="noopener">
+            Confidentialité
+          </a>
+        </div>
+      </div>
     </section>
 
     <section>
@@ -329,10 +396,14 @@ const CLE_JETON = 'alerte-incendie:jeton';
 
 let jeton = localStorage.getItem(CLE_JETON);
 let etat = null, carte = null, coucheZones = null, coucheDet = null, coucheEvts = null;
-let coucheSig = null, signalements = [], modeSignalement = false;
+let coucheFeux = null, coucheSig = null, signalements = [], feuxCarte = [], modeSignalement = false;
 
 /* ---------- utilitaires ---------- */
 const $ = (s) => document.querySelector(s);
+const html = (v) => String(v ?? '').replace(
+  /[&<>"']/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+);
 
 function toast(msg, err = false) {
   const t = $('#toast');
@@ -363,9 +434,9 @@ function relatif(iso) {
 }
 
 /* ---------- carte ---------- */
-function initCarte(centre) {
+function initCarte(centre = [46.6, 2.5], zoom = 5) {
   if (carte) return;
-  carte = L.map('map', { zoomControl: true, attributionControl: true }).setView(centre, 11);
+  carte = L.map('map', { zoomControl: true, attributionControl: true }).setView(centre, zoom);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 18, subdomains: 'abcd',
     attribution: '&copy; OpenStreetMap, &copy; CARTO — points chauds NASA FIRMS',
@@ -373,6 +444,7 @@ function initCarte(centre) {
   coucheZones = L.layerGroup().addTo(carte);
   coucheDet = L.layerGroup().addTo(carte);
   coucheEvts = L.layerGroup().addTo(carte);
+  coucheFeux = L.layerGroup().addTo(carte);
   coucheSig = L.layerGroup().addTo(carte);
 
   carte.on('click', (e) => {
@@ -398,10 +470,53 @@ async function chargerSignalements() {
   } catch { signalements = []; }
 }
 
+async function chargerFeuxCarte() {
+  try {
+    const j = await appel('carte?heures=24&limite=500');
+    feuxCarte = Array.isArray(j.feux) ? j.feux : [];
+    const el = $('#etatCarteSources');
+    if (el) el.textContent = `${feuxCarte.length} indice(s) corrélé(s) sur les dernières 24 h.`;
+  } catch {
+    feuxCarte = [];
+    const el = $('#etatCarteSources');
+    if (el) el.textContent = 'Les indices nationaux sont momentanément indisponibles.';
+  }
+}
+
+function dessinerFeuxCarte() {
+  if (!coucheFeux) return;
+  coucheFeux.clearLayers();
+  const actives = new Set(
+    [...document.querySelectorAll('[data-famille]:checked')].map((e) => e.dataset.famille),
+  );
+  for (const f of feuxCarte) {
+    if (!(f.familles || []).some((source) => actives.has(source))) continue;
+    const c = f.niveau === 'corrobore' ? '#ff3b30'
+      : f.niveau === 'probable' ? '#e9873a'
+      : f.niveau === 'temoins' ? '#d9a441' : '#8a7f78';
+    const sources = (f.sources || []).map(html).join(', ');
+    const precision = f.resolution_m
+      ? ` · précision source ~${Number(f.resolution_m).toLocaleString('fr-FR')} m`
+      : '';
+    L.circleMarker([f.lat, f.lon], {
+      radius: f.niveau === 'corrobore' ? 11 : f.niveau === 'probable' ? 8 : 6,
+      color: c, weight: 2, fillColor: c, fillOpacity: .38,
+    }).addTo(coucheFeux).bindPopup(
+      `<b style="color:${c}">${html(String(f.niveau || 'à confirmer').replaceAll('_', ' '))}</b>` +
+      `${f.commune ? ` · ${html(f.commune)}` : ''}<br>` +
+      `${Number(f.nb_observations) || 0} observation(s) · score indicatif ${Number(f.score) || 0}/99<br>` +
+      `${sources}${precision}<br>` +
+      `<span style="color:#a09892">${heure(f.dernier_at)} · ${relatif(f.dernier_at)}</span><br>` +
+      `<span style="font-size:12px">${html(f.explication || '')}</span>`,
+    );
+  }
+}
+
 function dessinerSignalements() {
   if (!coucheSig) return;
   coucheSig.clearLayers();
   for (const s of signalements) {
+    if (s.confirme) continue;
     /* gris tant que non confirmé, orange dès que deux personnes concordent */
     const c = s.confirme ? '#e9873a' : '#8a8a8a';
     L.circleMarker([s.lat, s.lon], {
@@ -411,10 +526,11 @@ function dessinerSignalements() {
       dashArray: s.confirme ? null : '3,3',
     }).addTo(coucheSig).bindPopup(
       `<b style="color:${c}">${s.confirme ? 'Signalement confirmé' : 'Signalement non confirmé'}</b><br>
-       ${s.nb_personnes} personne(s) — ${s.natures.join(', ')}<br>
-       ${s.commune || 'commune inconnue'}<br>
+       ${Number(s.nb_personnes) || 0} personne(s) — ${html((s.natures || []).join(', '))}<br>
+       ${html(s.commune || 'commune inconnue')}<br>
        <span style="color:#a09892">${heure(s.dernier_at)} · ${relatif(s.dernier_at)}</span>
-       ${s.confirme ? '' : '<br><span style="color:#a09892;font-size:12px">Il faut une deuxième personne pour confirmer.</span>'}`);
+       ${s.confirme ? '' : '<br><span style="color:#a09892;font-size:12px">Une confirmation indépendante supplémentaire est nécessaire.</span>'}
+       ${jeton ? `<br><button class="btn sm" data-contester="${html(s.id)}" style="margin-top:8px">Signaler comme erroné</button>` : ''}`);
   }
 }
 
@@ -447,6 +563,13 @@ async function signaler(lat, lon) {
 }
 
 function basculerModeSignalement(actif) {
+  const compteVerifie = etat?.canaux?.some((c) => c.actif && c.verifie);
+  if (!compteVerifie) {
+    return toast(
+      'Vérifiez d’abord une notification Push, Telegram ou une adresse e-mail.',
+      true,
+    );
+  }
   modeSignalement = actif !== undefined ? actif : !modeSignalement;
   const b = $('#btnSignaler');
   const m = document.getElementById('map');
@@ -457,8 +580,7 @@ function basculerModeSignalement(actif) {
 }
 
 function dessinerCarte() {
-  if (!etat.zones.length) return;
-  initCarte(etat.zones[0].centre);
+  initCarte(etat.zones[0]?.centre, etat.zones.length ? 11 : 5);
   [coucheZones, coucheDet, coucheEvts].forEach((c) => c.clearLayers());
 
   const bornes = [];
@@ -466,35 +588,12 @@ function dessinerCarte() {
     const l = L.geoJSON(z.geojson, {
       style: { color: '#e0453c', weight: 1.6, opacity: .75, fillColor: '#e0453c', fillOpacity: .07 },
     }).addTo(coucheZones);
-    l.bindPopup(`<b>${z.nom}</b><br>${z.surface_km2} km² surveillés<br>
+    l.bindPopup(`<b>${html(z.nom)}</b><br>${Number(z.surface_km2) || 0} km² surveillés<br>
       <span style="color:#a09892">${z.limitrophes.length} commune(s) limitrophe(s)${z.buffer_m ? ` + ${z.buffer_m / 1000} km de marge` : ''}</span>`);
     bornes.push(l.getBounds());
   }
 
-  /* points chauds des 72 dernières heures */
-  for (const d of etat.detections) {
-    const age = (Date.now() - new Date(d.acq_ts)) / 3600000;
-    const c = d.permanente ? '#5b6670' : age < 12 ? '#ff5a4f' : age < 36 ? '#e9873a' : '#8a7f78';
-    L.circleMarker([d.lat, d.lon], {
-      radius: d.permanente ? 3.5 : 5.5, color: c, weight: 1.4,
-      fillColor: c, fillOpacity: d.permanente ? .25 : .6,
-    }).addTo(coucheDet).bindPopup(
-      `<b>${d.permanente ? 'Source thermique permanente' : 'Point chaud'}</b><br>
-       ${d.source} — ${heure(d.acq_ts)}<br>
-       Confiance ${d.confiance || 'n/d'}${d.frp ? ` — ${(+d.frp).toFixed(1)} MW` : ''}`);
-  }
-
-  /* évènements actifs */
-  for (const e of etat.evenements.filter((e) => e.statut === 'actif')) {
-    const c = e.severite === 'critique' ? '#ff3b30' : e.severite === 'alerte' ? '#e9873a' : '#7c8a94';
-    L.circleMarker([e.lat, e.lon], {
-      radius: 12, color: c, weight: 2.5, fillColor: c, fillOpacity: .18,
-    }).addTo(coucheEvts).bindPopup(
-      `<b style="color:${c}">${e.severite.toUpperCase()}</b> — ${e.commune || '—'}<br>
-       ${e.nb_detections} point(s) chaud(s)${e.frp_max ? `, max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
-       <span style="color:#a09892">${heure(e.debut_ts)} · ${relatif(e.debut_ts)}</span>`);
-  }
-
+  dessinerFeuxCarte();
   dessinerSignalements();
 
   if (bornes.length) carte.fitBounds(bornes.reduce((a, b) => a.extend(b)), { padding: [24, 24] });
@@ -514,7 +613,7 @@ function rendre() {
   const actifs = etat.evenements.filter((e) => e.statut === 'actif');
   $('#stats').innerHTML = [
     [etat.zones.reduce((a, z) => a + (+z.surface_km2), 0).toFixed(0), 'km² suivis'],
-    [etat.detections.filter((d) => !d.permanente).length, 'pts chauds 72 h'],
+    [feuxCarte.length, 'indices nationaux 24 h'],
     [actifs.length, 'évèn. actifs'],
     [etat.canaux.filter((c) => c.actif).length, 'canaux'],
   ].map(([v, l]) => `<div><b>${v}</b><small>${l}</small></div>`).join('');
@@ -524,31 +623,36 @@ function rendre() {
     ? etat.zones.map((z) => `
       <div class="rangee">
         <div class="cr">
-          <b>${z.nom}</b>
-          <small>${z.surface_km2} km² · sensibilité ${z.sensibilite}${z.buffer_m ? ` · marge ${z.buffer_m / 1000} km` : ''}</small>
-          <div class="chips">${z.limitrophes.map((n) => `<span class="chip">${n}</span>`).join('') || '<span class="chip">sans limitrophes</span>'}</div>
+          <b>${html(z.nom)}</b>
+          <small>${Number(z.surface_km2) || 0} km² · sensibilité ${html(z.sensibilite)}${z.buffer_m ? ` · marge ${z.buffer_m / 1000} km` : ''}</small>
+          <div class="chips">${z.limitrophes.map((n) => `<span class="chip">${html(n)}</span>`).join('') || '<span class="chip">sans limitrophes</span>'}</div>
         </div>
-        <button class="btn g" data-zone="${z.id}" title="Retirer">✕</button>
+        <button class="btn g" data-zone="${html(z.id)}" title="Retirer">✕</button>
       </div>`).join('')
     : '<div class="vide">Aucune zone surveillée. Ajoutez une commune ci-dessous.</div>';
 
   /* canaux */
   const nomCanal = { webpush: 'Notifications', telegram: 'Telegram', email: 'E-mail' };
+  const compteVerifie = etat.canaux.some((c) => c.actif && c.verifie);
+  $('#btnSignaler').disabled = !compteVerifie;
+  $('#btnSignaler').title = compteVerifie
+    ? 'Pointer un départ de feu sur la carte'
+    : 'Vérifiez d’abord une notification Push, Telegram ou une adresse e-mail';
   $('#listeCanaux').innerHTML = etat.canaux.length
     ? etat.canaux.map((c) => `
       <div class="rangee">
         <span class="point ${c.actif && c.verifie ? 'ok' : c.actif ? '' : 'ko'}"></span>
         <div class="cr">
-          <b>${nomCanal[c.type] || c.type}${c.libelle ? ` — ${c.libelle}` : ''}
+          <b>${html(nomCanal[c.type] || c.type)}${c.libelle ? ` — ${html(c.libelle)}` : ''}
             ${!c.verifie ? '<span class="badge alerte">à confirmer</span>' : ''}</b>
-          <small>${!c.actif ? `désactivé — ${c.last_error ? c.last_error.slice(0, 90) : 'trop d’échecs'}`
+          <small>${!c.actif ? `désactivé — ${c.last_error ? html(c.last_error.slice(0, 90)) : 'trop d’échecs'}`
             : !c.verifie ? 'aucune alerte ne partira avant confirmation du code'
             : c.last_ok_at ? `dernier envoi réussi ${relatif(c.last_ok_at)}`
             : 'en attente d’un premier envoi — faites un test'}</small>
         </div>
         ${!c.verifie && c.type === 'email'
-          ? `<button class="btn sm" data-verif="${c.id}" data-adresse="${c.libelle || ''}">Confirmer</button>` : ''}
-        <button class="btn g" data-canal="${c.id}" title="Supprimer">✕</button>
+          ? `<button class="btn sm" data-verif="${html(c.id)}" data-adresse="${html(c.libelle || '')}">Confirmer</button>` : ''}
+        <button class="btn g" data-canal="${html(c.id)}" title="Supprimer">✕</button>
       </div>`).join('')
     : '<div class="vide">Aucun canal. Activez au moins les notifications ci-dessous.</div>';
 
@@ -558,15 +662,15 @@ function rendre() {
       <div class="evt ${e.severite}">
         <div class="barre"></div>
         <div class="cr">
-          <div class="t">${e.commune || 'Localisation indéterminée'}
+          <div class="t">${html(e.commune || 'Localisation indéterminée')}
             <span class="badge ${e.statut === 'clos' ? 'clos' : e.severite}">${e.statut === 'clos' ? 'clos' : e.severite}</span>
             ${e.origine === 'citoyen' ? '<span class="badge info">signalement non vérifié</span>' : ''}
             ${e.origine === 'mixte' ? '<span class="badge critique">témoins + satellite</span>' : ''}
           </div>
           <div class="d">
-            ${e.dans_commune ? `Sur la commune surveillée` : `À ${(e.distance_m / 1000).toFixed(1)} km du centre de ${e.zone}`}
+            ${e.dans_commune ? `Sur la commune surveillée` : `À ${(e.distance_m / 1000).toFixed(1)} km du centre de ${html(e.zone)}`}
             · ${e.nb_detections} point(s) chaud(s)${e.frp_max ? ` · max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
-            ${heure(e.debut_ts)} · ${relatif(e.debut_ts)} · ${e.sources.join(', ')}
+            ${heure(e.debut_ts)} · ${relatif(e.debut_ts)} · ${html((e.sources || []).join(', '))}
             ${e.notifiee ? '· <span style="color:var(--vert)">notifié</span>' : ''}
           </div>
         </div>
@@ -587,7 +691,7 @@ function rendre() {
 
 async function recharger() {
   try {
-    const [e1] = await Promise.all([appel('etat'), chargerSignalements()]);
+    const [e1] = await Promise.all([appel('etat'), chargerSignalements(), chargerFeuxCarte()]);
     etat = e1;
     rendre();
   } catch (e) {
@@ -636,9 +740,16 @@ async function activerPush() {
 /* ---------- évènements UI ---------- */
 $('#btnCommencer').onclick = async () => {
   try {
+    if (!$('#consentement').checked) {
+      return toast('Acceptez les informations de confidentialité avant de continuer.', true);
+    }
     const r = await appel('inscription', {
       method: 'POST',
-      body: JSON.stringify({ nom: $('#nom').value.trim() || null }),
+      body: JSON.stringify({
+        nom: $('#nom').value.trim() || null,
+        consentement: true,
+        conditions_version: '2026-07-26',
+      }),
     });
     jeton = r.abonne.token;
     localStorage.setItem(CLE_JETON, jeton);
@@ -775,13 +886,61 @@ $('#btnJeton').onclick = () => {
   prompt('Jeton d’accès — conservez-le pour retrouver vos réglages sur un autre appareil :', jeton);
 };
 
+$('#btnExporter').onclick = async () => {
+  try {
+    const donnees = await appel('compte-exporter');
+    const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alerte-incendie-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Export téléchargé.');
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
+$('#btnSupprimerCompte').onclick = async () => {
+  if (!confirm(
+    'Cette opération supprime définitivement le compte, ses canaux, ses réglages et ses signalements. Continuer ?',
+  )) return;
+  const confirmation = prompt('Tapez SUPPRIMER pour confirmer la suppression définitive :', '');
+  if (confirmation !== 'SUPPRIMER') return toast('Suppression annulée.');
+  try {
+    await appel('compte-supprimer', {
+      method: 'POST',
+      body: JSON.stringify({ confirmation }),
+    });
+    localStorage.removeItem(CLE_JETON);
+    jeton = null;
+    alert('Votre compte et ses données personnelles ont été supprimés.');
+    location.reload();
+  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
 /* suppression zone / canal */
 document.addEventListener('click', async (ev) => {
   const bz = ev.target.closest('[data-zone]');
   const bc = ev.target.closest('[data-canal]');
   const bv = ev.target.closest('[data-verif]');
+  const bs = ev.target.closest('[data-contester]');
   try {
-    if (bv) {
+    if (bs) {
+      if (!confirm('Confirmer que ce signalement vous paraît erroné ?')) return;
+      const motif = prompt('Pourquoi ? (facultatif, 160 caractères)', '') || null;
+      const r = await fetch(`${API_SIG}/contester`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-token': jeton },
+        body: JSON.stringify({ groupe_id: bs.dataset.contester, motif }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.erreur || `HTTP ${r.status}`);
+      toast(j.rejete
+        ? 'Signalement rejeté après plusieurs contestations concordantes.'
+        : 'Contestation enregistrée.');
+      await chargerSignalements();
+      dessinerSignalements();
+    } else if (bv) {
       return saisirCode(bv.dataset.verif, bv.dataset.adresse);
     } else if (bz) {
       if (!confirm('Retirer cette zone de votre surveillance ?')) return;
@@ -807,8 +966,8 @@ $('#rechCommune').oninput = (e) => {
       const s = $('#sugg');
       s.hidden = !l.length;
       s.innerHTML = l.map((c) => `
-        <div data-code="${c.code}">${c.nom}
-          <small> — ${c.cp || ''} ${c.departement || ''}${c.population ? ` · ${c.population.toLocaleString('fr-FR')} hab.` : ''}</small>
+        <div data-code="${html(c.code)}">${html(c.nom)}
+          <small> — ${html(c.cp || '')} ${html(c.departement || '')}${c.population ? ` · ${Number(c.population).toLocaleString('fr-FR')} hab.` : ''}</small>
         </div>`).join('');
       s.querySelectorAll('[data-code]').forEach((d) => {
         d.onclick = async () => {
@@ -835,6 +994,9 @@ $('#rechCommune').oninput = (e) => {
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.rech')) $('#sugg').hidden = true;
 });
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-famille]')) dessinerFeuxCarte();
+});
 
 /* ---------- démarrage ---------- */
 (async function () {
@@ -846,7 +1008,14 @@ document.addEventListener('click', (e) => {
   if (ios && !installee) $('#noteIos').hidden = false;
 
   if (!jeton) {
+    document.body.classList.add('anonyme');
     $('#vueAccueil').hidden = false;
+    $('#vueApp').hidden = false;
+    etat = { zones: [], evenements: [], detections: [], canaux: [], sante: null };
+    await Promise.all([chargerFeuxCarte(), chargerSignalements()]);
+    initCarte();
+    dessinerFeuxCarte();
+    dessinerSignalements();
   } else {
     $('#vueApp').hidden = false;
     await recharger();

@@ -1,11 +1,19 @@
 # Alerte Incendie
 
-Surveillance satellite des feux de végétation sur une commune française, ses
-communes limitrophes et une marge réglable, avec alertes par **notification
-push**, **Telegram** et **e-mail**.
+Projet de service gratuit destiné au public français : alertes autour de
+localisations choisies, carte nationale zoomable et signalements citoyens,
+complétés par la détection satellite. Les alertes utilisent les
+**notifications push**, **Telegram** et l'**e-mail**.
 
-Déployé et opérationnel : Supabase (Paris) + PWA statique.
-Première zone surveillée : **Cornebarrieu (31150)** — 287,8 km².
+Architecture cible : Supabase (Paris) + PWA statique. L'état exact des
+migrations effectivement livrées est suivi dans `docs/CONTEXTE.md`.
+Le moteur sait déjà surveiller une commune, ses communes limitrophes et une
+marge réglable. La première zone est **Cornebarrieu (31150)** — 287,8 km².
+La carte agrège désormais les indices récents sur la France métropolitaine et
+la Corse. Elle permet de filtrer chaque famille de source et affiche un score
+de corroboration explicable. Le passage à l'échelle, l'outre-mer automatique et
+l'ouverture anonyme complète restent suivis dans
+[`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md).
 
 ---
 
@@ -27,18 +35,25 @@ système, et il ne dépend d'aucune source unique.
 
 ### Signalements citoyens
 
-Chacun peut signaler un départ de feu en pointant la carte. Un compte gratuit et
-instantané suffit — ni e-mail ni mot de passe.
+Chacun peut signaler un départ de feu en pointant la carte après avoir créé un
+compte gratuit et vérifié au moins un canal : notification Push, Telegram ou
+adresse e-mail confirmée. Le jeton seul ne permet pas de contribuer.
 
 - deux signalements à moins de **50 m** et de moins de 6 h sont le même départ
 - confirmation dès **2 personnes sur 2 réseaux distincts**, ou **3 personnes**
   quel que soit le réseau
 - non confirmés en gris sur la carte, confirmés en orange
+- contestation possible par d'autres abonnés, avec le même quorum ; un groupe
+  rejeté retire sa preuve citoyenne sans supprimer une éventuelle preuve satellite
 
 Le second critère existe parce qu'exiger deux réseaux bloquait deux voisins
 partageant une box, et surtout les abonnés mobiles derrière le NAT d'opérateur —
 or les deux premiers témoins d'un feu sont probablement voisins. Un abuseur doit
 en revanche fabriquer trois comptes et franchir trois fois le quota horaire.
+
+L'inscription exige une acceptation versionnée des informations du service.
+Depuis « Mes données », chacun peut exporter son compte et son historique ou
+demander leur suppression immédiate.
 
 ### Collecte automatique
 
@@ -46,7 +61,8 @@ Toutes les 10 minutes (polaire) et toutes les 15 minutes (géostationnaire), un
 travail planifié :
 
 1. récupère les quatre flux « Active Fire » de **NASA FIRMS** couvrant l'Europe ;
-2. ne conserve que les points chauds tombant dans l'emprise des zones surveillées ;
+2. conserve au minimum la France métropolitaine et la Corse, puis étend
+   l'emprise aux éventuelles zones abonnées situées ailleurs ;
 3. dédoublonne (empreinte unique par détection) et écarte les **sources thermiques
    permanentes** apprises automatiquement ;
 4. agrège les points restants en **évènements** (2 km / 12 h) et calcule une
@@ -54,7 +70,20 @@ travail planifié :
 5. met en file puis envoie les alertes sur les canaux de chaque abonné, en
    respectant son seuil et ses heures silencieuses.
 
-Un contrôle de santé indépendant tourne toutes les 15 minutes : si aucune
+La carte des dernières 24 heures regroupe les observations distantes de moins
+de **2 km**. Les preuves sont comptées par famille réellement indépendante :
+VIIRS et MODIS forment une seule famille polaire ; Meteosat, un groupe de
+témoins vérifiés et une corroboration aérienne comptent séparément. Le score
+0–99 aide à lire la concordance mais ne constitue ni une confirmation
+officielle ni une probabilité scientifique.
+
+**FeuxDeForet.fr** est proposé comme carte complémentaire. Ses CGU interdisent
+l'extraction ou la réutilisation substantielle sans autorisation écrite et
+aucune API publique documentée n'a été trouvée au 26 juillet 2026. Ses données
+ne sont donc pas aspirées : une fusion ne sera activée qu'après accord et
+fourniture d'un flux partenaire documenté.
+
+Un contrôle de santé interne tourne toutes les 15 minutes : si aucune
 collecte n'a réussi depuis 45 minutes, **le système prévient qu'il est muet**
 plutôt que de laisser croire au calme.
 
@@ -101,24 +130,23 @@ depuis l'espace.
 
 ## Architecture
 
-```
-NASA FIRMS (4 flux CSV Europe, sans clé API)
-        │
-        ▼
-┌──────────────────────── Supabase — région eu-west-3 (Paris) ────────────────────────┐
-│                                                                                     │
-│  pg_cron ──10 min──> poll-firms ──> PostGIS ──> traiter_detections()                │
-│         └──15 min──> verifier_sante()              │                                │
-│         └──2 min───> dispatch <────── file d'alertes                                │
-│                          │                                                          │
-│                          ├─> Web Push (VAPID, aes128gcm)                            │
-│                          ├─> Telegram Bot API                                       │
-│                          └─> SMTP                                                   │
-│                                                                                     │
-│  api  <── jeton d'abonné (x-token) ── PWA                                           │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-        ▲
-   PWA statique (GitHub Pages) : carte Leaflet, réglages, historique
+```text
+NASA FIRMS ──> poll-firms ─────┐
+LSA SAF ─────> poll-lsasaf ────┼─> PostGIS ─> traiter_detections()
+Citoyens ────> signalement ────┘                    │
+OpenSky ─────> poll-adsb ─> corroboration           v
+Open-Meteo ──> poll-meteo ─> risque/vent       evenements
+                                                   │
+                                                   v
+                                           file d'alertes
+                                                   │
+                                                   v
+                                                dispatch
+                                         /         |        \
+                                     Web Push   Telegram    SMTP
+
+PWA GitHub Pages ── x-token ──> api / signalement
+pg_cron ──> collectes, santé interne, clôture, purge et autotests
 ```
 
 ### Tables principales
@@ -131,12 +159,14 @@ NASA FIRMS (4 flux CSV Europe, sans clé API)
 | `detections` | points chauds bruts, dédoublonnés par empreinte |
 | `sources_permanentes` | cellules de 500 m identifiées comme industrielles |
 | `signalements`, `signalement_groupes` | signalements citoyens et leur regroupement à 50 m |
+| `signalement_contestations` | contestations collectives et quorum de rejet |
 | `evenements` | clusters spatio-temporels = un feu, avec son origine |
 | `creneaux_traites` | créneaux satellite déjà décodés |
 | `meteo` | dernière observation et indice de risque par zone |
 | `observations_aero` | positions d'aéronefs de lutte (ADS-B), corroboration seule |
 | `alertes` | file d'envoi, idempotente par (évènement, canal, sévérité, type) |
 | `runs` | journal d'exécution, base du contrôle de santé |
+| `audit_admin` | journal minimal des appels humains avec la clé administrateur |
 | `config` | secrets applicatifs (RLS active, service role uniquement) |
 
 ### Règles de sévérité — sensibilité « équilibré »
@@ -169,20 +199,29 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   27 migrations SQL — schéma, moteur, cron
+supabase/migrations/   29 migrations SQL — schéma, moteur, cron et conformité
 supabase/functions/    10 Edge Functions Deno + module partagé + tests
-web/                   PWA autonome (1 fichier HTML, service worker, manifeste)
+web/                   PWA autonome, politique de confidentialité, service worker
 .github/workflows/     publication Pages + vérification et déploiement Supabase
-docs/                  exploitation et configuration
+docs/                  contexte, exploitation et sécurité
 ```
 
-Le déploiement est **subordonné aux tests** : lint, typage, tests unitaires et
-rejeu de toutes les migrations sur une base vierge s'exécutent avant tout `db
-push`. Pour lancer la vérification en local :
+Le déploiement est **subordonné aux tests** : formatage, lint, typage, tests
+unitaires et rejeu de toutes les migrations sur une base vierge s'exécutent
+avant tout `db push`. Pour lancer la vérification en local :
 
 ```bash
 cd supabase/functions && deno task verif
 ```
+
+### Documentation maintenue
+
+| Fichier | Rôle |
+|---|---|
+| [`docs/CONTEXTE.md`](docs/CONTEXTE.md) | mémoire technique, état de livraison, invariants et risques |
+| [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) | configuration, surveillance et procédures opérateur |
+| [`docs/SECURITE.md`](docs/SECURITE.md) | modèle d'accès, anti-abus et prérequis avant ouverture |
+| [`AGENTS.md`](AGENTS.md) | règles de maintenance et mise à jour systématique du contexte |
 
 ## Installation depuis zéro
 

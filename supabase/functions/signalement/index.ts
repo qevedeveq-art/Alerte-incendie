@@ -23,9 +23,11 @@
 //  alertes. Le risque n'est pas le spam, c'est la perte de confiance.
 //
 //    POST /signalement          { lat, lon, nature, commentaire }  x-token
+//    POST /signalement/contester { groupe_id, motif }               x-token
 //    GET  /signalement/carte    couche publique, 24 h par défaut
 // =====================================================================
-import { sb, json, CORS, ipAppelant, quota, TROP_DE_REQUETES } from "../_shared/mod.ts";
+import { CORS, ipAppelant, json, quota, sb, TROP_DE_REQUETES } from "../_shared/mod.ts";
+import { aUnCanalVerifie } from "../_shared/format.ts";
 
 const NATURES = ["fumee", "flammes", "odeur", "autre"];
 
@@ -53,6 +55,42 @@ Deno.serve(async (req) => {
       .select("id, actif").eq("token", jeton).maybeSingle();
     if (!ab || !ab.actif) return json({ erreur: "jeton invalide" }, 401);
 
+    const { data: canaux, error: erreurCanaux } = await sb.from("canaux")
+      .select("actif, verifie")
+      .eq("abonne_id", ab.id);
+    if (erreurCanaux) throw new Error(erreurCanaux.message);
+    if (!aUnCanalVerifie(canaux)) {
+      return json({
+        erreur:
+          "compte non vérifié : activez et vérifiez une notification Push, Telegram ou e-mail avant de contribuer",
+      }, 403);
+    }
+
+    if (route === "contester") {
+      if (!await quota(`sig-conteste:${ab.id}`, 10, 3600)) {
+        return json({ erreur: "limite de contestations atteinte" }, 429);
+      }
+      if (!await quota(`sig-conteste-ip:${ip}`, 20, 3600)) {
+        return json(TROP_DE_REQUETES, 429);
+      }
+      const body = await req.json().catch(() => ({} as any));
+      const groupeId = String(body.groupe_id ?? "");
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupeId)
+      ) {
+        return json({ erreur: "signalement invalide" }, 400);
+      }
+      const { data, error } = await sb.rpc("contester_signalement", {
+        p_abonne: ab.id,
+        p_groupe: groupeId,
+        p_ip: ip,
+        p_motif: String(body.motif ?? "").slice(0, 160) || null,
+      });
+      if (error) throw new Error(error.message);
+      if (data?.ok === false) return json(data, 400);
+      return json(data ?? { ok: true });
+    }
+
     // Quotas : 3 signalements par heure et par personne, 6 par réseau.
     // Généreux pour un témoin de bonne foi, contraignant pour un robot.
     if (!await quota(`sig:${ab.id}`, 3, 3600)) {
@@ -62,16 +100,17 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({} as any));
     const lat = Number(body.lat), lon = Number(body.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
-        Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    if (
+      !Number.isFinite(lat) || !Number.isFinite(lon) ||
+      Math.abs(lat) > 90 || Math.abs(lon) > 180
+    ) {
       return json({ erreur: "coordonnées invalides" }, 400);
     }
     // Emprise France métropolitaine et outre-mer, large : hors de là, c'est
     // forcément une erreur de saisie ou un abus.
-    const dansPerimetre =
-      (lat > 41 && lat < 51.5 && lon > -5.5 && lon < 10) ||   // métropole
-      (lat > 41 && lat < 43.1 && lon > 8.4 && lon < 9.6) ||   // Corse
-      (lat > -21.5 && lat < 16.6 && lon > -63 && lon < 56);   // outre-mer
+    const dansPerimetre = (lat > 41 && lat < 51.5 && lon > -5.5 && lon < 10) || // métropole
+      (lat > 41 && lat < 43.1 && lon > 8.4 && lon < 9.6) || // Corse
+      (lat > -21.5 && lat < 16.6 && lon > -63 && lon < 56); // outre-mer
     if (!dansPerimetre) return json({ erreur: "position hors zone couverte" }, 400);
 
     const nature = NATURES.includes(body.nature) ? body.nature : "fumee";

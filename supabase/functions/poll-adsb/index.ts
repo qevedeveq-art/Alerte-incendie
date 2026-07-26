@@ -22,15 +22,14 @@
 //    where k = 'adsb';
 // =====================================================================
 import {
+  autoriserOperation,
   config,
   CORS,
-  estInterne,
   fermerRun,
   fetchRetry,
   json,
   ouvrirRun,
   sb,
-  verifierAdmin,
 } from "../_shared/mod.ts";
 
 const API = "https://opensky-network.org/api/states/all";
@@ -58,7 +57,7 @@ function lireEtat(s: unknown[]) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "poll-adsb")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-adsb");
   const stats: Record<string, any> = {};
@@ -91,9 +90,10 @@ Deno.serve(async (req) => {
     const etats: unknown[][] = Array.isArray(j?.states) ? j.states : [];
     stats.aeronefs_dans_emprise = etats.length;
 
-    const motifs: string[] = (Array.isArray(a.indicatifs) && a.indicatifs.length
-      ? a.indicatifs
-      : INDICATIFS_DEFAUT).map((x: string) => String(x).toUpperCase());
+    const motifs: string[] =
+      (Array.isArray(a.indicatifs) && a.indicatifs.length ? a.indicatifs : INDICATIFS_DEFAUT).map((
+        x: string,
+      ) => String(x).toUpperCase());
 
     const lignes = [];
     for (const brut of etats) {
@@ -129,6 +129,10 @@ Deno.serve(async (req) => {
       if (ec) throw new Error(`corroboration: ${ec.message}`);
       stats.corroboration = corr;
     }
+
+    const { data: purgees, error: ep } = await sb.rpc("purger_aero");
+    if (ep) throw new Error(`purge: ${ep.message}`);
+    stats.observations_purgees = purgees ?? 0;
 
     await fermerRun(runId, true, stats);
     return json({ ok: true, stats });

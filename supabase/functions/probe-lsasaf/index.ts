@@ -10,7 +10,7 @@
 //  Les identifiants sont lus dans public.config et ne sortent jamais de
 //  la fonction : la réponse ne contient que la structure du fichier.
 // =====================================================================
-import { config, json, CORS, verifierAdmin } from "../_shared/mod.ts";
+import { autoriserOperation, config, CORS, json } from "../_shared/mod.ts";
 import * as h5wasm from "npm:h5wasm@0.7.5";
 
 const BASE = "https://datalsasaf.lsasvcs.ipma.pt/PRODUCTS/MSG/FRP-PIXEL/HDF5";
@@ -42,7 +42,9 @@ function serie(f: any, nom: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "probe-lsasaf", false)) {
+    return json({ erreur: "non autorisé" }, 401);
+  }
 
   const cfg = await config(true);
   const ident = cfg.lsasaf ?? {};
@@ -80,9 +82,13 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < n; i++) {
       const la = lat.v[i], lo = lon.v[i];
-      if (la === lat.manquant || lo === lon.manquant) { manquants++; continue; }
+      if (la === lat.manquant || lo === lon.manquant) {
+        manquants++;
+        continue;
+      }
       if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) {
-        aberrantes++; continue;
+        aberrantes++;
+        continue;
       }
       valides++;
       const puissance = frp.v[i];
@@ -111,7 +117,9 @@ Deno.serve(async (req) => {
       slot,
       latence_minutes: Math.round(
         (Date.now() - Date.parse(
-          `${slot.slice(0, 4)}-${slot.slice(4, 6)}-${slot.slice(6, 8)}T${slot.slice(8, 10)}:${slot.slice(10, 12)}:00Z`,
+          `${slot.slice(0, 4)}-${slot.slice(4, 6)}-${slot.slice(6, 8)}T${slot.slice(8, 10)}:${
+            slot.slice(10, 12)
+          }:00Z`,
         )) / 60000,
       ),
       enregistrements: n,

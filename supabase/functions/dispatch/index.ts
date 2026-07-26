@@ -27,15 +27,14 @@
 //  desactive automatiquement et signale dans l'interface.
 // =====================================================================
 import {
+  autoriserOperation,
   config,
   configVersion,
   CORS,
-  estInterne,
   fermerRun,
   json,
   ouvrirRun,
   sb,
-  verifierAdmin,
 } from "../_shared/mod.ts";
 import { echapperHtml, echapperMdV2 as md } from "../_shared/format.ts";
 import {
@@ -188,7 +187,7 @@ function poolSmtp(cfg: Record<string, any>) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   await req.json().catch(() => ({}));
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "dispatch")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("dispatch");
   const stats = {

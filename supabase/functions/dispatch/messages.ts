@@ -11,19 +11,35 @@
 import { echapperHtml, echapperMdV2, secteurVent } from "../_shared/format.ts";
 
 export type Meteo = {
-  vent_kmh: number | null; rafales_kmh: number | null; vent_deg: number | null;
-  temp_c: number | null; humidite_pct: number | null; risque: string | null;
+  vent_kmh: number | null;
+  rafales_kmh: number | null;
+  vent_deg: number | null;
+  temp_c: number | null;
+  humidite_pct: number | null;
+  risque: string | null;
 };
 
 export type Payload = {
-  zone: string; commune: string; dans_commune: boolean; distance_m: number;
-  distance_perso_m?: number | null; ref_libelle?: string | null;
-  severite: "info" | "alerte" | "critique"; nb_detections: number;
-  nb_signalements?: number; frp_max: number | null; sources: string[];
+  zone: string;
+  commune: string;
+  dans_commune: boolean;
+  distance_m: number;
+  distance_perso_m?: number | null;
+  ref_libelle?: string | null;
+  severite: "info" | "alerte" | "critique";
+  nb_detections: number;
+  nb_signalements?: number;
+  frp_max: number | null;
+  sources: string[];
   origine?: "satellite" | "citoyen" | "mixte";
-  resolution_m?: number | null; lat: number; lon: number;
-  debut_ts: string; derniere_maj?: string; evenement_id: string;
-  meteo?: Meteo | null; message?: string;
+  resolution_m?: number | null;
+  lat: number;
+  lon: number;
+  debut_ts: string;
+  derniere_maj?: string;
+  evenement_id: string;
+  meteo?: Meteo | null;
+  message?: string;
 };
 
 const PICTO = { info: "i", alerte: "!", critique: "!!!" } as const;
@@ -37,8 +53,11 @@ const GEO = ["MSG_SEVIRI", "MTG_FCI"];
 
 export function heureFr(iso: string) {
   return new Date(iso).toLocaleString("fr-FR", {
-    timeZone: "Europe/Paris", day: "2-digit", month: "2-digit",
-    hour: "2-digit", minute: "2-digit",
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -115,7 +134,9 @@ export function phraseVent(m: Meteo | null | undefined): string | null {
   if (v == null || secteur == null) return null;
   // Convention météo : la direction est celle d'où vient le vent.
   const vers = secteurVent(((m.vent_deg ?? 0) + 180) % 360);
-  return `Vent de secteur ${secteur}, ${Math.round(v)} km/h — propagation probable vers le ${vers}.`;
+  return `Vent de secteur ${secteur}, ${
+    Math.round(v)
+  } km/h — propagation probable vers le ${vers}.`;
 }
 
 export function titre(p: Payload) {

@@ -26,7 +26,16 @@
 //
 //  Licence des données : CC BY 4.0, EUMETSAT / LSA SAF.
 // =====================================================================
-import { sb, config, json, CORS, estInterne, verifierAdmin, ouvrirRun, fermerRun } from "../_shared/mod.ts";
+import {
+  autoriserOperation,
+  config,
+  CORS,
+  empriseFranceEtZones,
+  fermerRun,
+  json,
+  ouvrirRun,
+  sb,
+} from "../_shared/mod.ts";
 import * as h5wasm from "npm:h5wasm@0.7.5";
 
 const BASE = "https://datalsasaf.lsasvcs.ipma.pt/PRODUCTS/MSG/FRP-PIXEL/HDF5";
@@ -43,8 +52,8 @@ const MAX_DECODAGES = 3;
 // Filtre qualité propre au géostationnaire : à 3 km de résolution, une source
 // industrielle faible produirait des alertes avant que l'apprentissage des
 // sources permanentes n'ait eu le temps de la reconnaître.
-const CONF_MIN = 40;   // %
-const FRP_MIN = 15;    // MW
+const CONF_MIN = 40; // %
+const FRP_MIN = 15; // MW
 
 function creneaux(): { url: string; slot: string }[] {
   const t = new Date(Date.now() - LATENCE_MIN * 60_000);
@@ -54,7 +63,10 @@ function creneaux(): { url: string; slot: string }[] {
     const d = new Date(t.getTime() - i * 15 * 60_000);
     const AAAA = d.getUTCFullYear(), MM = p(d.getUTCMonth() + 1), JJ = p(d.getUTCDate());
     const slot = `${AAAA}${MM}${JJ}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
-    return { slot, url: `${BASE}/${AAAA}/${MM}/${JJ}/HDF5_LSASAF_MSG_FRP-PIXEL-ListProduct_MSG-Disk_${slot}` };
+    return {
+      slot,
+      url: `${BASE}/${AAAA}/${MM}/${JJ}/HDF5_LSASAF_MSG_FRP-PIXEL-ListProduct_MSG-Disk_${slot}`,
+    };
   });
 }
 
@@ -79,7 +91,7 @@ function serie(f: any, nom: string): { v: number[]; manquant: number } {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!estInterne(req) && !await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "poll-lsasaf")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-lsasaf");
   const stats: Record<string, any> = { creneaux: {} };
@@ -94,16 +106,15 @@ Deno.serve(async (req) => {
 
     const { data: bbox, error: eb } = await sb.rpc("bbox_surveillance", { p_marge_deg: 0.08 });
     if (eb) throw new Error(`bbox: ${eb.message}`);
-    if (!bbox) {
-      await fermerRun(runId, true, { note: "aucune zone active" });
-      return json({ ok: true, note: "aucune zone active" });
-    }
+    const emprise = empriseFranceEtZones(bbox);
+    stats.emprise = emprise;
 
     // Journal des créneaux : un créneau sans feu dans l'emprise n'insère aucune
     // détection, il faut donc le tracer explicitement pour ne pas le refaire.
     const tous = creneaux();
     const { data: aFaire, error: ec } = await sb.rpc("creneaux_a_traiter", {
-      p_source: SOURCE, p_slots: tous.map((c) => c.slot),
+      p_source: SOURCE,
+      p_slots: tous.map((c) => c.slot),
     });
     if (ec) throw new Error(`creneaux: ${ec.message}`);
     const restants = new Set(aFaire ?? []);
@@ -116,15 +127,24 @@ Deno.serve(async (req) => {
 
     for (const c of tous) {
       if (!restants.has(c.slot)) continue;
-      if (decodages >= MAX_DECODAGES) { stats.creneaux[c.slot] = "reporté"; continue; }
+      if (decodages >= MAX_DECODAGES) {
+        stats.creneaux[c.slot] = "reporté";
+        continue;
+      }
       try {
         const r = await fetch(c.url, {
           headers: { Authorization: auth, "User-Agent": "alerte-incendie/1.0" },
           signal: AbortSignal.timeout(35_000),
         });
-        if (r.status === 404) { stats.creneaux[c.slot] = "pas encore publié"; continue; }
+        if (r.status === 404) {
+          stats.creneaux[c.slot] = "pas encore publié";
+          continue;
+        }
         if (r.status === 401 || r.status === 403) throw new Error(`accès refusé (${r.status})`);
-        if (!r.ok) { stats.creneaux[c.slot] = `HTTP ${r.status}`; continue; }
+        if (!r.ok) {
+          stats.creneaux[c.slot] = `HTTP ${r.status}`;
+          continue;
+        }
 
         const chemin = `s${c.slot}.h5`;
         FS.writeFile(chemin, new Uint8Array(await r.arrayBuffer()));
@@ -142,7 +162,10 @@ Deno.serve(async (req) => {
             const la = lat.v[i], lo = lon.v[i];
             if (!Number.isFinite(la) || !Number.isFinite(lo)) continue;
             if (la === lat.manquant || lo === lon.manquant) continue;
-            if (la < bbox.sud || la > bbox.nord || lo < bbox.ouest || lo > bbox.est) continue;
+            if (
+              la < emprise.sud || la > emprise.nord ||
+              lo < emprise.ouest || lo > emprise.est
+            ) continue;
             dansEmprise++;
 
             const confPct = Math.round(conf.v[i] * 100);
@@ -166,13 +189,15 @@ Deno.serve(async (req) => {
             aInserer.push({
               source: SOURCE,
               acq_ts: ts,
-              lat: la, lon: lo,
+              lat: la,
+              lon: lo,
               geom: `SRID=4326;POINT(${lo} ${la})`,
               confiance: confPct >= 70 ? "high" : confPct >= 50 ? "nominal" : "low",
               confiance_num: confPct,
               frp: Math.round(puissance * 10) / 10,
               brillance: Number.isFinite(bt.v[i]) && bt.v[i] !== bt.manquant
-                ? Math.round(bt.v[i] * 10) / 10 : null,
+                ? Math.round(bt.v[i] * 10) / 10
+                : null,
               daynight: null,
               resolution_m: cote,
               fingerprint: `${SOURCE}|${la.toFixed(2)}|${lo.toFixed(2)}|${c.slot}`,
@@ -180,13 +205,22 @@ Deno.serve(async (req) => {
             retenus++;
           }
 
-          stats.creneaux[c.slot] = { pixels_disque: lat.v.length, dans_emprise: dansEmprise, retenus };
+          stats.creneaux[c.slot] = {
+            pixels_disque: lat.v.length,
+            dans_emprise: dansEmprise,
+            retenus,
+          };
           await sb.rpc("marquer_creneau", {
-            p_source: SOURCE, p_slot: c.slot, p_pixels: lat.v.length, p_retenus: retenus,
+            p_source: SOURCE,
+            p_slot: c.slot,
+            p_pixels: lat.v.length,
+            p_retenus: retenus,
           });
         } finally {
           f.close();
-          try { FS.unlink(chemin); } catch { /* sans conséquence */ }
+          try {
+            FS.unlink(chemin);
+          } catch { /* sans conséquence */ }
         }
       } catch (e) {
         stats.creneaux[c.slot] = `erreur: ${String(e).slice(0, 150)}`;

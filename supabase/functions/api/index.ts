@@ -7,15 +7,19 @@
 //
 //    GET  /api/etat             état complet (zones, évènements, santé)
 //    GET  /api/vapid            clé publique Web Push
+//    GET  /api/informations     informations légales publiques
+//    GET  /api/carte            indices de feu nationaux corrélés
 //    GET  /api/communes?q=      recherche de commune (France entière)
 //    POST /api/inscription      crée un abonné, renvoie son jeton
-//    POST /api/canal            ajoute un canal (webpush|email|telegram)
+//    POST /api/canal            ajoute un canal (webpush|email)
 //    POST /api/canal-verifier   confirme un e-mail par code a 6 chiffres
 //    POST /api/canal-supprimer
 //    POST /api/zone             ajoute une zone par code INSEE
 //    POST /api/zone-supprimer
 //    POST /api/reglages         seuil, heures silencieuses, sensibilité
 //    POST /api/test             alerte de test sur tous les canaux
+//    GET  /api/compte-exporter  export des données personnelles
+//    POST /api/compte-supprimer effacement irréversible du compte
 //    POST /api/telegram-webhook liaison chat_id ↔ abonné
 //  Anti-abus, indispensable pour un service ouvert au public :
 //    - quota par IP sur la creation de compte et la recherche
@@ -25,10 +29,21 @@
 //      de spam et l'expediteur finirait sur liste noire)
 //    - plafonds : 10 zones et 8 canaux par abonne
 // =====================================================================
-import { sb, config, json, CORS, ipAppelant, quota, TROP_DE_REQUETES } from "../_shared/mod.ts";
+import {
+  comparerSecret,
+  config,
+  CORS,
+  ipAppelant,
+  json,
+  normaliserAbonnementPush,
+  quota,
+  sb,
+  TROP_DE_REQUETES,
+} from "../_shared/mod.ts";
 
 const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CONDITIONS_VERSION = "2026-07-26";
 
 async function abonneParJeton(req: Request) {
   const t = req.headers.get("x-token") ?? new URL(req.url).searchParams.get("token");
@@ -46,10 +61,9 @@ async function assurerCommune(code: string) {
   const { data } = await sb.from("communes").select("code").eq("code", code).maybeSingle();
   if (data) return true;
   const dep = code.startsWith("97") ? code.slice(0, 3) : code.slice(0, 2);
-  const cfg = await config();
   const r = await fetch(`${URL_BASE}/functions/v1/load-communes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-admin-key": String(cfg.admin_key) },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SRK}` },
     body: JSON.stringify({ departements: [dep] }),
   });
   return r.ok;
@@ -72,12 +86,58 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const route = url.pathname.replace(/^\/api\/?/, "").replace(/\/$/, "") || "etat";
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-  const cfg = await config();
   const ip = ipAppelant(req);
 
   try {
+    const cfg = await config();
     // ---------- routes publiques ----------
     if (route === "vapid") return json({ publicKey: cfg.vapid_public });
+
+    if (route === "informations") {
+      if (!await quota(`informations:${ip}`, 120, 3600)) return json(TROP_DE_REQUETES, 429);
+      return json({
+        conditions_version: CONDITIONS_VERSION,
+        responsable_traitement: cfg.responsable_traitement ?? null,
+        contact_rgpd: cfg.contact_rgpd ?? null,
+        nom_service: "Alerte Incendie",
+      });
+    }
+
+    if (route === "carte") {
+      if (!await quota(`carte:${ip}`, 120, 60)) return json(TROP_DE_REQUETES, 429);
+      const lireNombre = (nom: string, defaut: number, min: number, max: number) => {
+        const valeur = url.searchParams.get(nom);
+        if (valeur === null || valeur.trim() === "") return defaut;
+        const brut = Number(valeur);
+        return Number.isFinite(brut) ? Math.min(max, Math.max(min, brut)) : defaut;
+      };
+      const heures = Math.round(lireNombre("heures", 24, 1, 72));
+      const ouest = lireNombre("ouest", -5.5, -180, 180);
+      const sud = lireNombre("sud", 41, -90, 90);
+      const est = lireNombre("est", 10, -180, 180);
+      const nord = lireNombre("nord", 51.5, -90, 90);
+      const limite = Math.round(lireNombre("limite", 300, 1, 500));
+      if (ouest >= est || sud >= nord) return json({ erreur: "emprise de carte invalide" }, 400);
+
+      const { data, error } = await sb.rpc("feux_carte", {
+        p_heures: heures,
+        p_ouest: ouest,
+        p_sud: sud,
+        p_est: est,
+        p_nord: nord,
+        p_limite: limite,
+      });
+      if (error) throw new Error(`carte: ${error.message}`);
+      return json({
+        feux: Array.isArray(data) ? data : [],
+        heures,
+        methode: {
+          distance_correlation_m: 2000,
+          fenetre_citoyenne_h: 12,
+          familles_independantes: ["polaire", "geostationnaire", "citoyen", "aerien"],
+        },
+      });
+    }
 
     if (route === "communes") {
       if (!await quota(`communes:${ip}`, 60, 60)) return json(TROP_DE_REQUETES, 429);
@@ -85,26 +145,45 @@ Deno.serve(async (req) => {
       if (q.length < 2) return json([]);
       const r = await fetch(
         `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}` +
-        `&fields=nom,code,codesPostaux,departement,population&boost=population&limit=12`,
+          `&fields=nom,code,codesPostaux,departement,population&boost=population&limit=12`,
       );
       const l = await r.json();
       return json((Array.isArray(l) ? l : []).map((c: any) => ({
-        code: c.code, nom: c.nom, cp: c.codesPostaux?.[0] ?? null,
-        departement: c.departement?.nom ?? null, population: c.population ?? null,
+        code: c.code,
+        nom: c.nom,
+        cp: c.codesPostaux?.[0] ?? null,
+        departement: c.departement?.nom ?? null,
+        population: c.population ?? null,
       })));
     }
 
     if (route === "inscription") {
       // 5 comptes par heure et par IP : suffisant pour une famille, dissuasif pour un robot
       if (!await quota(`inscription:${ip}`, 5, 3600)) return json(TROP_DE_REQUETES, 429);
+      if (body.conditions_version !== CONDITIONS_VERSION || body.consentement !== true) {
+        return json({
+          erreur:
+            "vous devez accepter les informations de confidentialité et les limites du service",
+          conditions_version: CONDITIONS_VERSION,
+        }, 400);
+      }
       const { data, error } = await sb.from("abonnes")
-        .insert({ nom: String(body.nom ?? "").slice(0, 60) || null })
+        .insert({
+          nom: String(body.nom ?? "").slice(0, 60) || null,
+          conditions_version: CONDITIONS_VERSION,
+          conditions_acceptees_at: new Date().toISOString(),
+        })
         .select("id, token, seuil_min, quiet_start, quiet_end").single();
       if (error) throw new Error(error.message);
       return json({ ok: true, abonne: data });
     }
 
     if (route === "telegram-webhook") {
+      const secretRecu = req.headers.get("x-telegram-bot-api-secret-token") ?? "";
+      const secretAttendu = String(cfg.telegram_webhook_secret ?? "");
+      if (!comparerSecret(secretRecu, secretAttendu)) {
+        return json({ erreur: "webhook non autorisé" }, 401);
+      }
       // Le bot ne fait qu'une chose : lier un chat_id à un jeton d'abonné
       // via la commande /start <jeton>.
       const msg = body?.message;
@@ -114,28 +193,37 @@ Deno.serve(async (req) => {
 
       const repondre = (t: string) =>
         fetch(`https://api.telegram.org/bot${cfg.telegram_token}/sendMessage`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ chat_id: chatId, text: t, parse_mode: "Markdown" }),
         }).catch(() => {});
 
       const m = texte.match(/^\/start\s+(\S+)/);
       if (!m) {
-        await repondre("Pour activer les alertes, ouvrez l'application et utilisez le bouton *Connecter Telegram*.");
+        await repondre(
+          "Pour activer les alertes, ouvrez l'application et utilisez le bouton *Connecter Telegram*.",
+        );
         return json({ ok: true });
       }
-      const { data: ab } = await sb.from("abonnes").select("id, nom").eq("token", m[1]).maybeSingle();
+      const { data: ab } = await sb.from("abonnes").select("id, nom").eq("token", m[1])
+        .maybeSingle();
       if (!ab) {
         await repondre("Jeton invalide ou expiré.");
         return json({ ok: true });
       }
       await sb.from("canaux").upsert({
-        abonne_id: ab.id, type: "telegram",
+        abonne_id: ab.id,
+        type: "telegram",
         destination: { chat_id: chatId },
         libelle: String(msg?.chat?.first_name ?? "Telegram").slice(0, 40),
         // chat_id fourni par Telegram lui-meme : le canal est verifie par construction
-        verifie: true, actif: true, echecs: 0,
+        verifie: true,
+        actif: true,
+        echecs: 0,
       }, { onConflict: "abonne_id,type,destination", ignoreDuplicates: false });
-      await repondre("Canal Telegram activé. Vous recevrez ici les alertes incendie de vos zones surveillées.");
+      await repondre(
+        "Canal Telegram activé. Vous recevrez ici les alertes incendie de vos zones surveillées.",
+      );
       return json({ ok: true });
     }
 
@@ -157,14 +245,21 @@ Deno.serve(async (req) => {
       ]);
       return json({
         abonne: {
-          id: ab.id, nom: ab.nom, email: ab.email, seuil_min: ab.seuil_min,
-          quiet_start: ab.quiet_start, quiet_end: ab.quiet_end,
+          id: ab.id,
+          nom: ab.nom,
+          email: ab.email,
+          seuil_min: ab.seuil_min,
+          quiet_start: ab.quiet_start,
+          quiet_end: ab.quiet_end,
           ref_libelle: ab.ref_libelle ?? null,
           ref_definie: !!ab.ref_geom,
         },
-        zones: zones.data ?? [], evenements: evts.data ?? [],
-        detections: dets.data ?? [], canaux: canaux.data ?? [],
-        sante: sante.data ?? null, meteo: meteo.data ?? {},
+        zones: zones.data ?? [],
+        evenements: evts.data ?? [],
+        detections: dets.data ?? [],
+        canaux: canaux.data ?? [],
+        sante: sante.data ?? null,
+        meteo: meteo.data ?? {},
         vapid: cfg.vapid_public,
         telegram_bot: cfg.telegram_bot_nom ?? null,
       });
@@ -172,11 +267,17 @@ Deno.serve(async (req) => {
 
     if (route === "canal") {
       if (!await quota(`canal:${ab.id}`, 10, 3600)) return json(TROP_DE_REQUETES, 429);
-      const { data: place } = await sb.rpc("verifier_plafonds", { p_abonne: ab.id, p_quoi: "canaux" });
+      const { data: place } = await sb.rpc("verifier_plafonds", {
+        p_abonne: ab.id,
+        p_quoi: "canaux",
+      });
       if (!place) return json({ erreur: "maximum de 8 canaux atteint" }, 400);
 
       const { type, destination, libelle } = body;
-      if (!["webpush", "email", "telegram"].includes(type)) return json({ erreur: "type invalide" }, 400);
+      // Telegram ne peut être lié que par le webhook /start : accepter ici
+      // un chat_id fourni par le client contredirait la vérification par
+      // construction décrite dans le modèle de sécurité.
+      if (!["webpush", "email"].includes(type)) return json({ erreur: "type invalide" }, 400);
 
       // --- e-mail : double opt-in obligatoire ---
       if (type === "email") {
@@ -192,8 +293,14 @@ Deno.serve(async (req) => {
 
         const code = codeA6Chiffres();
         const { data: canal, error } = await sb.from("canaux").upsert({
-          abonne_id: ab.id, type: "email", destination: { adresse },
-          libelle: adresse, actif: true, verifie: false, echecs: 0, last_error: null,
+          abonne_id: ab.id,
+          type: "email",
+          destination: { adresse },
+          libelle: adresse,
+          actif: true,
+          verifie: false,
+          echecs: 0,
+          last_error: null,
           code_verif: code,
           code_expire_at: new Date(Date.now() + 30 * 60_000).toISOString(),
           tentatives_verif: 0,
@@ -201,8 +308,11 @@ Deno.serve(async (req) => {
         if (error) throw new Error(error.message);
 
         await sb.from("alertes").insert({
-          canal_id: canal.id, abonne_id: ab.id, type: "test",
-          severite: "info", statut: "en_attente",
+          canal_id: canal.id,
+          abonne_id: ab.id,
+          type: "test",
+          severite: "info",
+          statut: "en_attente",
           payload: {
             severite: "info",
             message: `Votre code de confirmation est ${code}\n\n` +
@@ -215,11 +325,18 @@ Deno.serve(async (req) => {
         return json({ ok: true, verification_requise: true, canal_id: canal.id });
       }
 
-      // --- push et telegram : verifies par construction ---
+      // --- Web Push : abonnement produit par le navigateur ---
+      const destinationPush = normaliserAbonnementPush(destination);
+      if (!destinationPush) return json({ erreur: "abonnement push invalide" }, 400);
       const { data, error } = await sb.from("canaux").upsert({
-        abonne_id: ab.id, type, destination,
+        abonne_id: ab.id,
+        type,
+        destination: destinationPush,
         libelle: String(libelle ?? "").slice(0, 40) || null,
-        actif: true, verifie: true, echecs: 0, last_error: null,
+        actif: true,
+        verifie: true,
+        echecs: 0,
+        last_error: null,
       }, { onConflict: "abonne_id,type,destination" }).select("id,type,libelle").single();
       if (error) throw new Error(error.message);
       return json({ ok: true, canal: data });
@@ -231,18 +348,26 @@ Deno.serve(async (req) => {
         .select("id, code_verif, code_expire_at, tentatives_verif")
         .eq("id", body.id).eq("abonne_id", ab.id).maybeSingle();
       if (!c) return json({ erreur: "canal introuvable" }, 404);
-      if ((c.tentatives_verif ?? 0) >= 5) return json({ erreur: "trop d'essais, redemandez un code" }, 429);
+      if ((c.tentatives_verif ?? 0) >= 5) {
+        return json({ erreur: "trop d'essais, redemandez un code" }, 429);
+      }
       if (!c.code_expire_at || new Date(c.code_expire_at) < new Date()) {
         return json({ erreur: "code expire, redemandez-en un" }, 400);
       }
 
       const fourni = String(body.code ?? "").trim();
       if (fourni !== c.code_verif) {
-        await sb.from("canaux").update({ tentatives_verif: (c.tentatives_verif ?? 0) + 1 }).eq("id", c.id);
+        await sb.from("canaux").update({ tentatives_verif: (c.tentatives_verif ?? 0) + 1 }).eq(
+          "id",
+          c.id,
+        );
         return json({ erreur: "code incorrect" }, 400);
       }
       await sb.from("canaux").update({
-        verifie: true, code_verif: null, code_expire_at: null, tentatives_verif: 0,
+        verifie: true,
+        code_verif: null,
+        code_expire_at: null,
+        tentatives_verif: 0,
       }).eq("id", c.id);
       return json({ ok: true });
     }
@@ -254,11 +379,16 @@ Deno.serve(async (req) => {
 
     if (route === "zone") {
       if (!await quota(`zone:${ab.id}`, 15, 3600)) return json(TROP_DE_REQUETES, 429);
-      const { data: place } = await sb.rpc("verifier_plafonds", { p_abonne: ab.id, p_quoi: "zones" });
+      const { data: place } = await sb.rpc("verifier_plafonds", {
+        p_abonne: ab.id,
+        p_quoi: "zones",
+      });
       if (!place) return json({ erreur: "maximum de 10 zones atteint" }, 400);
 
       const code = String(body.code ?? "").trim();
-      if (!/^[0-9][0-9AB][0-9]{3}$/i.test(code)) return json({ erreur: "code INSEE invalide" }, 400);
+      if (!/^[0-9][0-9AB][0-9]{3}$/i.test(code)) {
+        return json({ erreur: "code INSEE invalide" }, 400);
+      }
       if (!await assurerCommune(code)) return json({ erreur: "commune introuvable" }, 404);
 
       const { data: z, error } = await sb.rpc("upsert_zone", {
@@ -266,12 +396,16 @@ Deno.serve(async (req) => {
         p_limitrophes: body.limitrophes !== false,
         p_buffer_m: Math.min(50000, Math.max(0, Number(body.buffer_m ?? 3000) || 0)),
         p_sensibilite: ["sensible", "equilibre", "conservateur"].includes(body.sensibilite)
-          ? body.sensibilite : "equilibre",
+          ? body.sensibilite
+          : "equilibre",
       });
       if (error) throw new Error(error.message);
       const zone = Array.isArray(z) ? z[0] : z;
       await sb.from("zone_abonnes").upsert({ zone_id: zone.id, abonne_id: ab.id });
-      return json({ ok: true, zone: { id: zone.id, nom: zone.nom, limitrophes: zone.limitrophes } });
+      return json({
+        ok: true,
+        zone: { id: zone.id, nom: zone.nom, limitrophes: zone.limitrophes },
+      });
     }
 
     if (route === "zone-supprimer") {
@@ -285,7 +419,9 @@ Deno.serve(async (req) => {
     if (route === "reglages") {
       if (!await quota(`reglages:${ab.id}`, 30, 3600)) return json(TROP_DE_REQUETES, 429);
       const maj: Record<string, unknown> = {};
-      if (body.seuil_min && ["info", "alerte", "critique"].includes(body.seuil_min)) maj.seuil_min = body.seuil_min;
+      if (body.seuil_min && ["info", "alerte", "critique"].includes(body.seuil_min)) {
+        maj.seuil_min = body.seuil_min;
+      }
       if ("quiet_start" in body) maj.quiet_start = body.quiet_start || null;
       if ("quiet_end" in body) maj.quiet_end = body.quiet_end || null;
       if ("nom" in body) maj.nom = String(body.nom ?? "").slice(0, 60) || null;
@@ -303,7 +439,9 @@ Deno.serve(async (req) => {
           return json({ erreur: "longitude invalide" }, 400);
         }
         const { error } = await sb.rpc("maj_reference", {
-          p_abonne: ab.id, p_lat: lat, p_lon: lon,
+          p_abonne: ab.id,
+          p_lat: lat,
+          p_lon: lon,
           p_libelle: String(body.ref_libelle ?? "").slice(0, 40) || null,
         });
         if (error) throw new Error(error.message);
@@ -311,8 +449,12 @@ Deno.serve(async (req) => {
 
       if (body.zone_id) {
         const zmaj: Record<string, unknown> = {};
-        if (["sensible", "equilibre", "conservateur"].includes(body.sensibilite)) zmaj.sensibilite = body.sensibilite;
-        if (body.buffer_m != null) zmaj.buffer_m = Math.min(50000, Math.max(0, Number(body.buffer_m) || 0));
+        if (["sensible", "equilibre", "conservateur"].includes(body.sensibilite)) {
+          zmaj.sensibilite = body.sensibilite;
+        }
+        if (body.buffer_m != null) {
+          zmaj.buffer_m = Math.min(50000, Math.max(0, Number(body.buffer_m) || 0));
+        }
         if ("limitrophes" in body) zmaj.inclure_limitrophes = !!body.limitrophes;
         if (Object.keys(zmaj).length) {
           // on ne modifie qu'une zone a laquelle l'abonne est rattache
@@ -334,18 +476,73 @@ Deno.serve(async (req) => {
       if (!canaux?.length) return json({ erreur: "aucun canal vérifié" }, 400);
 
       const faux = {
-        zone: "Test", commune: "Test", dans_commune: true, distance_m: 0,
-        severite: "info", nb_detections: 1, frp_max: 12.3,
-        sources: ["VIIRS_SNPP"], lat: 43.649, lon: 1.3197,
-        debut_ts: new Date().toISOString(), evenement_id: "test",
+        zone: "Test",
+        commune: "Test",
+        dans_commune: true,
+        distance_m: 0,
+        severite: "info",
+        nb_detections: 1,
+        frp_max: 12.3,
+        sources: ["VIIRS_SNPP"],
+        lat: 43.649,
+        lon: 1.3197,
+        debut_ts: new Date().toISOString(),
+        evenement_id: "test",
         message: "Test réussi : ce canal est opérationnel et recevra les alertes incendie.",
       };
       await sb.from("alertes").insert(canaux.map((c) => ({
-        canal_id: c.id, abonne_id: ab.id, type: "test",
-        severite: "info", statut: "en_attente", payload: faux,
+        canal_id: c.id,
+        abonne_id: ab.id,
+        type: "test",
+        severite: "info",
+        statut: "en_attente",
+        payload: faux,
       })));
       await declencherDispatch();
       return json({ ok: true, canaux: canaux.length });
+    }
+
+    if (route === "compte-exporter") {
+      if (!await quota(`export:${ab.id}`, 3, 86400)) return json(TROP_DE_REQUETES, 429);
+      const [profil, zones, canaux, signalements, contestations, fiabilite] = await Promise.all([
+        sb.from("abonnes").select(
+          "id,nom,email,seuil_min,quiet_start,quiet_end,fuseau,ref_libelle,created_at,last_seen_at,conditions_version,conditions_acceptees_at",
+        ).eq("id", ab.id).single(),
+        sb.rpc("zones_abonne", { p_abonne: ab.id }),
+        sb.from("canaux")
+          .select("id,type,destination,libelle,actif,verifie,last_ok_at,last_error,created_at")
+          .eq("abonne_id", ab.id),
+        sb.from("signalements")
+          .select(
+            "id,groupe_id,lat,lon,nature,commentaire,ip_hash,commune_code,commune_nom,statut,created_at",
+          )
+          .eq("abonne_id", ab.id),
+        sb.from("signalement_contestations")
+          .select("groupe_id,ip_hash,motif,created_at").eq("abonne_id", ab.id),
+        sb.rpc("fiabilite_abonne", { p_abonne: ab.id }),
+      ]);
+      const echec = [profil, zones, canaux, signalements, contestations, fiabilite]
+        .find((resultat) => resultat.error);
+      if (echec?.error) throw new Error(`export: ${echec.error.message}`);
+      return json({
+        exporte_at: new Date().toISOString(),
+        profil: profil.data,
+        zones: zones.data ?? [],
+        canaux: canaux.data ?? [],
+        signalements: signalements.data ?? [],
+        contestations: contestations.data ?? [],
+        fiabilite: fiabilite.data ?? {},
+      });
+    }
+
+    if (route === "compte-supprimer") {
+      if (!await quota(`suppression:${ab.id}`, 3, 86400)) return json(TROP_DE_REQUETES, 429);
+      if (body.confirmation !== "SUPPRIMER") {
+        return json({ erreur: "confirmation SUPPRIMER requise" }, 400);
+      }
+      const { data, error } = await sb.rpc("supprimer_abonne", { p_abonne: ab.id });
+      if (error) throw new Error(error.message);
+      return json(data ?? { ok: true });
     }
 
     return json({ erreur: `route inconnue: ${route}` }, 404);

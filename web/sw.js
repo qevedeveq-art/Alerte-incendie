@@ -1,6 +1,6 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v1';
-const STATIQUE = ['./', './index.html', './manifest.webmanifest'];
+const CACHE = 'alerte-incendie-v3';
+const STATIQUE = ['./', './index.html', './confidentialite.html', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIQUE)).then(() => self.skipWaiting()));

@@ -11,18 +11,25 @@
 //
 //  En-tête requis : x-admin-key
 // =====================================================================
-import { sb, verifierAdmin, json, CORS, ouvrirRun, fermerRun } from "../_shared/mod.ts";
+import { autoriserOperation, CORS, fermerRun, json, ouvrirRun, sb } from "../_shared/mod.ts";
 
 const DEPARTEMENTS_FRANCE = [
-  ...Array.from({ length: 19 }, (_, i) => String(i + 1).padStart(2, "0")),   // 01..19
-  "2A", "2B",
-  ...Array.from({ length: 76 }, (_, i) => String(i + 21).padStart(2, "0")),  // 21..96
-  "971", "972", "973", "974", "976",
+  ...Array.from({ length: 19 }, (_, i) => String(i + 1).padStart(2, "0")), // 01..19
+  "2A",
+  "2B",
+  ...Array.from({ length: 76 }, (_, i) => String(i + 21).padStart(2, "0")), // 21..96
+  "971",
+  "972",
+  "973",
+  "974",
+  "976",
 ];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!await verifierAdmin(req)) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "load-communes")) {
+    return json({ erreur: "non autorisé" }, 401);
+  }
 
   const body = await req.json().catch(() => ({}));
   const deps: string[] = body.france
@@ -56,9 +63,13 @@ Deno.serve(async (req) => {
         const payload = communes!.slice(i, i + 100)
           .filter((c) => c.contour)
           .map((c) => ({
-            code: c.code, nom: c.nom, departement: dep,
-            population: c.population ?? null, surface_ha: c.surface ?? null,
-            centre: c.centre ?? null, contour: c.contour,
+            code: c.code,
+            nom: c.nom,
+            departement: dep,
+            population: c.population ?? null,
+            surface_ha: c.surface ?? null,
+            centre: c.centre ?? null,
+            contour: c.contour,
           }));
         if (payload.length === 0) continue;
         const { error } = await sb.rpc("upsert_communes", { p_data: payload });

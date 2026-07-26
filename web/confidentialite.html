@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#b3261e">
+  <title>Confidentialité — Alerte Incendie</title>
+  <style>
+    :root { color-scheme: dark; --fond:#12100e; --carte:#1d1916; --txt:#f4eee9; --mut:#b9ada5; --rouge:#e0453c; }
+    * { box-sizing:border-box }
+    body { margin:0;background:var(--fond);color:var(--txt);font:16px/1.65 system-ui,Segoe UI,sans-serif }
+    main { max-width:760px;margin:auto;padding:28px 18px 60px }
+    h1,h2 { line-height:1.2 } h1 { color:#fff } h2 { margin-top:32px }
+    .carte { background:var(--carte);padding:18px;border-radius:12px;border:1px solid #332b26 }
+    .alerte { border-left:4px solid var(--rouge) }
+    a { color:#ff8d84 } li { margin:.35rem 0 } code { color:#ffd0cc }
+    table { width:100%;border-collapse:collapse } td,th { padding:8px;border-bottom:1px solid #3a302b;text-align:left;vertical-align:top }
+    .mut { color:var(--mut) }
+  </style>
+</head>
+<body>
+<main>
+  <p><a href="./">← Retour à l’application</a></p>
+  <h1>Confidentialité et conditions d’utilisation</h1>
+  <p class="mut">Version acceptée : <strong>26 juillet 2026</strong>.</p>
+
+  <div class="carte alerte">
+    <strong>Service non officiel.</strong> Alerte Incendie complète FR-Alert mais
+    ne le remplace pas. Il ne prévient pas les secours. En cas de fumée, de
+    flammes ou de danger immédiat, appelez le <strong>18</strong> ou le
+    <strong>112</strong>.
+  </div>
+
+  <h2>Responsable et contact</h2>
+  <div class="carte">
+    <p>Responsable du traitement : <strong id="responsable">chargement…</strong></p>
+    <p>Contact pour vos droits : <strong id="contact">chargement…</strong></p>
+    <p id="configManquante" hidden>
+      Les coordonnées réglementaires ne sont pas encore configurées par
+      l’exploitant. Le service ne doit pas être diffusé largement tant que ce
+      point n’est pas complété.
+    </p>
+  </div>
+
+  <h2>Finalités et données traitées</h2>
+  <table>
+    <thead><tr><th>Donnée</th><th>Utilisation</th></tr></thead>
+    <tbody>
+      <tr><td>Jeton aléatoire, prénom facultatif</td><td>Retrouver vos réglages sans mot de passe.</td></tr>
+      <tr><td>Communes et point de référence facultatif</td><td>Calculer les zones et distances d’alerte.</td></tr>
+      <tr><td>E-mail, abonnement push ou identifiant Telegram</td><td>Envoyer les alertes demandées.</td></tr>
+      <tr><td>Signalements, position et commentaire</td><td>Détecter un départ de feu signalé par plusieurs témoins.</td></tr>
+      <tr><td>Empreinte irréversible de l’adresse IP</td><td>Appliquer les quotas et distinguer les réseaux sans conserver l’IP en clair.</td></tr>
+      <tr><td>Journal technique et erreurs d’envoi</td><td>Surveiller la collecte et la délivrabilité.</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Le traitement lié à votre compte repose sur votre démarche volontaire et
+    sur le consentement enregistré à l’inscription. Vous pouvez le retirer en
+    supprimant votre compte. Les journaux strictement nécessaires à la sécurité
+    et à la prévention des abus sont conservés pour l’intérêt légitime de
+    sécuriser le service.
+  </p>
+
+  <h2>Durées de conservation</h2>
+  <ul>
+    <li>détections satellite : 90 jours ;</li>
+    <li>évènements clos : 365 jours ;</li>
+    <li>signalements et contestations associés : 365 jours ;</li>
+    <li>alertes et preuves d’envoi : 180 jours ;</li>
+    <li>journal des actions administrateur : 180 jours ;</li>
+    <li>journaux techniques : 30 jours ;</li>
+    <li>quotas : 2 jours ; créneaux de collecte : 7 jours ;</li>
+    <li>positions ADS-B : 24 heures ;</li>
+    <li>compte inactif sans canal ni zone : 60 jours.</li>
+  </ul>
+
+  <h2>Destinataires et sous-traitants techniques</h2>
+  <p>
+    Les données sont traitées dans Supabase. Selon les fonctions activées,
+    les messages transitent par le fournisseur Web Push du navigateur,
+    Telegram ou le serveur SMTP configuré. Les données satellite et météo
+    proviennent de NASA FIRMS, LSA SAF/EUMETSAT et Open-Meteo ; elles ne
+    reçoivent pas vos données d’abonné.
+  </p>
+
+  <h2>Vos droits</h2>
+  <p>
+    Depuis la rubrique <em>Mes données</em>, vous pouvez télécharger un export
+    JSON et supprimer définitivement votre compte. La suppression recalcule les
+    confirmations citoyennes qui dépendaient de vos signalements. Pour toute
+    demande complémentaire — accès, rectification, limitation ou opposition —
+    utilisez le contact indiqué plus haut.
+  </p>
+
+  <h2>Limites du service</h2>
+  <ul>
+    <li>Meteosat fournit généralement une première indication en environ 25 minutes, avec une position approximative à 3 km.</li>
+    <li>VIIRS/MODIS confirment généralement en 2 à 3 heures, avec une résolution de 375 m à 1 km.</li>
+    <li>Les nuages, la végétation, un feu trop petit ou très récent peuvent masquer un départ.</li>
+    <li>Les signalements citoyens restent explicitement non vérifiés tant qu’aucune source automatique ne les corrobore.</li>
+    <li>Une panne complète du projet Supabase peut rester invisible au contrôle de santé interne.</li>
+  </ul>
+
+  <p class="mut">
+    Le code source est sous licence MIT. Cette page décrit le fonctionnement
+    technique du service ; elle ne constitue pas un avis juridique.
+  </p>
+</main>
+<script>
+const API = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api/informations';
+const CONTACT_PUBLIC = 'qevedeveq@gmail.com';
+fetch(API).then((r) => r.json()).then((j) => {
+  const responsable = j.responsable_traitement || CONTACT_PUBLIC;
+  const contact = j.contact_rgpd || CONTACT_PUBLIC;
+  document.querySelector('#responsable').textContent = responsable;
+  document.querySelector('#contact').textContent = contact;
+  document.querySelector('#configManquante').hidden = true;
+}).catch(() => {
+  document.querySelector('#responsable').textContent = CONTACT_PUBLIC;
+  document.querySelector('#contact').textContent = CONTACT_PUBLIC;
+  document.querySelector('#configManquante').hidden = true;
+});
+</script>
+</body>
+</html>

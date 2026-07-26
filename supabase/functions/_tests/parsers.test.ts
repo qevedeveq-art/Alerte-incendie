@@ -6,12 +6,8 @@
 //  deux sources d'erreur silencieuse les plus courantes.
 // =====================================================================
 import { assertEquals } from "./assert.ts";
-import {
-  horodatage,
-  nombreOuNull,
-  normaliserConfiance,
-  parserCsv,
-} from "../poll-firms/parsers.ts";
+import { empriseFranceEtZones } from "../_shared/format.ts";
+import { horodatage, nombreOuNull, normaliserConfiance, parserCsv } from "../poll-firms/parsers.ts";
 
 const CSV_VIIRS = [
   "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight",
@@ -75,4 +71,18 @@ Deno.test("bout à bout — une ligne à FRP nulle conserve sa valeur", () => {
   assertEquals(nombreOuNull(l[1].frp), 0);
   assertEquals(nombreOuNull(l[2].frp), null);
   assertEquals(normaliserConfiance(l[1].confidence), 90);
+});
+
+Deno.test("emprise nationale — collecte la France même sans abonné", () => {
+  assertEquals(
+    empriseFranceEtZones(null),
+    { sud: 41, nord: 51.5, ouest: -5.5, est: 10 },
+  );
+});
+
+Deno.test("emprise nationale — conserve une zone ultramarine", () => {
+  assertEquals(
+    empriseFranceEtZones({ sud: 14.3, nord: 14.9, ouest: -61.3, est: -60.7 }),
+    { sud: 14.3, nord: 51.5, ouest: -61.3, est: 10 },
+  );
 });

@@ -8,6 +8,7 @@
 //  active, aucune policy).
 // =====================================================================
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { comparerSecret } from "./format.ts";
 
 export const sb: SupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -44,12 +45,11 @@ export function invaliderConfig() {
 
 /** Comparaison à temps constant contre config.admin_key. */
 export async function verifierAdmin(req: Request): Promise<boolean> {
-  const f = req.headers.get("x-admin-key") ?? new URL(req.url).searchParams.get("admin_key") ?? "";
+  // Jamais dans l'URL : les query strings finissent couramment dans les logs,
+  // historiques et en-têtes Referer.
+  const f = req.headers.get("x-admin-key") ?? "";
   const a = String((await config()).admin_key ?? "");
-  if (!a || f.length !== a.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= f.charCodeAt(i) ^ a.charCodeAt(i);
-  return d === 0;
+  return comparerSecret(f, a);
 }
 
 /** Appel interne depuis une autre Edge Function (porteur du service role). */
@@ -61,7 +61,7 @@ export function estInterne(req: Request): boolean {
   // Un simple refus est plus sûr et plus lisible.
   const srk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!srk) return false;
-  return (req.headers.get("Authorization") ?? "").includes(srk);
+  return comparerSecret(req.headers.get("Authorization") ?? "", `Bearer ${srk}`);
 }
 
 export const CORS = {
@@ -110,10 +110,43 @@ export function ipAppelant(req: Request): string {
   return (xff.split(",")[0] || req.headers.get("cf-connecting-ip") || "inconnue").trim();
 }
 
+/** Autorise une opération d'exploitation et journalise l'usage d'admin_key.
+ *  Les appels internes porteurs du service role restent distingués et ne
+ *  polluent pas le journal des actions humaines. */
+export async function autoriserOperation(
+  req: Request,
+  action: string,
+  accepterInterne = true,
+): Promise<boolean> {
+  if (accepterInterne && estInterne(req)) return true;
+  if (!await verifierAdmin(req)) return false;
+
+  try {
+    const cfg = await config();
+    const brut = `${ipAppelant(req)}|${String(cfg.sel_ip ?? "")}`;
+    const empreinte = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(brut));
+    const ipHash = [...new Uint8Array(empreinte)]
+      .map((x) => x.toString(16).padStart(2, "0")).join("");
+    const { error } = await sb.from("audit_admin").insert({
+      action: action.slice(0, 120),
+      ip_hash: ipHash,
+      user_agent: String(req.headers.get("user-agent") ?? "").slice(0, 300) || null,
+    });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    // Une indisponibilité du journal ne doit pas bloquer une collecte ou une
+    // intervention urgente ; elle reste visible dans les logs Edge.
+    console.error("audit_admin", action, String(e));
+  }
+  return true;
+}
+
 /** Consomme un jeton de quota. Renvoie false si le plafond est atteint. */
 export async function quota(cle: string, max: number, secondes: number): Promise<boolean> {
   const { data, error } = await sb.rpc("consommer_quota", {
-    p_cle: cle, p_max: max, p_fenetre: `${secondes} seconds`,
+    p_cle: cle,
+    p_max: max,
+    p_fenetre: `${secondes} seconds`,
   });
   if (error) return true; // en cas de panne du compteur, on ne bloque pas le service
   return data !== false;
@@ -123,4 +156,13 @@ export const TROP_DE_REQUETES = { erreur: "trop de requêtes, patientez quelques
 
 // Utilitaires purs : définis dans format.ts (sans dépendance à Supabase,
 // donc testables hors environnement), réexportés ici par commodité.
-export { echapperHtml, echapperMdV2, fetchRetry, secteurVent } from "./format.ts";
+export {
+  aUnCanalVerifie,
+  comparerSecret,
+  echapperHtml,
+  echapperMdV2,
+  empriseFranceEtZones,
+  fetchRetry,
+  normaliserAbonnementPush,
+  secteurVent,
+} from "./format.ts";
