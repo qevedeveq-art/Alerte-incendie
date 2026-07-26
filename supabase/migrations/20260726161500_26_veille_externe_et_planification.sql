@@ -143,9 +143,11 @@ declare j record;
 begin
   for j in
     select jobname from cron.job
-     where command ~ '(poll-firms|poll-lsasaf|poll-meteo|poll-adsb|probe-mtg|dispatch'
-                  || '|verifier_sante|purger|clore_signalements|notifier_fin_evenements'
-                  || '|autotest_canaux|appeler_fonction)'
+     where command ~ (
+       '(poll-firms|poll-lsasaf|poll-meteo|poll-adsb|probe-mtg|dispatch'
+       || '|verifier_sante|purger|clore_signalements|notifier_fin_evenements'
+       || '|autotest_canaux|appeler_fonction)'
+     )
   loop
     perform cron.unschedule(j.jobname);
   end loop;
