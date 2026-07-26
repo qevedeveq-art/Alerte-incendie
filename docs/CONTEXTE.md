@@ -15,7 +15,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - État de livraison vérifié : migrations **01 à 38** appliquées et 12 Edge
   Functions déployées.
 - La PWA intègre le calcul d'accélération par la pente topographique (%) via l'API Altimétrie IGN (`elevation.json`), la capture du cap boussole mobile (`azimut_deg`) et la triangulation optique géométrique par intersection des visées témoins, le calculateur de vélocité du front de feu (km/h) et la matrice de fusion multi-sources.
-- La PWA intègre une correspondance stricte 1-à-1 entre les icônes de la légende et les marqueurs flammes de la carte (retrait des ronds d'ombrage parasites `L.circleMarker`), avec une légende haute visibilité toujours ouverte (`.legende-carte`) doublée d'une barre de légende permanente (`#legendeInteractiveBarre`) avec décomptes en temps réel et filtrage interactif au clic.
+- La PWA intègre un système de marqueurs cartographiques tactiques glassmorphic (`.marqueur-feu-tactique`) associant directement sur la carte l'icône de flamme vectorielle, le nom de la localité et la pastille de sévérité (`Confirmé`, `Probable`, `Témoins`, `Indice`), offrant une lisibilité et une compréhension immédiates.
 - La PWA intègre un slider temporel 24 h avec animation Play/Pause pour rejouer
   la propagation des détections, la mise en cache hors-ligne des tuiles (IGN, OSM, CARTO)
   dans `web/sw.js` (MAX_TUILES=450), l'affichage du vecteur vent au sol (Open-Meteo API)

@@ -280,9 +280,15 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .legende-carte .ligne{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;
   transition:background .18s ease;user-select:none}
 .legende-carte .ligne:hover{background:rgba(255,255,255,.08)}
-.legende-carte .badge-compteur{margin-left:auto;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;
-  background:var(--fond3);color:var(--txt2);border:1px solid var(--bord)}
-.legende-carte .toggle-legende{display:none}
+.conteneur-marqueur-tactique{background:transparent;border:0}
+.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:6px;background:rgba(14,17,22,.94);
+  backdrop-filter:blur(12px);border:1.5px solid var(--couleur-bord,#ef3829);border-radius:20px;
+  padding:4px 10px 4px 6px;box-shadow:0 6px 20px rgba(0,0,0,.85),0 0 14px var(--couleur-halo,rgba(239,56,41,.6));
+  color:#fff;font-size:12px;font-weight:700;white-space:nowrap;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;
+  cursor:pointer}
+.marqueur-feu-tactique:hover{transform:scale(1.12) translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.95),0 0 22px var(--couleur-halo,rgba(239,56,41,.9));z-index:2000!important}
+.marqueur-feu-tactique .badge-titre{font-size:12px;font-weight:700;color:#fff;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-weight:800;padding:2px 6px;border-radius:8px;letter-spacing:.04em}
 .panneau-filtres{display:none}
 .panneau-filtres.ouvert{display:grid}
 .offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:#8a4b08;color:#fff;
@@ -1309,18 +1315,18 @@ function apparenceFeu(f) {
 
   if (citoyenVerifie) {
     return { couleur: '#a78bfa', taille: [24, 32, 40][importance - 1],
-      libelle: 'Déclarations citoyennes vérifiées', importance, type: 'citoyen', niveau };
+      libelle: 'Déclarations citoyennes vérifiées', importance, type: 'citoyen', niveau, statutCourt: 'Témoins' };
   }
   if (niveau === 'corrobore') {
     return { couleur: '#ef3829', taille: [32, 42, 54][importance - 1],
-      libelle: 'Feu corroboré par plusieurs familles', importance, type: 'corrobore', niveau };
+      libelle: 'Feu corroboré par plusieurs familles', importance, type: 'corrobore', niveau, statutCourt: 'Confirmé' };
   }
   if (niveau === 'probable') {
     return { couleur: '#ff8c32', taille: [26, 34, 44][importance - 1],
-      libelle: 'Signal thermique fort ou répété', importance, type: 'probable', niveau };
+      libelle: 'Signal thermique fort ou répété', importance, type: 'probable', niveau, statutCourt: 'Probable' };
   }
   return { couleur: '#ffd43b', taille: [22, 28, 36][importance - 1],
-    libelle: 'Indice automatique isolé', importance, type: 'indice', niveau };
+    libelle: 'Indice automatique isolé', importance, type: 'indice', niveau, statutCourt: 'Indice' };
 }
 
 function feuxFiltres() {
@@ -1554,18 +1560,26 @@ function creerMarqueurFeu(f) {
   L.circle([f.lat, f.lon], {
     radius: r,
     color: aspect.couleur,
-    weight: 1.2,
+    weight: 1.5,
     dashArray: '4,4',
     fillColor: aspect.couleur,
     fillOpacity: 0.08,
   }).addTo(groupe);
 
+  const nomLieu = html(f.commune || aspect.statutCourt);
+  const badgeHtml = `
+    <div class="marqueur-feu-tactique" style="--couleur-bord:${aspect.couleur};--couleur-halo:${aspect.couleur}">
+      ${svgFlamme(aspect.couleur, 26, aspect.type)}
+      <span class="badge-titre">${nomLieu}</span>
+      <span class="badge-statut" style="background:${aspect.couleur}33;color:${aspect.couleur}">${html(aspect.statutCourt)}</span>
+    </div>`;
+
   const marker = L.marker([f.lat, f.lon], {
     icon: L.divIcon({
-      className: 'marqueur-feu',
-      html: svgFlamme(aspect.couleur, aspect.taille, aspect.type),
-      iconSize: [Math.round(aspect.taille * .82), aspect.taille],
-      iconAnchor: [Math.round(aspect.taille * .41), aspect.taille],
+      className: 'conteneur-marqueur-tactique',
+      html: badgeHtml,
+      iconSize: null,
+      iconAnchor: [18, 18],
     }),
     title: `${aspect.libelle}${f.commune ? ` · ${f.commune}` : ''}`,
     alt: aspect.libelle,
