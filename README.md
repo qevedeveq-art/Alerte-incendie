@@ -58,6 +58,38 @@ Un contrôle de santé indépendant tourne toutes les 15 minutes : si aucune
 collecte n'a réussi depuis 45 minutes, **le système prévient qu'il est muet**
 plutôt que de laisser croire au calme.
 
+### Le veilleur est dehors
+
+Ce contrôle de santé avait un angle mort : il vivait dans le système qu'il
+surveille. pg_cron, les Edge Functions et la base sont dans le même projet
+Supabase — si le projet tombe, se met en pause ou sature, plus rien ne prévient
+personne, ce qui est précisément la panne qu'un heartbeat doit attraper.
+
+La logique est donc inversée : tant que tout va bien, le système **émet un signal
+vers un service tiers**. C'est l'absence de signal qui déclenche l'alerte, chez
+quelqu'un qui ne dépend pas de Supabase. Une panne totale devient détectable.
+Configuration : clé `heartbeat_url` (voir `docs/EXPLOITATION.md`).
+
+### Le vent, pour rendre l'alerte actionnable
+
+« Feu à 4 km » ne dit pas s'il vient vers vous. Les alertes portent désormais le
+vent relevé au point du feu — secteur, vitesse, sens de propagation probable —
+depuis **Open-Meteo**.
+
+La météo sert aussi à **durcir automatiquement la détection** les jours à risque :
+air sec, vent fort et forte chaleur font passer une zone d'`equilibre` à
+`sensible`. La modulation est volontairement **asymétrique** : elle ne peut que
+rendre le système plus sensible, jamais moins. Assouplir un seuil sur la foi d'une
+prévision reviendrait à masquer un départ de feu réel.
+
+### Fin d'alerte
+
+Un évènement sans nouvelle détection depuis 3 heures déclenche un message de fin
+vers ceux qui avaient reçu l'alerte. Auparavant l'évènement se clôturait en
+silence après 18 h : la dernière information reçue par l'abonné restait une alerte
+incendie, indéfiniment. Le message précise qu'un foyer résiduel reste invisible
+depuis l'espace.
+
 ## Limites, à lire avant de s'y fier
 
 | | |
@@ -107,7 +139,9 @@ NASA FIRMS (4 flux CSV Europe, sans clé API)
 | `signalements`, `signalement_groupes` | signalements citoyens et leur regroupement à 50 m |
 | `evenements` | clusters spatio-temporels = un feu, avec son origine |
 | `creneaux_traites` | créneaux satellite déjà décodés |
-| `alertes` | file d'envoi, idempotente par (évènement, canal, sévérité) |
+| `meteo` | dernière observation et indice de risque par zone |
+| `observations_aero` | positions d'aéronefs de lutte (ADS-B), corroboration seule |
+| `alertes` | file d'envoi, idempotente par (évènement, canal, sévérité, type) |
 | `runs` | journal d'exécution, base du contrôle de santé |
 | `config` | secrets applicatifs (RLS active, service role uniquement) |
 
@@ -141,11 +175,19 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   10 migrations SQL — schéma, moteur, cron
-supabase/functions/    7 Edge Functions Deno + module partagé
+supabase/migrations/   27 migrations SQL — schéma, moteur, cron
+supabase/functions/    10 Edge Functions Deno + module partagé + tests
 web/                   PWA autonome (1 fichier HTML, service worker, manifeste)
-.github/workflows/     publication Pages + déploiement Supabase
+.github/workflows/     publication Pages + vérification et déploiement Supabase
 docs/                  exploitation et configuration
+```
+
+Le déploiement est **subordonné aux tests** : lint, typage, tests unitaires et
+rejeu de toutes les migrations sur une base vierge s'exécutent avant tout `db
+push`. Pour lancer la vérification en local :
+
+```bash
+cd supabase/functions && deno task verif
 ```
 
 ## Installation depuis zéro
@@ -175,8 +217,23 @@ curl -X POST "$URL/functions/v1/load-communes" \
   MODIS C6.1 (1 km), flux régionaux Europe 24 h, sans clé API.
 - **LSA SAF / EUMETSAT** — FRP-PIXEL Meteosat SEVIRI, 3 km, cadence 15 min,
   licence CC BY 4.0. Inscription gratuite requise.
+- **Open-Meteo** — vent, rafales, humidité et température par zone. Sans clé,
+  serveurs en UE, CC BY 4.0.
+- **OpenSky Network** — positions ADS-B des aéronefs de lutte, en corroboration
+  seule. Désactivé par défaut (`config.adsb`).
 - **geo.api.gouv.fr** — découpage communal IGN Admin Express.
 - **Les utilisateurs eux-mêmes**, pour les signalements.
+
+### Corroboration aérienne
+
+Un bombardier d'eau qui tourne à basse altitude au-dessus d'un point confirme un
+feu réel **et** significatif : ces appareils ne décollent pas pour un feu de
+broussaille, et le signal précède souvent le passage polaire suivant.
+
+Deux garde-fous : l'ADS-B ne **crée jamais** un évènement — un appareil en transit
+ou en entraînement produirait des faux positifs — et il n'incrémente pas
+`nb_detections`, puisque ce n'est pas un pixel chaud. Il ajoute `ADSB` aux sources,
+ce qui suffit à déclencher la règle « deux sources concordantes → critique ».
 
 ## Licence
 

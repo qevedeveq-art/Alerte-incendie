@@ -22,7 +22,17 @@
 //  Cadence : toutes les 10 minutes (cron pg_cron). Inutile d'aller plus
 //  vite, les fichiers amont sont régénérés environ une fois par heure.
 // =====================================================================
-import { fermerRun, json, CORS, estInterne, ouvrirRun, sb, verifierAdmin } from "../_shared/mod.ts";
+import {
+  CORS,
+  estInterne,
+  fermerRun,
+  fetchRetry,
+  json,
+  ouvrirRun,
+  sb,
+  verifierAdmin,
+} from "../_shared/mod.ts";
+import { horodatage, nombreOuNull, normaliserConfiance, parserCsv } from "./parsers.ts";
 
 const BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire";
 
@@ -32,37 +42,6 @@ const FLUX = [
   { source: "VIIRS_NOAA21", res: 375,  url: `${BASE}/noaa-21-viirs-c2/csv/J2_VIIRS_C2_Europe_24h.csv` },
   { source: "MODIS",        res: 1000, url: `${BASE}/c6.1/csv/MODIS_C6_1_Europe_24h.csv` },
 ];
-
-/** VIIRS renvoie low/nominal/high, MODIS un pourcentage : on normalise sur 0-100. */
-function normaliserConfiance(v: string): number | null {
-  const t = (v ?? "").trim().toLowerCase();
-  if (t === "l" || t === "low") return 20;
-  if (t === "n" || t === "nominal") return 60;
-  if (t === "h" || t === "high") return 90;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : null;
-}
-
-/** acq_date=2026-07-24 + acq_time=0030 (UTC) -> 2026-07-24T00:30:00Z */
-function horodatage(date: string, time: string): string {
-  const t = String(time ?? "0").trim().padStart(4, "0");
-  return `${date}T${t.slice(0, 2)}:${t.slice(2, 4)}:00Z`;
-}
-
-function parserCsv(txt: string): Record<string, string>[] {
-  const lignes = txt.trim().split("\n");
-  if (lignes.length < 2) return [];
-  const entetes = lignes[0].split(",").map((h) => h.trim());
-  const out: Record<string, string>[] = [];
-  for (let i = 1; i < lignes.length; i++) {
-    const cols = lignes[i].split(",");
-    if (cols.length < entetes.length) continue;
-    const o: Record<string, string> = {};
-    entetes.forEach((h, j) => (o[h] = cols[j]));
-    out.push(o);
-  }
-  return out;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -83,10 +62,12 @@ Deno.serve(async (req) => {
     // 2. Téléchargement + filtrage des 4 flux, en parallèle
     const lots = await Promise.all(FLUX.map(async (f) => {
       try {
-        const r = await fetch(f.url, {
-          signal: AbortSignal.timeout(30_000),
+        // Reessais : les serveurs NASA rendent regulierement des 5xx
+        // passagers, et un seul essai transforme un hoquet de trois
+        // secondes en creneau de collecte perdu.
+        const r = await fetchRetry(f.url, {
           headers: { "User-Agent": "alerte-incendie/1.0 (surveillance communale)" },
-        });
+        }, 3, 30_000);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const lignes = parserCsv(await r.text());
 
@@ -103,8 +84,10 @@ Deno.serve(async (req) => {
             geom: `SRID=4326;POINT(${lon} ${lat})`,
             confiance: (l.confidence ?? "").trim(),
             confiance_num: normaliserConfiance(l.confidence),
-            frp: Number(l.frp) || null,
-            brillance: Number(l.bright_ti4 ?? l.brightness) || null,
+            // `Number(x) || null` transformait une FRP de 0 en null : rare,
+            // mais 0 MW est une mesure, pas une absence de mesure.
+            frp: nombreOuNull(l.frp),
+            brillance: nombreOuNull(l.bright_ti4 ?? l.brightness),
             daynight: (l.daynight ?? "").trim().slice(0, 1) || null,
             resolution_m: f.res,
             fingerprint: `${f.source}|${lat.toFixed(5)}|${lon.toFixed(5)}|${l.acq_date}|${l.acq_time}`,

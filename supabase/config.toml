@@ -20,3 +20,12 @@ verify_jwt = false          # protégée par x-admin-key, usage diagnostique
 
 [functions.signalement]
 verify_jwt = false          # écriture protégée par jeton d'abonné, carte publique
+
+[functions.poll-meteo]
+verify_jwt = false          # protégée par x-admin-key, appelée par pg_cron
+
+[functions.poll-adsb]
+verify_jwt = false          # protégée par x-admin-key, inactive sans config.adsb
+
+[functions.probe-mtg]
+verify_jwt = false          # protégée par x-admin-key, veille mensuelle

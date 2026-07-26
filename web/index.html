@@ -265,6 +265,23 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
             </div>
           </div>
         </div>
+        <div style="margin-top:14px">
+          <label for="refLibelle">Mon point de référence
+            <span style="color:var(--txt3)">(facultatif)</span></label>
+          <p class="note" style="margin:2px 0 8px">
+            Les alertes indiquent aujourd’hui la distance au centre de la commune.
+            Avec un point de référence, elles donnent la distance à cet endroit précis.
+            Cette position ne quitte jamais votre compte.
+          </p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="refLibelle" placeholder="la maison, l’exploitation…" maxlength="40"
+                   style="flex:1;min-width:150px">
+            <button class="btn g" id="btnRefIci" type="button">Utiliser ma position</button>
+            <button class="btn g" id="btnRefCarte" type="button">Pointer sur la carte</button>
+            <button class="btn g" id="btnRefEffacer" type="button">Effacer</button>
+          </div>
+          <p class="note" id="refEtat" style="margin-top:6px"></p>
+        </div>
         <button class="btn pleine" style="margin-top:14px" id="btnReglages">Enregistrer</button>
       </div>
     </section>
@@ -276,13 +293,17 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 
     <section>
       <p class="note">
-        <b>Sources.</b> Points chauds NASA FIRMS — VIIRS S-NPP, NOAA-20, NOAA-21 (375 m) et
-        MODIS (1 km), flux Europe rafraîchis plusieurs fois par jour. Contours communaux
-        IGN Admin&nbsp;Express via geo.api.gouv.fr. Collecte toutes les 10 minutes.<br><br>
-        <b>Limites à connaître.</b> Latence satellite de 2 à 3 h. Un feu peut être manqué
-        s’il est masqué par les nuages ou trop petit au moment du passage. Les sources
-        thermiques permanentes (industrie, torchères) sont écartées automatiquement après
-        apprentissage. <b>Ce service ne remplace ni FR-Alert ni le 18/112.</b>
+        <b>Sources.</b> Trois niveaux indépendants qui se corroborent :
+        <b>signalements de témoins</b> (instantanés, non vérifiés) ;
+        <b>Meteosat / LSA SAF</b>, géostationnaire, environ 25 minutes de latence pour
+        3 km de résolution ; <b>NASA FIRMS</b> — VIIRS S-NPP, NOAA-20, NOAA-21 (375 m) et
+        MODIS (1 km), 2 à 3 h de latence. Météo Open-Meteo, contours communaux
+        IGN Admin&nbsp;Express via geo.api.gouv.fr.<br><br>
+        <b>Limites à connaître.</b> Un feu peut être manqué s’il est masqué par les nuages,
+        trop petit, ou trop récent : le seuil géostationnaire est d’environ 20&nbsp;MW.
+        Les sources thermiques permanentes (industrie, torchères) sont écartées
+        automatiquement après apprentissage.
+        <b>Ce service ne remplace ni FR-Alert ni le 18/112.</b>
       </p>
     </section>
 
@@ -355,6 +376,14 @@ function initCarte(centre) {
   coucheSig = L.layerGroup().addTo(carte);
 
   carte.on('click', (e) => {
+    if (modeChoixReference) {
+      refEnAttente = { lat: e.latlng.lat, lon: e.latlng.lng };
+      refEffacer = false;
+      modeChoixReference = false;
+      majEtatReference();
+      toast('Position retenue. Enregistrez vos réglages pour confirmer.');
+      return;
+    }
     if (!modeSignalement) return;
     signaler(e.latlng.lat, e.latlng.lng);
   });
@@ -550,6 +579,8 @@ function rendre() {
   $('#selSeuil').value = etat.abonne.seuil_min;
   if (etat.abonne.quiet_start) $('#qStart').value = etat.abonne.quiet_start.slice(0, 5);
   if (etat.abonne.quiet_end) $('#qEnd').value = etat.abonne.quiet_end.slice(0, 5);
+  if (etat.abonne.ref_libelle) $('#refLibelle').value = etat.abonne.ref_libelle;
+  majEtatReference();
 
   dessinerCarte();
 }
@@ -670,16 +701,71 @@ $('#btnTest').onclick = async () => {
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 };
 
+/* ---------- point de référence ----------
+   La distance qui compte pour un abonné est celle qui le sépare de chez
+   lui, pas du centre de la commune. La position reste sur son compte et
+   n'est exposée à personne d'autre. */
+let refEnAttente = null;      // {lat, lon} choisi mais pas encore enregistré
+let refEffacer = false;
+let modeChoixReference = false;
+
+function majEtatReference() {
+  const el = $('#refEtat');
+  if (!el) return;
+  if (refEffacer) el.textContent = 'Point de référence supprimé — enregistrez pour confirmer.';
+  else if (refEnAttente) {
+    el.textContent = `Position choisie : ${refEnAttente.lat.toFixed(4)}, ` +
+      `${refEnAttente.lon.toFixed(4)} — enregistrez pour confirmer.`;
+  } else if (etat?.abonne?.ref_definie) {
+    el.textContent = `Point de référence défini${
+      etat.abonne.ref_libelle ? ` : ${etat.abonne.ref_libelle}` : ''
+    }.`;
+  } else el.textContent = 'Aucun point de référence : les distances partent du centre de la commune.';
+}
+
+$('#btnRefIci').onclick = () => {
+  if (!navigator.geolocation) return toast('Géolocalisation indisponible.', true);
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      refEnAttente = { lat: p.coords.latitude, lon: p.coords.longitude };
+      refEffacer = false;
+      majEtatReference();
+    },
+    () => toast('Position refusée ou indisponible.', true),
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+};
+
+$('#btnRefCarte').onclick = () => {
+  toast('Touchez la carte à l’endroit voulu.');
+  modeChoixReference = true;
+};
+
+$('#btnRefEffacer').onclick = () => {
+  refEnAttente = null;
+  refEffacer = true;
+  $('#refLibelle').value = '';
+  majEtatReference();
+};
+
 $('#btnReglages').onclick = async () => {
   try {
-    await appel('reglages', {
-      method: 'POST',
-      body: JSON.stringify({
-        seuil_min: $('#selSeuil').value,
-        quiet_start: $('#qStart').value || null,
-        quiet_end: $('#qEnd').value || null,
-      }),
-    });
+    const corps = {
+      seuil_min: $('#selSeuil').value,
+      quiet_start: $('#qStart').value || null,
+      quiet_end: $('#qEnd').value || null,
+    };
+    if (refEffacer) {
+      corps.ref_lat = null;
+      corps.ref_lon = null;
+    } else if (refEnAttente) {
+      corps.ref_lat = refEnAttente.lat;
+      corps.ref_lon = refEnAttente.lon;
+      corps.ref_libelle = $('#refLibelle').value || null;
+    }
+    await appel('reglages', { method: 'POST', body: JSON.stringify(corps) });
+    refEnAttente = null;
+    refEffacer = false;
     toast('Réglages enregistrés.');
     recharger();
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }

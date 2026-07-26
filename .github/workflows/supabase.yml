@@ -1,18 +1,61 @@
-# Déploiement des migrations et des Edge Functions vers Supabase.
-# Secrets à définir dans Settings > Secrets and variables > Actions :
+# Verification puis deploiement des migrations et des Edge Functions.
+#
+# Le deploiement est desormais SUBORDONNE aux tests. Auparavant un push
+# sur main partait directement en production sans lint, sans typage et
+# sans test : pour un systeme d'alerte incendie reel, une faute de frappe
+# dans un message ou une regression dans un analyseur se decouvrait sur
+# le terrain.
+#
+# Secrets a definir dans Settings > Secrets and variables > Actions :
 #   SUPABASE_ACCESS_TOKEN  (jeton personnel Supabase)
-#   SUPABASE_PROJECT_REF   (xpcsnxyhjrpvcvsqmaxd)
+#   SUPABASE_PROJECT_REF   (reference du projet)
 #   SUPABASE_DB_PASSWORD   (mot de passe Postgres du projet)
 name: Déployer Supabase
 
 on:
   push:
     branches: [main]
+    paths: ['supabase/**', '.github/workflows/supabase.yml']
+  pull_request:
     paths: ['supabase/**']
   workflow_dispatch:
 
 jobs:
+  verifier:
+    name: Vérifier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Style et règles de lint
+        working-directory: supabase/functions
+        run: deno lint
+
+      - name: Typage
+        working-directory: supabase/functions
+        run: deno check **/index.ts _tests/*.ts
+
+      - name: Tests unitaires
+        working-directory: supabase/functions
+        run: deno test _tests/
+
+      # Une migration doit toujours pouvoir s'appliquer sur une base
+      # vierge : c'est la seule verification qui attrape une erreur de
+      # syntaxe SQL ou une dependance a un objet inexistant AVANT la
+      # production.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Rejouer toutes les migrations sur une base neuve
+        run: supabase db start
+
   deployer:
+    name: Déployer
+    needs: verifier
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

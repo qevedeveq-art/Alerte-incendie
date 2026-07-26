@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
 
     if (route === "etat") {
       if (!await quota(`etat:${ab.id}`, 120, 3600)) return json(TROP_DE_REQUETES, 429);
-      const [zones, evts, sante, canaux, dets] = await Promise.all([
+      const [zones, evts, sante, canaux, dets, meteo] = await Promise.all([
         sb.rpc("zones_abonne", { p_abonne: ab.id }),
         sb.rpc("evenements_abonne", { p_abonne: ab.id, p_jours: 30 }),
         sb.from("v_sante").select("*").single(),
@@ -153,15 +153,18 @@ Deno.serve(async (req) => {
           .select("id,type,libelle,actif,verifie,last_ok_at,last_error,echecs")
           .eq("abonne_id", ab.id),
         sb.rpc("detections_abonne", { p_abonne: ab.id, p_heures: 72 }),
+        sb.rpc("meteo_abonne", { p_abonne: ab.id }),
       ]);
       return json({
         abonne: {
           id: ab.id, nom: ab.nom, email: ab.email, seuil_min: ab.seuil_min,
           quiet_start: ab.quiet_start, quiet_end: ab.quiet_end,
+          ref_libelle: ab.ref_libelle ?? null,
+          ref_definie: !!ab.ref_geom,
         },
         zones: zones.data ?? [], evenements: evts.data ?? [],
         detections: dets.data ?? [], canaux: canaux.data ?? [],
-        sante: sante.data ?? null,
+        sante: sante.data ?? null, meteo: meteo.data ?? {},
         vapid: cfg.vapid_public,
         telegram_bot: cfg.telegram_bot_nom ?? null,
       });
@@ -287,6 +290,24 @@ Deno.serve(async (req) => {
       if ("quiet_end" in body) maj.quiet_end = body.quiet_end || null;
       if ("nom" in body) maj.nom = String(body.nom ?? "").slice(0, 60) || null;
       if (Object.keys(maj).length) await sb.from("abonnes").update(maj).eq("id", ab.id);
+
+      // Point de reference : la distance qui compte pour un abonne est
+      // celle qui le separe de chez lui, pas du centre de la commune.
+      if ("ref_lat" in body || "ref_lon" in body) {
+        const lat = body.ref_lat == null ? null : Number(body.ref_lat);
+        const lon = body.ref_lon == null ? null : Number(body.ref_lon);
+        if (lat !== null && (!Number.isFinite(lat) || Math.abs(lat) > 90)) {
+          return json({ erreur: "latitude invalide" }, 400);
+        }
+        if (lon !== null && (!Number.isFinite(lon) || Math.abs(lon) > 180)) {
+          return json({ erreur: "longitude invalide" }, 400);
+        }
+        const { error } = await sb.rpc("maj_reference", {
+          p_abonne: ab.id, p_lat: lat, p_lon: lon,
+          p_libelle: String(body.ref_libelle ?? "").slice(0, 40) || null,
+        });
+        if (error) throw new Error(error.message);
+      }
 
       if (body.zone_id) {
         const zmaj: Record<string, unknown> = {};
