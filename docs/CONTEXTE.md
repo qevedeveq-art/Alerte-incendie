@@ -192,12 +192,13 @@ plus de 24 heures.
   chaque famille indépendante : polaire, géostationnaire, citoyenne et aérienne.
   Son score est indicatif et ne doit jamais être présenté comme une
   confirmation officielle.
-- La carte utilise l'orthophotographie IGN/Géoplateforme par défaut et conserve
-  le plan sombre comme repli. Les indices automatiques sont des flammes
-  jaunes/orange/rouges, les groupes citoyens vérifiés des flammes violettes et
-  seuls les signalements non vérifiés restent des points gris discontinus. La
-  taille 1–3 combine score, FRP et répétition ; elle ne représente jamais une
-  surface brûlée.
+- La carte utilise l'orthophotographie IGN/Géoplateforme avec superposition
+  des noms de localités en français (couche IGN GEOGRAPHICALNAMES.NAMES) et
+  propose les plans OpenStreetMap France et sombre en repli. Les indices
+  automatiques sont des flammes jaunes/orange/rouges, les groupes citoyens
+  vérifiés des flammes violettes et seuls les signalements non vérifiés restent
+  des points gris discontinus. La taille 1–3 combine score, FRP et répétition ;
+  elle ne représente jamais une surface brûlée.
 - `corrobore` exige au moins deux familles indépendantes. Une seule famille,
   même répétée ou très puissante, reste `probable`; VIIRS, MODIS et les
   différents satellites polaires ne se corroborent pas entre eux.

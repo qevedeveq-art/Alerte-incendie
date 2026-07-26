@@ -910,11 +910,29 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
       attribution: '&copy; IGN / Géoplateforme — photographies aériennes',
     },
   );
+  const nomsFrancaisIGN = L.tileLayer(
+    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=GEOGRAPHICALNAMES.NAMES&STYLE=normal&FORMAT=image/png' +
+    '&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+      maxZoom: 19,
+      opacity: 0.9,
+      attribution: '&copy; IGN / Géoplateforme — noms des localités en français',
+    },
+  );
+  const osmFr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '&copy; OpenStreetMap France — carte et localités en français',
+  });
   const planSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 18, subdomains: 'abcd',
     attribution: '&copy; OpenStreetMap, &copy; CARTO',
   });
-  (donneesReduites ? planSombre : satellite).addTo(carte);
+  if (donneesReduites) {
+    planSombre.addTo(carte);
+  } else {
+    satellite.addTo(carte);
+    nomsFrancaisIGN.addTo(carte);
+  }
   $('#modeEconomie').hidden = !donneesReduites;
   let erreursSatellite = 0;
   satellite.on('tileload', () => (erreursSatellite = 0));
@@ -922,14 +940,18 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     erreursSatellite++;
     if (erreursSatellite >= 4 && carte.hasLayer(satellite)) {
       carte.removeLayer(satellite);
-      planSombre.addTo(carte);
-      toast('Vue satellite indisponible : passage automatique au plan.');
+      if (carte.hasLayer(nomsFrancaisIGN)) carte.removeLayer(nomsFrancaisIGN);
+      osmFr.addTo(carte);
+      toast('Vue satellite indisponible : passage automatique au plan OpenStreetMap France.');
     }
   });
   L.control.layers({
-    'Vue satellite (IGN)': satellite,
+    'Vue satellite + Noms français (IGN)': L.layerGroup([satellite, nomsFrancaisIGN]),
+    'Plan OpenStreetMap (France)': osmFr,
     'Plan sombre': planSombre,
-  }, {}, { position: 'topleft', collapsed: true }).addTo(carte);
+  }, {
+    'Noms des localités (IGN)': nomsFrancaisIGN,
+  }, { position: 'topleft', collapsed: true }).addTo(carte);
 
   const legende = L.control({ position: 'bottomright' });
   legende.onAdd = () => {
