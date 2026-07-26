@@ -1,10 +1,20 @@
 # Publication de la PWA sur GitHub Pages à chaque push sur main.
+#
+# La publication est SUBORDONNEE aux tests, comme le deploiement Supabase.
+# Auparavant un push sur web/** partait en production sans rien verifier :
+# les tests d'interface vivent dans supabase/functions/_tests, et le
+# workflow Supabase ne se declenche que sur supabase/**. Une refonte de la
+# carte pouvait donc casser deux tests d'interface et etre publiee quand
+# meme — c'est exactement ce qui s'est produit le 26 juillet 2026, ou six
+# commits de rattrapage ont suivi sur le meme ecran.
 name: Publier la PWA
 
 on:
   push:
     branches: [main]
-    paths: ['web/**', '.github/workflows/pages.yml']
+    paths: ['web/**', '.github/workflows/pages.yml', 'supabase/functions/_tests/**']
+  pull_request:
+    paths: ['web/**']
   workflow_dispatch:
 
 permissions:
@@ -17,7 +27,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verifier:
+    name: Vérifier l'interface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Les tests d'interface lisent web/index.html, web/moderation.html et
+      # web/sw.js : ils gardent les invariants visibles par l'utilisateur
+      # (legende, statuts de preuve, cle admin non persistee, hors-ligne).
+      - name: Tests d'interface et d'invariants
+        working-directory: supabase/functions
+        run: deno task test
+
+      # Un JSON de manifeste invalide casse l'installation de la PWA sans
+      # aucun symptome visible sur la carte.
+      - name: Manifeste et service worker
+        run: |
+          python3 -c "import json,sys; json.load(open('web/manifest.webmanifest')); print('manifeste valide')"
+          test -f web/sw.js
+          test -f web/index.html
+
   publier:
+    name: Publier
+    needs: verifier
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
