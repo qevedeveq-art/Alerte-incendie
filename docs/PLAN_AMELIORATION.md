@@ -6,9 +6,9 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
 
 ## État réel
 
-- Les migrations 01 à 29, les Edge Functions et la PWA sont en production.
-  Les migrations 30 à 33 et les évolutions ci-dessous sont validées localement,
-  mais pas encore publiées.
+- Les migrations 01 à 33, les 11 Edge Functions et la PWA sont en production.
+  Le déploiement du commit `b9d1ee8` est vérifié par GitHub Actions et par des
+  contrôles externes HTTP.
 - La carte publique corrèle quatre familles indépendantes : polaire,
   géostationnaire, citoyenne et aérienne.
 - La vue satellite IGN/Géoplateforme est le fond par défaut. Une légende
@@ -17,14 +17,14 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
   surface brûlée.
 - Un compte actif avec au moins un canal vérifié est obligatoire pour créer ou
   contester un signalement.
-- L'angle mort majeur reste l'absence de contrôle extérieur à Supabase : projet
-  en pause, base indisponible ou `pg_cron` arrêté peuvent passer inaperçus.
+- La veille GitHub extérieure contrôle désormais Supabase et `pg_cron` toutes
+  les cinq minutes. Elle reste dépendante de GitHub et de ses notifications.
 - L'outre-mer homogène, la charge nationale et l'identité légale complète de
   l'exploitant ne sont pas encore validés.
 
 ### Avancement du plan prioritaire
 
-Réalisé et validé localement le 26 juillet :
+Réalisé, déployé et vérifié le 26 juillet :
 
 - classification rouge/orange/jaune corrigée par familles indépendantes ;
 - fiche de preuve avec sources, fraîcheur, résolution et limites de précision ;
@@ -37,9 +37,8 @@ Réalisé et validé localement le 26 juillet :
   au tableau SQL dans la version précédente ;
 - liens EFFIS et Météo des forêts séparés des preuves.
 
-Restent dépendants d'un déploiement ou d'un tiers :
+Restent dépendants d'un tiers ou d'une campagne d'évaluation :
 
-- activer la veille externe en production après migration 30 ;
 - mener les comparaisons MTG/Sentinel pendant deux semaines quand leurs flux
   sont effectivement disponibles et stables ;
 - obtenir les accords FeuxDeForet.fr, SDIS ou préfectures ;

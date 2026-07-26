@@ -10,9 +10,10 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État Git publié : commit `449b093` sur `main` et `origin/main`.
+- État fonctionnel publié : commit `b9d1ee8` sur `main` et `origin/main`
+  (suivi d'un commit de mémoire de livraison).
 - Schéma du dépôt : migrations **01 à 33**.
-- État de production vérifié : migrations **01 à 29** appliquées et Edge
+- État de production vérifié : migrations **01 à 33** appliquées et Edge
   Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
@@ -33,16 +34,19 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
   de déploiement signale explicitement lequel des trois secrets manque.
 - Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
-  2.109.1 : les **29 migrations** se rejouent intégralement sur une base neuve.
-  Le conteneur Postgres est sain, les 11 tâches `pg_cron` sont présentes, toutes
+  2.109.1 : les **33 migrations** se rejouent intégralement sur une base neuve.
+  Le conteneur Postgres est sain, les 12 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
   contacts RGPD valent `qevedeveq@gmail.com`.
-- Évolution locale non encore publiée : migrations 30 à 33, correction des
-  niveaux cartographiques, santé publique, veille GitHub externe, signalement
-  structuré, journal de modération, sonde Sentinel-3 et correction ADS-B. Les **33 migrations**
-  se rejouent sur une base neuve. Sur les 105 groupes live du 26 juillet, le
-  client classe 1 concordance multi-familles en rouge, 57 signaux forts ou
-  répétés en orange et 47 indices isolés en jaune, sans erreur navigateur.
+- Le run « Publier la PWA » `30209289005` du commit `b9d1ee8` a réussi. Le run
+  Supabase `30209289053` a rencontré un timeout réseau vers le pooler lors de
+  sa première tentative, puis sa seconde tentative a appliqué les migrations
+  30 à 33 et déployé les 11 Edge Functions avec succès.
+- Contrôle externe après déploiement : la PWA répond HTTP 200 avec le fond
+  satellite et le formulaire structuré ; `/api/sante-publique` répond HTTP 200
+  avec `ok=true`, collecte polaire, Meteosat et `pg_cron` opérationnels. La
+  carte de production renvoie 110 groupes : 1 corroboré multi-familles, 59
+  probables forts ou répétés et 50 indices isolés.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
@@ -179,9 +183,10 @@ plus de 24 heures.
 
 ## Limites et risques connus
 
-1. **Veille externe non encore publiée.** Le workflow GitHub couvrant projet en
-   pause et `pg_cron` arrêté existe localement mais ne protège la production
-   qu'après déploiement des migrations 30–32 et activation du workflow.
+1. **Dépendance de la veille externe.** Le workflow GitHub couvre désormais le
+   projet en pause et `pg_cron` arrêté toutes les cinq minutes. Son efficacité
+   dépend des notifications Actions du mainteneur et de la disponibilité de
+   GitHub ; il ne remplace pas un contrat de supervision.
 2. **Jeton porteur.** Le jeton d'abonné est conservé dans `localStorage`.
    Quiconque le récupère contrôle les zones et canaux de cet abonné.
 3. **Réputation non décisionnelle.** L'export expose un historique agrégé
