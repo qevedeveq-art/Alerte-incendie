@@ -1560,20 +1560,12 @@ function creerMarqueurFeu(f) {
     fillOpacity: 0.08,
   }).addTo(groupe);
 
-  L.circleMarker([f.lat, f.lon], {
-    radius: Math.round(aspect.taille * 0.45),
-    color: '#ffffff',
-    weight: 2,
-    fillColor: aspect.couleur,
-    fillOpacity: 0.45,
-  }).addTo(groupe);
-
   const marker = L.marker([f.lat, f.lon], {
     icon: L.divIcon({
       className: 'marqueur-feu',
       html: svgFlamme(aspect.couleur, aspect.taille, aspect.type),
-      iconSize: [Math.round(aspect.taille * .78), aspect.taille],
-      iconAnchor: [Math.round(aspect.taille * .39), aspect.taille],
+      iconSize: [Math.round(aspect.taille * .82), aspect.taille],
+      iconAnchor: [Math.round(aspect.taille * .41), aspect.taille],
     }),
     title: `${aspect.libelle}${f.commune ? ` · ${f.commune}` : ''}`,
     alt: aspect.libelle,
