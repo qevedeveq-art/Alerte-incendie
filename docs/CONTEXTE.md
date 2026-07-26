@@ -10,8 +10,8 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État Git publié : commit fonctionnel `689596d`, mémoire `3f05437`, sur
-  `main` et `origin/main`.
+- État Git publié : commit fonctionnel `689596d`, suivi des mises à jour de
+  mémoire `3f05437` et `af21815`, sur `main` et `origin/main`.
 - Schéma du dépôt : migrations **01 à 29**.
 - État de production vérifié : migrations **01 à 29** appliquées et Edge
   Functions déployées.
@@ -24,9 +24,11 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   « Déployer Supabase » a réussi. Contrôle externe effectué le 26 juillet :
   `GET /functions/v1/api/carte?heures=24&limite=5` répond HTTP 200 et expose
   les quatre familles `polaire`, `geostationnaire`, `citoyen`, `aerien`.
-- Le workflow PWA échoue séparément dans `actions/configure-pages` parce que
-  GitHub Pages n'est pas encore activé et configuré avec « GitHub Actions »
-  comme source de publication.
+- GitHub Pages est activé avec « GitHub Actions » comme source. Le workflow
+  « Publier la PWA #5 » du commit `af21815` a réussi ; contrôle externe effectué
+  le 26 juillet : `https://qevedeveq-art.github.io/Alerte-incendie/` répond
+  HTTP 200 et contient la carte corrélée, ses filtres et la page de
+  confidentialité.
 - Les secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et
   `SUPABASE_DB_PASSWORD` sont désormais configurés dans GitHub Actions.
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
