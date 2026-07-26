@@ -1,52 +1,22 @@
 -- ===================================================================
---  VEILLE EXTERNE ET PLANIFICATION
+--  AUTOTEST DES CANAUX ET PLANIFICATION
 -- ---------------------------------------------------------------------
---  1. Interrupteur d'homme mort externe.
---     Le heartbeat actuel vit dans le systeme qu'il surveille : pg_cron,
---     les Edge Functions et la base sont dans le meme projet Supabase.
---     Si le projet est en pause, sature, ou si pg_cron s'arrete, plus
---     rien ne previent personne — exactement la panne que le heartbeat
---     est cense attraper.
---
---     On inverse donc la logique : le systeme envoie un signal
---     PERIODIQUE VERS L'EXTERIEUR tant qu'il va bien. C'est l'absence
---     de signal qui declenche l'alerte, chez un tiers qui, lui, ne
---     depend pas de Supabase (healthchecks.io, cron-job.org, UptimeRobot).
---     Une panne totale devient donc detectable, ce qu'elle n'etait pas.
---
---  2. Autotest mensuel des canaux : un canal push revoque n'est
+--  1. Autotest mensuel des canaux : un canal push revoque n'est
 --     desactive qu'a l'usage. On le decouvrait le jour du feu.
 --
---  3. Planification declarative. Les taches pg_cron n'existaient que
+--  2. Planification declarative. Les taches pg_cron n'existaient que
 --     dans la base de production, creees a la main : une reconstruction
 --     du projet depuis les migrations repartait sans aucune collecte.
+--
+--  Angle mort assume : verifier_sante() s'execute dans le projet qu'il
+--  surveille. Il detecte une collecte muette ou la perte du
+--  geostationnaire, mais pas une panne de Supabase lui-meme (projet en
+--  pause, saturation, arret de pg_cron). Couvrir ce cas demanderait un
+--  veilleur externe, ecarte pour ne pas dependre d'un service tiers.
 -- ===================================================================
 
 -- ---------------------------------------------------------------------
---  1. SIGNAL VERS L'EXTERIEUR
--- ---------------------------------------------------------------------
-create or replace function public.ping_externe()
-returns boolean
-language plpgsql security definer set search_path = public, extensions
-as $$
-declare v_url text;
-begin
-  select v #>> '{}' into v_url from public.config where k = 'heartbeat_url';
-  if v_url is null or v_url = '' then return false; end if;
-  perform net.http_get(url := v_url, timeout_milliseconds := 10000);
-  return true;
-exception when others then
-  -- Le ping ne doit jamais faire echouer le controle de sante lui-meme.
-  return false;
-end;
-$$;
-
-comment on function public.ping_externe() is
-  'Signale a un service tiers que le systeme est vivant. L''absence de ping declenche l''alerte cote tiers.';
-
--- ---------------------------------------------------------------------
---  Controle de sante : signale la panne en interne, et confirme la
---  bonne sante en externe. Le ping n'est emis QUE si tout va bien.
+--  Controle de sante interne.
 -- ---------------------------------------------------------------------
 create or replace function public.verifier_sante()
 returns jsonb
@@ -56,7 +26,7 @@ declare
   v_min integer; v_dernier timestamptz;
   v_geo integer; v_geo_conf boolean;
   v_alertes integer := 0; r record;
-  v_msg text; v_sev text; v_ping boolean := false;
+  v_msg text; v_sev text;
 begin
   select minutes_depuis_poll, dernier_poll_ok, minutes_depuis_geo, geo_configure
     into v_min, v_dernier, v_geo, v_geo_conf
@@ -73,10 +43,8 @@ begin
       'Collecte geostationnaire interrompue depuis %s minutes. La surveillance continue via NASA FIRMS, mais avec 2 a 3 h de latence au lieu de 30 minutes.',
       coalesce(v_geo::text, 'un temps indetermine'));
   else
-    -- Tout va bien : c'est le seul cas ou l'on rassure le veilleur externe.
-    v_ping := public.ping_externe();
     return jsonb_build_object('minutes_depuis_poll', v_min, 'minutes_depuis_geo', v_geo,
-                              'alertes_heartbeat', 0, 'ping_externe', v_ping);
+                              'alertes_heartbeat', 0);
   end if;
 
   if exists (select 1 from public.alertes

@@ -58,17 +58,11 @@ Un contrôle de santé indépendant tourne toutes les 15 minutes : si aucune
 collecte n'a réussi depuis 45 minutes, **le système prévient qu'il est muet**
 plutôt que de laisser croire au calme.
 
-### Le veilleur est dehors
-
-Ce contrôle de santé avait un angle mort : il vivait dans le système qu'il
-surveille. pg_cron, les Edge Functions et la base sont dans le même projet
-Supabase — si le projet tombe, se met en pause ou sature, plus rien ne prévient
-personne, ce qui est précisément la panne qu'un heartbeat doit attraper.
-
-La logique est donc inversée : tant que tout va bien, le système **émet un signal
-vers un service tiers**. C'est l'absence de signal qui déclenche l'alerte, chez
-quelqu'un qui ne dépend pas de Supabase. Une panne totale devient détectable.
-Configuration : clé `heartbeat_url` (voir `docs/EXPLOITATION.md`).
+Ce contrôle garde un angle mort assumé : il vit dans le système qu'il surveille.
+pg_cron, les Edge Functions et la base sont dans le même projet Supabase — si le
+projet lui-même tombe ou se met en pause, personne n'est prévenu. Détecter ce
+scénario demanderait un veilleur externe, écarté pour ne pas ajouter une
+dépendance tierce.
 
 ### Le vent, pour rendre l'alerte actionnable
 
