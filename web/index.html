@@ -274,10 +274,14 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .incident-ligne small{display:block;color:var(--txt3)}
 .incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12px}
 .cluster-feu{background:transparent;border:0}
-.cluster-bulle{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
-  color:#fff;font-weight:800;border:3px solid rgba(255,255,255,.9);
-  background:radial-gradient(circle at 35% 30%,#52616d,#27323a 72%);
-  box-shadow:0 4px 16px rgba(0,0,0,.55)}
+.legende-carte{background:rgba(15,18,22,.94);backdrop-filter:blur(16px);border:1px solid var(--bord);
+  border-radius:14px;padding:12px 14px;color:var(--txt);box-shadow:0 12px 36px rgba(0,0,0,.65);max-width:320px}
+.legende-carte b{display:block;font-size:12px;color:#fff;margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase}
+.legende-carte .ligne{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;
+  transition:background .18s ease;user-select:none}
+.legende-carte .ligne:hover{background:rgba(255,255,255,.08)}
+.legende-carte .badge-compteur{margin-left:auto;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:var(--fond3);color:var(--txt2);border:1px solid var(--bord)}
 .legende-carte .toggle-legende{display:none}
 .panneau-filtres{display:none}
 .panneau-filtres.ouvert{display:grid}
@@ -1034,22 +1038,46 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
         <span>Légende</span><span aria-hidden="true">⌃</span>
       </button>
       <div class="contenu-legende">
-      <b>Légende des feux</b>
-      <div class="ligne"><span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span><span>Au moins 2 familles indépendantes</span></div>
-      <div class="ligne"><span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span><span>Signal unique fort ou répété</span></div>
-      <div class="ligne"><span class="symbole">${svgFlamme('#ffd43b', 16, 'indice')}</span><span>Indice automatique isolé</span></div>
-      <div class="ligne"><span class="symbole">${svgFlamme('#a78bfa', 19, 'citoyen')}</span><span>Déclarations citoyennes vérifiées</span></div>
-      <div class="ligne"><span class="symbole"><i class="point-non-verifie"></i></span><span>Déclaration non vérifiée</span></div>
-      <span class="aide">Taille = importance des indices, jamais surface brûlée.<br>
-        <a href="https://meteofrance.com/meteo-des-forets" target="_blank" rel="noopener">Météo des forêts officielle</a>
-        · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a></span>
+        <b>Légende &amp; Filtres réactifs</b>
+        <div class="ligne" data-filtre-legende="corrobore" title="Cliquez pour filtrer les feux corroborés">
+          <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
+          <span>Feux corroborés (≥2 sources)</span>
+          <span class="badge-compteur" id="cntCorrobore">0</span>
+        </div>
+        <div class="ligne" data-filtre-legende="probable" title="Cliquez pour filtrer les signaux forts">
+          <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
+          <span>Signal fort / répété</span>
+          <span class="badge-compteur" id="cntProbable">0</span>
+        </div>
+        <div class="ligne" data-filtre-legende="indice" title="Cliquez pour filtrer les indices isolés">
+          <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
+          <span>Indice automatique isolé</span>
+          <span class="badge-compteur" id="cntIndice">0</span>
+        </div>
+        <div class="ligne" data-filtre-legende="citoyen" title="Cliquez pour filtrer les déclarations vérifiées">
+          <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
+          <span>Témoins vérifiés par quorum</span>
+          <span class="badge-compteur" id="cntCitoyen">0</span>
+        </div>
+        <div class="ligne" data-filtre-legende="signalement" title="Cliquez pour filtrer les témoins non vérifiés">
+          <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
+          <span>Témoignage non vérifié</span>
+          <span class="badge-compteur" id="cntSignalement">0</span>
+        </div>
+        <span class="aide" style="font-size:11px;color:var(--txt3);margin-top:8px;display:block">
+          Cliquez sur un niveau pour filtrer la carte.<br>
+          <a href="https://meteofrance.com/meteo-des-forets" target="_blank" rel="noopener">Météo des forêts officielle</a>
+          · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a>
+        </span>
       </div>`;
     L.DomEvent.disableClickPropagation(div);
     const bouton = div.querySelector('.toggle-legende');
-    bouton.addEventListener('click', () => {
-      const ouverte = div.classList.toggle('ouverte');
-      bouton.setAttribute('aria-expanded', String(ouverte));
-    });
+    if (bouton) {
+      bouton.addEventListener('click', () => {
+        const ouverte = div.classList.toggle('ouverte');
+        bouton.setAttribute('aria-expanded', String(ouverte));
+      });
+    }
     return div;
   };
   legende.addTo(carte);
@@ -1277,6 +1305,19 @@ function rendreResumeCarte() {
   const corrobores = filtres.filter((f) => apparenceFeu(f).niveau === 'corrobore').length;
   const fiables = filtres.filter((f) =>
     ['corrobore', 'probable', 'temoins'].includes(apparenceFeu(f).niveau)).length;
+
+  const nCor = feuxCarte.filter((f) => apparenceFeu(f).niveau === 'corrobore').length;
+  const nPro = feuxCarte.filter((f) => apparenceFeu(f).niveau === 'probable').length;
+  const nInd = feuxCarte.filter((f) => apparenceFeu(f).niveau === 'a_confirmer').length;
+  const nCit = feuxCarte.filter((f) => (f.origine === 'citoyen' || f.niveau === 'temoins')).length;
+  const nSig = signalements.filter((s) => !s.confirme).length;
+
+  const el1 = $('#cntCorrobore'); if (el1) el1.textContent = nCor;
+  const el2 = $('#cntProbable'); if (el2) el2.textContent = nPro;
+  const el3 = $('#cntIndice'); if (el3) el3.textContent = nInd;
+  const el4 = $('#cntCitoyen'); if (el4) el4.textContent = nCit;
+  const el5 = $('#cntSignalement'); if (el5) el5.textContent = nSig;
+
   const maj = derniereMajCarte ? `Actualisé ${relatif(derniereMajCarte)}` : 'Actualisation en cours';
   const bouton = $('#btnActionResume');
   let titre;
@@ -2321,13 +2362,26 @@ $('#btnSupprimerCompte').onclick = async () => {
 
 /* suppression zone / appareil */
 document.addEventListener('click', async (ev) => {
+  const fl = ev.target.closest('[data-filtre-legende]');
   const bv = ev.target.closest('[data-voir-incident]');
   const bz = ev.target.closest('[data-zone]');
   const bc = ev.target.closest('[data-canal]');
   const bs = ev.target.closest('[data-contester]');
   const be = ev.target.closest('[data-etape]');
   try {
-    if (bv) {
+    if (fl) {
+      const niv = fl.dataset.filtreLegende;
+      if (confianceCarte === niv) {
+        confianceCarte = 'tous';
+        toast('Filtre réinitialisé : tous les événements sont affichés.');
+      } else {
+        confianceCarte = ['corrobore', 'probable'].includes(niv) ? niv : 'tous';
+        toast(`Filtre réactif de légende activé : ${niv}`);
+      }
+      dessinerFeuxCarte();
+      rendreListeFeux();
+      rendreResumeCarte();
+    } else if (bv) {
       const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === bv.dataset.voirIncident);
       if (f) ouvrirIncident(f);
     } else if (be) {
