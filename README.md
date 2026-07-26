@@ -42,7 +42,11 @@ adresse e-mail confirmée. Le jeton seul ne permet pas de contribuer.
 - deux signalements à moins de **50 m** et de moins de 6 h sont le même départ
 - confirmation dès **2 personnes sur 2 réseaux distincts**, ou **3 personnes**
   quel que soit le réseau
-- non confirmés en gris sur la carte, confirmés en orange
+- non confirmés en gris sur la carte, confirmés en violet
+- formulaire structuré : nature, heure, intensité perçue, végétation, proximité
+  d'habitations et degré de certitude
+- suivi privé du statut : en attente, confirmé par quorum, corroboré par capteur,
+  rejeté ou expiré
 - contestation possible par d'autres abonnés, avec le même quorum ; un groupe
   rejeté retire sa preuve citoyenne sans supprimer une éventuelle preuve satellite
 
@@ -75,7 +79,17 @@ de **2 km**. Les preuves sont comptées par famille réellement indépendante :
 VIIRS et MODIS forment une seule famille polaire ; Meteosat, un groupe de
 témoins vérifiés et une corroboration aérienne comptent séparément. Le score
 0–99 aide à lire la concordance mais ne constitue ni une confirmation
-officielle ni une probabilité scientifique.
+officielle ni une probabilité scientifique. La vue satellite IGN est affichée
+par défaut, avec un plan sombre en repli. Une légende française distingue :
+
+- les indices isolés en jaune, les signaux forts/répétés d'une seule famille en
+  orange et les concordances d'au moins deux familles indépendantes en rouge ;
+- les déclarations citoyennes vérifiées par une flamme violette ;
+- les déclarations encore non vérifiées par un point gris discontinu.
+
+La taille d'une flamme combine le score, la puissance thermique maximale et la
+répétition des observations. Elle exprime l'importance de l'indice, jamais la
+surface brûlée.
 
 **FeuxDeForet.fr** est proposé comme carte complémentaire. Ses CGU interdisent
 l'extraction ou la réutilisation substantielle sans autorisation écrite et
@@ -87,11 +101,10 @@ Un contrôle de santé interne tourne toutes les 15 minutes : si aucune
 collecte n'a réussi depuis 45 minutes, **le système prévient qu'il est muet**
 plutôt que de laisser croire au calme.
 
-Ce contrôle garde un angle mort assumé : il vit dans le système qu'il surveille.
-pg_cron, les Edge Functions et la base sont dans le même projet Supabase — si le
-projet lui-même tombe ou se met en pause, personne n'est prévenu. Détecter ce
-scénario demanderait un veilleur externe, écarté pour ne pas ajouter une
-dépendance tierce.
+Une veille GitHub Actions extérieure interroge aussi l'état public toutes les
+cinq minutes. Elle échoue si le projet est inaccessible, si la collecte polaire
+est trop ancienne ou si `pg_cron` ne passe plus. La PWA affiche la fraîcheur de
+ces trois contrôles sans exposer de donnée d'abonné.
 
 ### Le vent, pour rendre l'alerte actionnable
 
@@ -199,8 +212,8 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   29 migrations SQL — schéma, moteur, cron et conformité
-supabase/functions/    10 Edge Functions Deno + module partagé + tests
+supabase/migrations/   33 migrations SQL — schéma, moteur, cron et conformité
+supabase/functions/    11 Edge Functions Deno + module partagé + tests
 web/                   PWA autonome, politique de confidentialité, service worker
 .github/workflows/     publication Pages + vérification et déploiement Supabase
 docs/                  contexte, exploitation et sécurité
@@ -254,6 +267,11 @@ curl -X POST "$URL/functions/v1/load-communes" \
   serveurs en UE, CC BY 4.0.
 - **OpenSky Network** — positions ADS-B des aéronefs de lutte, en corroboration
   seule. Désactivé par défaut (`config.adsb`).
+- **Sentinel-3 SLSTR FRP NRT** — veille mensuelle du catalogue STAC ; aucune
+  ingestion tant qu'un identifiant de collection stable n'est pas exposé et
+  évalué en mode fantôme.
+- **EFFIS et Météo des forêts** — liens de contexte séparés des observations ;
+  ils n'augmentent jamais le nombre de preuves.
 - **geo.api.gouv.fr** — découpage communal IGN Admin Express.
 - **Les utilisateurs eux-mêmes**, pour les signalements.
 

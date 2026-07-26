@@ -44,7 +44,7 @@ jobs:
 
       - name: Tests unitaires
         working-directory: supabase/functions
-        run: deno test _tests/
+        run: deno test --allow-read=../../web/index.html _tests/
 
       # Une migration doit toujours pouvoir s'appliquer sur une base
       # vierge : c'est la seule verification qui attrape une erreur de

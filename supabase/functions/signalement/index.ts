@@ -25,11 +25,17 @@
 //    POST /signalement          { lat, lon, nature, commentaire }  x-token
 //    POST /signalement/contester { groupe_id, motif }               x-token
 //    GET  /signalement/carte    couche publique, 24 h par défaut
+//    GET  /signalement/mes-signalements historique privé            x-token
 // =====================================================================
 import { CORS, ipAppelant, json, quota, sb, TROP_DE_REQUETES } from "../_shared/mod.ts";
 import { aUnCanalVerifie } from "../_shared/format.ts";
 
 const NATURES = ["fumee", "flammes", "odeur", "autre"];
+const INTENSITES = ["faible", "moyenne", "forte"];
+const VEGETATIONS = ["foret", "broussailles", "herbes", "culture", "inconnue"];
+const CERTITUDES = ["incertain", "probable", "certain"];
+const DETAIL_OPERATIONNEL =
+  /(?:position|coordonn[ée]es?|mouvement|trajet|strat[ée]gie).{0,40}(?:secours|pompier|canadair|dash|h[ée]licopt[èe]re)|(?:secours|pompier|canadair|dash|h[ée]licopt[èe]re).{0,40}(?:position|coordonn[ée]es?|mouvement|trajet|strat[ée]gie)/i;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -40,7 +46,7 @@ Deno.serve(async (req) => {
 
   try {
     // ---------- couche carte, publique ----------
-    if (req.method === "GET" || route === "carte") {
+    if (req.method === "GET" && (route === "" || route === "carte")) {
       if (!await quota(`sig-carte:${ip}`, 120, 60)) return json(TROP_DE_REQUETES, 429);
       const heures = Math.min(72, Math.max(1, Number(url.searchParams.get("heures") ?? 24) || 24));
       const { data, error } = await sb.rpc("signalements_carte", { p_heures: heures });
@@ -64,6 +70,18 @@ Deno.serve(async (req) => {
         erreur:
           "compte non vérifié : activez et vérifiez une notification Push, Telegram ou e-mail avant de contribuer",
       }, 403);
+    }
+
+    if (req.method === "GET" && route === "mes-signalements") {
+      if (!await quota(`mes-signalements:${ab.id}`, 30, 60)) {
+        return json(TROP_DE_REQUETES, 429);
+      }
+      const { data, error } = await sb.rpc("mes_signalements", {
+        p_abonne: ab.id,
+        p_limite: 50,
+      });
+      if (error) throw new Error(error.message);
+      return json({ ok: true, signalements: data ?? [] });
     }
 
     if (route === "contester") {
@@ -115,6 +133,24 @@ Deno.serve(async (req) => {
 
     const nature = NATURES.includes(body.nature) ? body.nature : "fumee";
     const commentaire = String(body.commentaire ?? "").trim().slice(0, 280) || null;
+    if (commentaire && DETAIL_OPERATIONNEL.test(commentaire)) {
+      return json({
+        erreur: "ne publiez pas la position, les mouvements ou la stratégie des secours",
+      }, 400);
+    }
+
+    const intensite = INTENSITES.includes(body.intensite_percue) ? body.intensite_percue : null;
+    const vegetation = VEGETATIONS.includes(body.vegetation) ? body.vegetation : null;
+    const certitude = CERTITUDES.includes(body.certitude) ? body.certitude : null;
+    const observeAt = new Date(body.observe_at ?? Date.now());
+    const maintenant = Date.now();
+    if (
+      !Number.isFinite(observeAt.getTime()) ||
+      observeAt.getTime() < maintenant - 12 * 3_600_000 ||
+      observeAt.getTime() > maintenant + 15 * 60_000
+    ) {
+      return json({ erreur: "heure d'observation invalide ou trop ancienne" }, 400);
+    }
 
     const { data, error } = await sb.rpc("enregistrer_signalement", {
       p_abonne: ab.id,
@@ -125,6 +161,17 @@ Deno.serve(async (req) => {
       p_ip: ip,
     });
     if (error) throw new Error(error.message);
+
+    if (data?.signalement_id) {
+      const { error: erreurStructure } = await sb.from("signalements").update({
+        observe_at: observeAt.toISOString(),
+        intensite_percue: intensite,
+        vegetation,
+        proximite_habitations: body.proximite_habitations === true,
+        certitude,
+      }).eq("id", data.signalement_id).eq("abonne_id", ab.id);
+      if (erreurStructure) throw new Error(erreurStructure.message);
+    }
 
     // Un signalement confirmé peut avoir créé un évènement à notifier
     if (data?.confirme) {

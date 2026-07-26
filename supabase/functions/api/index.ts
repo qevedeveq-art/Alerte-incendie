@@ -9,6 +9,7 @@
 //    GET  /api/vapid            clé publique Web Push
 //    GET  /api/informations     informations légales publiques
 //    GET  /api/carte            indices de feu nationaux corrélés
+//    GET  /api/sante-publique   fraîcheur des collectes et de pg_cron
 //    GET  /api/communes?q=      recherche de commune (France entière)
 //    POST /api/inscription      crée un abonné, renvoie son jeton
 //    POST /api/canal            ajoute un canal (webpush|email)
@@ -101,6 +102,13 @@ Deno.serve(async (req) => {
         contact_rgpd: cfg.contact_rgpd ?? null,
         nom_service: "Alerte Incendie",
       });
+    }
+
+    if (route === "sante-publique") {
+      if (!await quota(`sante-publique:${ip}`, 60, 60)) return json(TROP_DE_REQUETES, 429);
+      const { data, error } = await sb.rpc("sante_publique");
+      if (error) throw new Error(`sante publique: ${error.message}`);
+      return json(data ?? { ok: false, statut: "indisponible" }, data?.ok === false ? 503 : 200);
     }
 
     if (route === "carte") {

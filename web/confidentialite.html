@@ -49,7 +49,10 @@
       <tr><td>Jeton aléatoire, prénom facultatif</td><td>Retrouver vos réglages sans mot de passe.</td></tr>
       <tr><td>Communes et point de référence facultatif</td><td>Calculer les zones et distances d’alerte.</td></tr>
       <tr><td>E-mail, abonnement push ou identifiant Telegram</td><td>Envoyer les alertes demandées.</td></tr>
-      <tr><td>Signalements, position et commentaire</td><td>Détecter un départ de feu signalé par plusieurs témoins.</td></tr>
+      <tr><td>Signalements : position, heure, nature, intensité perçue,
+        végétation, proximité d’habitations, certitude et commentaire</td>
+        <td>Détecter un départ de feu signalé par plusieurs témoins et permettre
+        une modération explicable.</td></tr>
       <tr><td>Empreinte irréversible de l’adresse IP</td><td>Appliquer les quotas et distinguer les réseaux sans conserver l’IP en clair.</td></tr>
       <tr><td>Journal technique et erreurs d’envoi</td><td>Surveiller la collecte et la délivrabilité.</td></tr>
     </tbody>
@@ -66,7 +69,8 @@
   <ul>
     <li>détections satellite : 90 jours ;</li>
     <li>évènements clos : 365 jours ;</li>
-    <li>signalements et contestations associés : 365 jours ;</li>
+    <li>signalements, contestations et décisions de modération associés :
+      365 jours ;</li>
     <li>alertes et preuves d’envoi : 180 jours ;</li>
     <li>journal des actions administrateur : 180 jours ;</li>
     <li>journaux techniques : 30 jours ;</li>
@@ -98,8 +102,10 @@
     <li>Meteosat fournit généralement une première indication en environ 25 minutes, avec une position approximative à 3 km.</li>
     <li>VIIRS/MODIS confirment généralement en 2 à 3 heures, avec une résolution de 375 m à 1 km.</li>
     <li>Les nuages, la végétation, un feu trop petit ou très récent peuvent masquer un départ.</li>
-    <li>Les signalements citoyens restent explicitement non vérifiés tant qu’aucune source automatique ne les corrobore.</li>
-    <li>Une panne complète du projet Supabase peut rester invisible au contrôle de santé interne.</li>
+    <li>Les signalements citoyens restent explicitement communautaires tant
+      qu’aucune source automatique ne les corrobore.</li>
+    <li>Un contrôle GitHub extérieur vérifie l’accessibilité du projet, la
+      fraîcheur des collectes et le passage de la planification.</li>
   </ul>
 
   <p class="mut">

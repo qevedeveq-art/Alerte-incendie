@@ -29,3 +29,6 @@ verify_jwt = false          # protégée par x-admin-key, inactive sans config.a
 
 [functions.probe-mtg]
 verify_jwt = false          # protégée par x-admin-key, veille mensuelle
+
+[functions.probe-sentinel3]
+verify_jwt = false          # protégée par x-admin-key, veille mensuelle STAC

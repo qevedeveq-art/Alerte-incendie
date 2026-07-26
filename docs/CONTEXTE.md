@@ -10,9 +10,8 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État Git publié : commit fonctionnel `689596d`, suivi des mises à jour de
-  mémoire `3f05437` et `af21815`, sur `main` et `origin/main`.
-- Schéma du dépôt : migrations **01 à 29**.
+- État Git publié : commit `449b093` sur `main` et `origin/main`.
+- Schéma du dépôt : migrations **01 à 33**.
 - État de production vérifié : migrations **01 à 29** appliquées et Edge
   Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
@@ -38,6 +37,12 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Le conteneur Postgres est sain, les 11 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
   contacts RGPD valent `qevedeveq@gmail.com`.
+- Évolution locale non encore publiée : migrations 30 à 33, correction des
+  niveaux cartographiques, santé publique, veille GitHub externe, signalement
+  structuré, journal de modération, sonde Sentinel-3 et correction ADS-B. Les **33 migrations**
+  se rejouent sur une base neuve. Sur les 105 groupes live du 26 juillet, le
+  client classe 1 concordance multi-familles en rouge, 57 signaux forts ou
+  répétés en orange et 47 indices isolés en jaune, sans erreur navigateur.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
@@ -91,6 +96,7 @@ role et appliquent les contrôles applicatifs.
 | `load-communes` | cache des contours communaux | admin ou service role |
 | `probe-lsasaf` | diagnostic manuel du décodeur HDF5 | admin |
 | `probe-mtg` | veille mensuelle sur le produit MTG | admin ou service role |
+| `probe-sentinel3` | cherche une collection SLSTR FRP NRT stable dans le STAC CDSE | admin ou service role |
 
 ## Domaines de données
 
@@ -99,7 +105,7 @@ role et appliquent les contrôles applicatifs.
 | Géographie | `communes`, `zones`, `zone_abonnes` |
 | Abonnements | `abonnes`, `canaux` |
 | Satellites | `detections`, `sources_permanentes`, `creneaux_traites` |
-| Témoins | `signalements`, `signalement_groupes`, `signalement_contestations` |
+| Témoins | `signalements`, `signalement_groupes`, `signalement_contestations`, `signalement_moderation_audit` |
 | Fusion | `evenements`, `evenement_detections` |
 | Notification | `alertes` |
 | Enrichissement | `meteo`, `observations_aero` |
@@ -107,7 +113,7 @@ role et appliquent les contrôles applicatifs.
 
 ## Planification déclarative
 
-La migration 26 est la source de vérité des tâches `pg_cron`.
+Les migrations 26 et 32 sont la source de vérité des tâches `pg_cron`.
 
 | Tâche | Cadence | Fonction |
 |---|---:|---|
@@ -122,6 +128,7 @@ La migration 26 est la source de vérité des tâches `pg_cron`.
 | `purger` | 03:15 | rétention des données |
 | `autotest-canaux` | 1er du mois à 09:00 | test des canaux inactifs |
 | `probe-mtg` | 1er du mois à 04:30 | veille MTG |
+| `probe-sentinel3` | 1er du mois à 04:45 | veille catalogue Sentinel-3 |
 
 Quand l'ADS-B est actif, `poll-adsb` purge aussi les observations aériennes de
 plus de 24 heures.
@@ -157,12 +164,24 @@ plus de 24 heures.
   chaque famille indépendante : polaire, géostationnaire, citoyenne et aérienne.
   Son score est indicatif et ne doit jamais être présenté comme une
   confirmation officielle.
+- La carte utilise l'orthophotographie IGN/Géoplateforme par défaut et conserve
+  le plan sombre comme repli. Les indices automatiques sont des flammes
+  jaunes/orange/rouges, les groupes citoyens vérifiés des flammes violettes et
+  seuls les signalements non vérifiés restent des points gris discontinus. La
+  taille 1–3 combine score, FRP et répétition ; elle ne représente jamais une
+  surface brûlée.
+- `corrobore` exige au moins deux familles indépendantes. Une seule famille,
+  même répétée ou très puissante, reste `probable`; VIIRS, MODIS et les
+  différents satellites polaires ne se corroborent pas entre eux.
+- Les changements de statut de modération sont append-only dans
+  `signalement_moderation_audit`. Leur historique privé est accessible
+  uniquement au porteur du jeton et d'un canal vérifié.
 
 ## Limites et risques connus
 
-1. **Angle mort interne.** `verifier_sante()` vit dans Supabase. Un projet en
-   pause, une panne de la base ou l'arrêt de `pg_cron` ne produisent aucune
-   alerte. Il n'existe volontairement plus de veilleur externe.
+1. **Veille externe non encore publiée.** Le workflow GitHub couvrant projet en
+   pause et `pg_cron` arrêté existe localement mais ne protège la production
+   qu'après déploiement des migrations 30–32 et activation du workflow.
 2. **Jeton porteur.** Le jeton d'abonné est conservé dans `localStorage`.
    Quiconque le récupère contrôle les zones et canaux de cet abonné.
 3. **Réputation non décisionnelle.** L'export expose un historique agrégé
@@ -192,6 +211,12 @@ plus de 24 heures.
    sans autorisation écrite. La PWA fournit un lien complémentaire ; aucune
    donnée n'est copiée tant qu'un contrat et un schéma de flux partenaire
    vérifiable ne sont pas disponibles.
+10. **Fond cartographique externe.** La vue satellite dépend du WMTS public
+    IGN/Géoplateforme. Le plan CARTO reste sélectionnable manuellement en cas
+    d'indisponibilité, mais il n'existe pas encore de bascule automatique.
+11. **WMS EFFIS trop lent.** Le 26 juillet, le GetMap officiel n'a répondu ni
+    dans Leaflet ni en 30 secondes. Il reste un lien contextuel et n'est pas
+    chargé dans la carte critique.
 
 Le plan priorisé de réduction de ces risques et d'intégration de nouvelles
 sources est maintenu dans `docs/PLAN_AMELIORATION.md`.

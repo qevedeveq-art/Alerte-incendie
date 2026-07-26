@@ -81,6 +81,19 @@ input,select{background:var(--fond3);border:1px solid var(--bord);color:var(--tx
 input:focus,select:focus{outline:0;border-color:#4d4642}
 label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;
+  padding:0;border:1px solid var(--bord);border-radius:16px;background:var(--fond2);color:var(--txt);
+  box-shadow:0 20px 80px rgba(0,0,0,.72)}
+dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+.dialog-entete{padding:16px 18px;border-bottom:1px solid var(--bord)}
+.dialog-entete h3{margin:0;font-size:17px}
+.dialog-corps{padding:16px 18px}
+.alerte-secours{padding:10px 12px;border:1px solid rgba(224,69,60,.55);
+  border-radius:10px;background:rgba(224,69,60,.12);color:#ffd6d2;font-size:12px}
+.etat-sources{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--bord)}
+.etat-source{padding:12px;background:var(--fond2)}
+.etat-source b{display:block;font-size:12px}.etat-source small{color:var(--txt3)}
+@media(max-width:560px){.etat-sources{grid-template-columns:1fr}}
 
 /* ---------- carte Leaflet ---------- */
 #map{height:330px;background:var(--fond3)}
@@ -102,6 +115,24 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 .leaflet-bar a:hover{background:#332e2b}
 .leaflet-control-attribution{background:rgba(18,16,14,.75)!important;color:#6f6863!important}
 .leaflet-control-attribution a{color:#8a827c!important}
+.marqueur-feu{background:transparent;border:0}
+.marqueur-feu svg{display:block;overflow:visible;filter:drop-shadow(0 2px 3px rgba(0,0,0,.8))}
+.legende-carte{width:228px;padding:10px 11px;background:rgba(18,16,14,.94);
+  color:var(--txt);border:1px solid #4b4541;border-radius:10px;
+  box-shadow:0 4px 18px rgba(0,0,0,.45);font-size:11px;line-height:1.3}
+.legende-carte b{display:block;font-size:12px;margin-bottom:7px}
+.legende-carte .ligne{display:flex;align-items:center;gap:8px;margin:5px 0}
+.legende-carte .symbole{width:24px;display:grid;place-items:center;flex:0 0 24px}
+.legende-carte .symbole svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+.legende-carte .point-non-verifie{width:12px;height:12px;border-radius:50%;
+  border:2px dashed #d0d0d0;background:rgba(138,138,138,.45)}
+.legende-carte .aide{display:block;color:#b9b2ad;border-top:1px solid #4b4541;
+  margin-top:7px;padding-top:7px}
+.legende-carte a{color:#fff;text-decoration:underline}
+@media(max-width:560px){
+  .legende-carte{width:190px;font-size:10px}
+  .leaflet-control-layers{font-size:11px}
+}
 
 /* ---------- badges & évènements ---------- */
 .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;
@@ -224,7 +255,9 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
           <div class="source-note">
             Les observations à moins de 2 km et 12 h sont regroupées. VIIRS et MODIS
             restent une seule famille de preuve afin de ne pas gonfler artificiellement
-            la confiance. <span id="etatCarteSources">Chargement des indices récents…</span><br>
+            la confiance. La taille des flammes traduit l’importance de l’indice
+            (score, puissance thermique et répétition), jamais une superficie brûlée.
+            <span id="etatCarteSources">Chargement des indices récents…</span><br>
             <a href="https://feuxdeforet.fr/cartes/feux/" target="_blank" rel="noopener noreferrer">
               Consulter aussi la carte FeuxDeForet.fr
             </a>
@@ -273,6 +306,13 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
             </select>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>État public des sources</h2>
+      <div class="carte etat-sources" id="santePublique" aria-live="polite">
+        <div class="etat-source"><b>Chargement…</b><small>Vérification indépendante en cours</small></div>
       </div>
     </section>
 
@@ -342,6 +382,11 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
     </section>
 
     <section data-prive>
+      <h2>Mes signalements et leur modération</h2>
+      <div class="carte" id="listeMesSignalements"></div>
+    </section>
+
+    <section data-prive>
       <h2>Mes données</h2>
       <div class="carte pad">
         <p class="note" style="margin-top:0">
@@ -382,6 +427,75 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 
 <div id="toast"></div>
 
+<dialog id="dialogSignalement" aria-labelledby="titreSignalement">
+  <form id="formSignalement">
+    <div class="dialog-entete">
+      <h3 id="titreSignalement">Signaler un départ de feu</h3>
+    </div>
+    <div class="dialog-corps">
+      <p class="alerte-secours">
+        <b>Danger immédiat : appelez le 18 ou le 112.</b><br>
+        Cette déclaration informe la communauté mais ne prévient pas les secours.
+        Ne publiez ni position, ni mouvement, ni stratégie des équipes d’intervention.
+      </p>
+      <div class="grille2">
+        <div>
+          <label for="sigNature">Que voyez-vous ?</label>
+          <select id="sigNature" required>
+            <option value="fumee">Fumée</option>
+            <option value="flammes">Flammes</option>
+            <option value="odeur">Odeur de brûlé</option>
+            <option value="autre">Autre indice</option>
+          </select>
+        </div>
+        <div>
+          <label for="sigIntensite">Intensité perçue</label>
+          <select id="sigIntensite">
+            <option value="">Non estimée</option>
+            <option value="faible">Faible</option>
+            <option value="moyenne">Moyenne</option>
+            <option value="forte">Forte</option>
+          </select>
+        </div>
+        <div>
+          <label for="sigVegetation">Végétation concernée</label>
+          <select id="sigVegetation">
+            <option value="inconnue">Inconnue</option>
+            <option value="foret">Forêt</option>
+            <option value="broussailles">Broussailles</option>
+            <option value="herbes">Herbes</option>
+            <option value="culture">Culture</option>
+          </select>
+        </div>
+        <div>
+          <label for="sigCertitude">Votre degré de certitude</label>
+          <select id="sigCertitude">
+            <option value="incertain">Incertain</option>
+            <option value="probable" selected>Probable</option>
+            <option value="certain">Certain</option>
+          </select>
+        </div>
+        <div>
+          <label for="sigObserveAt">Heure de l’observation</label>
+          <input id="sigObserveAt" type="datetime-local" required>
+        </div>
+        <label style="display:flex;gap:9px;align-items:center;margin-top:24px">
+          <input id="sigHabitations" type="checkbox" style="width:auto">
+          <span>Habitations à proximité</span>
+        </label>
+      </div>
+      <label for="sigCommentaire" style="margin-top:12px">Précision utile (facultatif)</label>
+      <input id="sigCommentaire" maxlength="280"
+             placeholder="Aspect de la fumée, végétation, évolution visible…">
+      <p class="note" id="sigPosition" style="margin:10px 0 0"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn g" type="button" id="btnAnnulerSignalement">Annuler</button>
+        <button class="btn p" type="submit">Envoyer le signalement</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -397,6 +511,7 @@ const CLE_JETON = 'alerte-incendie:jeton';
 let jeton = localStorage.getItem(CLE_JETON);
 let etat = null, carte = null, coucheZones = null, coucheDet = null, coucheEvts = null;
 let coucheFeux = null, coucheSig = null, signalements = [], feuxCarte = [], modeSignalement = false;
+let mesSignalements = [], signalementCible = null, santePublique = null;
 
 /* ---------- utilitaires ---------- */
 const $ = (s) => document.querySelector(s);
@@ -437,10 +552,42 @@ function relatif(iso) {
 function initCarte(centre = [46.6, 2.5], zoom = 5) {
   if (carte) return;
   carte = L.map('map', { zoomControl: true, attributionControl: true }).setView(centre, zoom);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  const satellite = L.tileLayer(
+    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg' +
+    '&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+      maxZoom: 19,
+      attribution: '&copy; IGN / Géoplateforme — photographies aériennes',
+    },
+  ).addTo(carte);
+  const planSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 18, subdomains: 'abcd',
-    attribution: '&copy; OpenStreetMap, &copy; CARTO — points chauds NASA FIRMS',
-  }).addTo(carte);
+    attribution: '&copy; OpenStreetMap, &copy; CARTO',
+  });
+  L.control.layers({
+    'Vue satellite (IGN)': satellite,
+    'Plan sombre': planSombre,
+  }, {}, { position: 'topleft', collapsed: true }).addTo(carte);
+
+  const legende = L.control({ position: 'bottomright' });
+  legende.onAdd = () => {
+    const div = L.DomUtil.create('div', 'legende-carte');
+    div.setAttribute('role', 'note');
+    div.setAttribute('aria-label', 'Légende des feux');
+    div.innerHTML = `
+      <b>Légende des feux</b>
+      <div class="ligne"><span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span><span>Au moins 2 familles indépendantes</span></div>
+      <div class="ligne"><span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span><span>Signal unique fort ou répété</span></div>
+      <div class="ligne"><span class="symbole">${svgFlamme('#ffd43b', 16, 'indice')}</span><span>Indice automatique isolé</span></div>
+      <div class="ligne"><span class="symbole">${svgFlamme('#a78bfa', 19, 'citoyen')}</span><span>Déclarations citoyennes vérifiées</span></div>
+      <div class="ligne"><span class="symbole"><i class="point-non-verifie"></i></span><span>Déclaration non vérifiée</span></div>
+      <span class="aide">Taille = importance des indices, jamais surface brûlée.<br>
+        <a href="https://meteofrance.com/meteo-des-forets" target="_blank" rel="noopener">Météo des forêts officielle</a>
+        · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a></span>`;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  legende.addTo(carte);
   coucheZones = L.layerGroup().addTo(carte);
   coucheDet = L.layerGroup().addTo(carte);
   coucheEvts = L.layerGroup().addTo(carte);
@@ -483,31 +630,190 @@ async function chargerFeuxCarte() {
   }
 }
 
+async function chargerSantePublique() {
+  try {
+    const r = await fetch(`${API}/sante-publique`);
+    santePublique = await r.json();
+  } catch {
+    santePublique = { ok: false, statut: 'injoignable' };
+  }
+  rendreSantePublique();
+}
+
+function rendreSantePublique() {
+  const el = $('#santePublique');
+  if (!el || !santePublique) return;
+  const p = santePublique.collecte_polaire || {};
+  const g = santePublique.collecte_geostationnaire || {};
+  const c = santePublique.planification || {};
+  const etatCourt = (x, facultatif = false) => facultatif && !x.configuree
+    ? ['Non configuré', 'Source facultative']
+    : x.ok
+    ? ['Opérationnel', x.age_minutes == null ? 'succès récent' : `succès il y a ${x.age_minutes} min`]
+    : ['En retard', x.age_minutes == null ? 'aucun succès connu' : `${x.age_minutes} min sans succès`];
+  const lignes = [
+    ['Collecte polaire', ...etatCourt(p)],
+    ['Meteosat', ...etatCourt(g, true)],
+    ['Planification pg_cron', ...etatCourt(c)],
+  ];
+  el.innerHTML = lignes.map(([nom, statut, detail]) => `
+    <div class="etat-source">
+      <b><span class="point ${statut === 'Opérationnel' ? 'ok' : statut === 'Non configuré' ? '' : 'ko'}"></span>
+        ${html(nom)} · ${html(statut)}</b>
+      <small>${html(detail)}</small>
+    </div>`).join('');
+}
+
+async function chargerMesSignalements() {
+  if (!jeton) {
+    mesSignalements = [];
+    return;
+  }
+  try {
+    const r = await fetch(`${API_SIG}/mes-signalements`, {
+      headers: { 'x-token': jeton },
+    });
+    const j = await r.json();
+    mesSignalements = r.ok && Array.isArray(j.signalements) ? j.signalements : [];
+  } catch {
+    mesSignalements = [];
+  }
+}
+
+function rendreMesSignalements() {
+  const el = $('#listeMesSignalements');
+  if (!el) return;
+  const labels = {
+    en_attente: 'en attente',
+    confirme_quorum: 'confirmé par témoins',
+    corrobore_capteur: 'corroboré par capteur',
+    rejete: 'rejeté',
+    expire: 'expiré',
+  };
+  el.innerHTML = mesSignalements.length
+    ? mesSignalements.map((s) => `
+      <div class="rangee">
+        <div class="cr">
+          <b>${html(s.commune || 'Localisation déclarée')}
+            <span class="badge ${s.moderation_statut === 'corrobore_capteur' ? 'critique'
+              : s.moderation_statut === 'confirme_quorum' ? 'alerte' : 'info'}">
+              ${html(labels[s.moderation_statut] || s.moderation_statut || 'en attente')}
+            </span>
+          </b>
+          <small>${html(s.nature || 'indice')} · ${heure(s.observe_at || s.created_at)}
+            · ${Number(s.nb_personnes) || 1} témoin(s)</small>
+          ${s.moderation_motif ? `<small>Motif : ${html(s.moderation_motif)}</small>` : ''}
+        </div>
+      </div>`).join('')
+    : '<div class="vide">Aucun signalement rattaché à ce compte.</div>';
+}
+
+function svgFlamme(couleur, taille, type = 'probable') {
+  const largeur = Math.round(taille * .78);
+  const contour = type === 'indice' ? 'stroke-dasharray="2.2 1.5"' : '';
+  const signe = type === 'corrobore'
+    ? '<path d="M6.7 8.5h3M14.2 7h3" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>'
+    : type === 'citoyen'
+    ? '<circle cx="18.5" cy="7" r="4" fill="#252220" stroke="#fff" stroke-width="1.2"/><path d="m16.6 7 1.3 1.3 2.4-2.7" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>'
+    : '';
+  return `<svg width="${largeur}" height="${taille}" viewBox="0 0 24 30" aria-hidden="true" focusable="false">
+    <path d="M12 1C10 7 3 10 3 19a9 9 0 0 0 18 0c0-6-3.8-10.8-7-14.4.2 4-1.7 6-3.5 7.8C9.8 8.3 11.2 4.5 12 1Z"
+      fill="${couleur}" stroke="#fff" stroke-width="1.35" stroke-linejoin="round" ${contour}/>
+    <path d="M12.2 14.2c-1 3-4 4.3-4 8a4 4 0 0 0 8 0c0-2.7-1.7-5.1-3.1-6.8.1 1.7-.6 2.8-1.5 3.8-.1-1.8.3-3.6.6-5Z"
+      fill="#fff3c4" opacity=".9"/>
+    ${signe}
+  </svg>`;
+}
+
+function apparenceFeu(f) {
+  const citoyenVerifie = f.origine === 'citoyen' || f.niveau === 'temoins';
+  const score = Number(f.score) || 0;
+  const puissance = Number(f.frp_max) || 0;
+  const observations = Number(f.nb_observations) || 0;
+  const familles = Number(f.nb_sources_independantes) || 0;
+  const niveau = citoyenVerifie ? 'temoins'
+    : familles >= 2 ? 'corrobore'
+    : score >= 60 || puissance >= 50 || observations >= 3 ? 'probable'
+    : 'a_confirmer';
+  let importance = Number(f.importance) || 1;
+  if (!f.importance) {
+    if (puissance >= 50 || observations >= 10 || score >= 75) importance = 3;
+    else if (puissance >= 10 || observations >= 3 || score >= 60) importance = 2;
+  }
+
+  if (citoyenVerifie) {
+    return { couleur: '#a78bfa', taille: [18, 23, 29][importance - 1],
+      libelle: 'Déclarations citoyennes vérifiées', importance, type: 'citoyen', niveau };
+  }
+  if (niveau === 'corrobore') {
+    return { couleur: '#ef3829', taille: [22, 29, 36][importance - 1],
+      libelle: 'Feu corroboré par plusieurs familles', importance, type: 'corrobore', niveau };
+  }
+  if (niveau === 'probable') {
+    return { couleur: '#ff8c32', taille: [19, 25, 32][importance - 1],
+      libelle: 'Signal thermique fort ou répété', importance, type: 'probable', niveau };
+  }
+  return { couleur: '#ffd43b', taille: [16, 21, 27][importance - 1],
+    libelle: 'Indice automatique isolé', importance, type: 'indice', niveau };
+}
+
 function dessinerFeuxCarte() {
   if (!coucheFeux) return;
   coucheFeux.clearLayers();
   const actives = new Set(
     [...document.querySelectorAll('[data-famille]:checked')].map((e) => e.dataset.famille),
   );
+  const nomsSources = {
+    MSG_SEVIRI: 'Meteosat (géostationnaire)',
+    CITOYEN: 'témoins vérifiés',
+    ADSB: 'corroboration aérienne',
+    MODIS: 'MODIS (polaire)',
+    VIIRS_SNPP: 'VIIRS S-NPP (polaire)',
+    VIIRS_NOAA20: 'VIIRS NOAA-20 (polaire)',
+    VIIRS_NOAA21: 'VIIRS NOAA-21 (polaire)',
+  };
   for (const f of feuxCarte) {
     if (!(f.familles || []).some((source) => actives.has(source))) continue;
-    const c = f.niveau === 'corrobore' ? '#ff3b30'
-      : f.niveau === 'probable' ? '#e9873a'
-      : f.niveau === 'temoins' ? '#d9a441' : '#8a7f78';
-    const sources = (f.sources || []).map(html).join(', ');
+    const aspect = apparenceFeu(f);
+    const c = aspect.couleur;
+    const sources = (f.sources || []).map((s) => html(nomsSources[s] || s)).join(', ');
+    const preuves = (f.sources || []).map((s) =>
+      `<span class="chip">${html(nomsSources[s] || s)}</span>`).join('');
     const precision = f.resolution_m
       ? ` · précision source ~${Number(f.resolution_m).toLocaleString('fr-FR')} m`
       : '';
-    L.circleMarker([f.lat, f.lon], {
-      radius: f.niveau === 'corrobore' ? 11 : f.niveau === 'probable' ? 8 : 6,
-      color: c, weight: 2, fillColor: c, fillOpacity: .38,
+    const ageMin = Math.max(0, Math.round((Date.now() - new Date(f.dernier_at)) / 60000));
+    const fraicheur = ageMin <= 60 ? 'preuve fraîche'
+      : ageMin <= 180 ? 'preuve récente' : 'preuve vieillissante';
+    const explication = aspect.niveau === 'corrobore'
+      ? 'Au moins deux familles réellement indépendantes concordent.'
+      : aspect.niveau === 'probable'
+      ? 'Une seule famille de capteurs fournit un signal fort ou répété.'
+      : f.explication || 'Indice isolé à confirmer.';
+    L.marker([f.lat, f.lon], {
+      icon: L.divIcon({
+        className: 'marqueur-feu',
+        html: svgFlamme(c, aspect.taille, aspect.type),
+        iconSize: [Math.round(aspect.taille * .78), aspect.taille],
+        iconAnchor: [Math.round(aspect.taille * .39), aspect.taille],
+        popupAnchor: [0, -aspect.taille + 3],
+      }),
+      title: aspect.libelle,
+      alt: aspect.libelle,
     }).addTo(coucheFeux).bindPopup(
-      `<b style="color:${c}">${html(String(f.niveau || 'à confirmer').replaceAll('_', ' '))}</b>` +
+      `<b style="color:${c}">${html(aspect.libelle)}</b>` +
       `${f.commune ? ` · ${html(f.commune)}` : ''}<br>` +
-      `${Number(f.nb_observations) || 0} observation(s) · score indicatif ${Number(f.score) || 0}/99<br>` +
+      `${Number(f.nb_observations) || 0} observation(s) · importance ${aspect.importance}/3 · score indicatif ${Number(f.score) || 0}/99<br>` +
       `${sources}${precision}<br>` +
       `<span style="color:#a09892">${heure(f.dernier_at)} · ${relatif(f.dernier_at)}</span><br>` +
-      `<span style="font-size:12px">${html(f.explication || '')}</span>`,
+      `<span style="font-size:12px">${html(explication)}</span>` +
+      `<details style="margin-top:8px"><summary>Voir les preuves et l’incertitude</summary>` +
+      `<div class="chips">${preuves}</div>` +
+      `<span style="font-size:12px;color:#a09892">` +
+      `${html(fraicheur)} · première observation ${heure(f.premier_at)} · dernière ${heure(f.dernier_at)}.<br>` +
+      `Le marqueur représente le centre d’un groupe à 2 km. ` +
+      `${f.resolution_m ? `La meilleure résolution source est d’environ ${Number(f.resolution_m).toLocaleString('fr-FR')} m.` : ''}` +
+      ` Il ne décrit ni le périmètre ni la surface brûlée.</span></details>`,
     );
   }
 }
@@ -517,49 +823,63 @@ function dessinerSignalements() {
   coucheSig.clearLayers();
   for (const s of signalements) {
     if (s.confirme) continue;
-    /* gris tant que non confirmé, orange dès que deux personnes concordent */
-    const c = s.confirme ? '#e9873a' : '#8a8a8a';
+    /* Seules les déclarations encore non vérifiées restent des points gris. */
+    const c = '#8a8a8a';
     L.circleMarker([s.lat, s.lon], {
-      radius: s.confirme ? 9 : 6,
+      radius: 6,
       color: c, weight: 2, fillColor: c,
-      fillOpacity: s.confirme ? .35 : .15,
-      dashArray: s.confirme ? null : '3,3',
+      fillOpacity: .15,
+      dashArray: '3,3',
     }).addTo(coucheSig).bindPopup(
-      `<b style="color:${c}">${s.confirme ? 'Signalement confirmé' : 'Signalement non confirmé'}</b><br>
+      `<b style="color:${c}">Signalement non vérifié</b><br>
        ${Number(s.nb_personnes) || 0} personne(s) — ${html((s.natures || []).join(', '))}<br>
        ${html(s.commune || 'commune inconnue')}<br>
        <span style="color:#a09892">${heure(s.dernier_at)} · ${relatif(s.dernier_at)}</span>
-       ${s.confirme ? '' : '<br><span style="color:#a09892;font-size:12px">Une confirmation indépendante supplémentaire est nécessaire.</span>'}
+       <br><span style="color:#a09892;font-size:12px">Une confirmation indépendante supplémentaire est nécessaire.</span>
        ${jeton ? `<br><button class="btn sm" data-contester="${html(s.id)}" style="margin-top:8px">Signaler comme erroné</button>` : ''}`);
   }
 }
 
 async function signaler(lat, lon) {
-  const nature = prompt(
-    'Que voyez-vous ?\n\n' +
-    '1 = fumée\n2 = flammes\n3 = odeur de brûlé\n4 = autre\n\n' +
-    'Position : ' + lat.toFixed(4) + ', ' + lon.toFixed(4), '1');
-  if (nature === null) return;
-  const natures = { '1': 'fumee', '2': 'flammes', '3': 'odeur', '4': 'autre' };
-  const commentaire = prompt('Précision utile ? (facultatif, 280 caractères)', '') || null;
+  signalementCible = { lat, lon };
+  $('#sigPosition').textContent =
+    `Position retenue : ${lat.toFixed(5)}, ${lon.toFixed(5)}. Elle sera regroupée à 50 m avec les témoignages voisins.`;
+  const maintenant = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000);
+  $('#sigObserveAt').value = maintenant.toISOString().slice(0, 16);
+  $('#dialogSignalement').showModal();
+}
 
-  try {
-    const r = await fetch(API_SIG, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-token': jeton },
-      body: JSON.stringify({ lat, lon, nature: natures[nature.trim()] || 'fumee', commentaire }),
-    });
-    const j = await r.json();
-    if (j.erreur) return toast(j.erreur, true);
+async function envoyerSignalement() {
+  if (!signalementCible) return;
+  const payload = {
+    ...signalementCible,
+    nature: $('#sigNature').value,
+    intensite_percue: $('#sigIntensite').value || null,
+    vegetation: $('#sigVegetation').value || null,
+    certitude: $('#sigCertitude').value || null,
+    observe_at: new Date($('#sigObserveAt').value).toISOString(),
+    proximite_habitations: $('#sigHabitations').checked,
+    commentaire: $('#sigCommentaire').value.trim() || null,
+  };
 
-    basculerModeSignalement(false);
-    await chargerSignalements();
-    dessinerSignalements();
-    alert(
-      (j.message || 'Signalement enregistré.') + '\n\n' +
-      'Important : ce signalement ne prévient pas les secours. ' +
-      'Si vous voyez un départ de feu, appelez le 18 ou le 112.');
-  } catch (e) { toast(String(e), true); }
+  const r = await fetch(API_SIG, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-token': jeton },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.erreur || `HTTP ${r.status}`);
+  $('#dialogSignalement').close();
+  $('#formSignalement').reset();
+  signalementCible = null;
+  basculerModeSignalement(false);
+  await Promise.all([chargerSignalements(), chargerMesSignalements()]);
+  dessinerSignalements();
+  rendreMesSignalements();
+  alert(
+    (j.message || 'Signalement enregistré.') + '\n\n' +
+    'Vous pourrez suivre sa confirmation ou sa modération dans « Mes signalements ». ' +
+    'Cette déclaration ne prévient pas les secours : appelez le 18 ou le 112.');
 }
 
 function basculerModeSignalement(actif) {
@@ -686,12 +1006,19 @@ function rendre() {
   if (etat.abonne.ref_libelle) $('#refLibelle').value = etat.abonne.ref_libelle;
   majEtatReference();
 
+  rendreMesSignalements();
   dessinerCarte();
 }
 
 async function recharger() {
   try {
-    const [e1] = await Promise.all([appel('etat'), chargerSignalements(), chargerFeuxCarte()]);
+    const [e1] = await Promise.all([
+      appel('etat'),
+      chargerSignalements(),
+      chargerFeuxCarte(),
+      chargerSantePublique(),
+      chargerMesSignalements(),
+    ]);
     etat = e1;
     rendre();
   } catch (e) {
@@ -758,6 +1085,18 @@ $('#btnCommencer').onclick = async () => {
     await recharger();
     toast('Espace créé. Ajoutez votre commune.');
   } catch (e) { toast(String(e), true); }
+};
+$('#formSignalement').onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await envoyerSignalement();
+  } catch (err) {
+    toast(String(err).replace('Error: ', ''), true);
+  }
+};
+$('#btnAnnulerSignalement').onclick = () => {
+  $('#dialogSignalement').close();
+  signalementCible = null;
 };
 
 $('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace('Error: ', ''), true));
@@ -1012,7 +1351,7 @@ document.addEventListener('change', (e) => {
     $('#vueAccueil').hidden = false;
     $('#vueApp').hidden = false;
     etat = { zones: [], evenements: [], detections: [], canaux: [], sante: null };
-    await Promise.all([chargerFeuxCarte(), chargerSignalements()]);
+    await Promise.all([chargerFeuxCarte(), chargerSignalements(), chargerSantePublique()]);
     initCarte();
     dessinerFeuxCarte();
     dessinerSignalements();

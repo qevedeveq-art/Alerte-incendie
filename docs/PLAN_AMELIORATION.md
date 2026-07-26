@@ -1,152 +1,201 @@
-# Plan d'amélioration vers un service national gratuit
+# Plan d'amélioration — application nationale précise et vérifiable
 
-Revue du **26 juillet 2026**. L'objectif produit est un service gratuit et
-accessible au public français, avec :
+Revue du **26 juillet 2026**. L'objectif est un service gratuit et accessible
+au public français : carte nationale, alertes personnalisées et signalements
+citoyens. Ce document distingue l'existant livré des évolutions proposées.
 
-1. des alertes autour d'une ou plusieurs localisations choisies ;
-2. une carte nationale zoomable des événements ;
-3. une partie déclarative permettant de signaler et corroborer un départ.
+## État réel
 
-Ce document distingue l'existant vérifié de la cible. Il ne vaut ni validation
-opérationnelle par les secours, ni avis juridique.
+- Les migrations 01 à 29, les Edge Functions et la PWA sont en production.
+  Les migrations 30 à 33 et les évolutions ci-dessous sont validées localement,
+  mais pas encore publiées.
+- La carte publique corrèle quatre familles indépendantes : polaire,
+  géostationnaire, citoyenne et aérienne.
+- La vue satellite IGN/Géoplateforme est le fond par défaut. Une légende
+  française sépare flammes automatiques, flammes citoyennes vérifiées et points
+  gris non vérifiés. La taille 1–3 exprime l'importance de l'indice, pas une
+  surface brûlée.
+- Un compte actif avec au moins un canal vérifié est obligatoire pour créer ou
+  contester un signalement.
+- L'angle mort majeur reste l'absence de contrôle extérieur à Supabase : projet
+  en pause, base indisponible ou `pg_cron` arrêté peuvent passer inaperçus.
+- L'outre-mer homogène, la charge nationale et l'identité légale complète de
+  l'exploitant ne sont pas encore validés.
 
-## Diagnostic actuel
+### Avancement du plan prioritaire
 
-### Fonctionnel
+Réalisé et validé localement le 26 juillet :
 
-- L'inscription consentie, les zones surveillées, les canaux Push/Telegram/
-  e-mail, l'historique, l'export et l'effacement existent dans la PWA.
-- Les signalements, leur regroupement, leur confirmation et leur contestation
-  collective existent.
-- La carte s'initialise sur la France, permet le zoom et agrège désormais les
-  détections automatiques métropole/Corse et les groupes citoyens confirmés.
-  Des filtres expliquent les quatre familles indépendantes. L'accès anonyme
-  complet, l'outre-mer homogène et les tests de charge restent à livrer.
-- L'interface mélange aujourd'hui santé globale des collecteurs et couverture
-  personnelle : « actif » peut être affiché alors qu'aucune zone n'est créée.
-- Le contact public est `qevedeveq@gmail.com`. Une adresse e-mail ne remplace
-  toutefois pas le nom ou la raison sociale et l'adresse légale de l'exploitant.
+- classification rouge/orange/jaune corrigée par familles indépendantes ;
+- fiche de preuve avec sources, fraîcheur, résolution et limites de précision ;
+- état public et veille GitHub extérieure toutes les cinq minutes ;
+- formulaire citoyen structuré, historique privé et journal de modération ;
+- cache borné des dernières tuiles IGN pour consultation dégradée hors ligne ;
+- sonde mensuelle Sentinel-3 et recommandation MTG corrigée pour éviter tout
+  double compte géostationnaire ;
+- correction de la corroboration ADS-B, qui ne pouvait pas ajouter sa source
+  au tableau SQL dans la version précédente ;
+- liens EFFIS et Météo des forêts séparés des preuves.
 
-### Livraison et fiabilité
+Restent dépendants d'un déploiement ou d'un tiers :
 
-- Le dernier état connu de production s'arrête à la migration 22 ; les
-  migrations 23 à 28 ne sont pas encore attestées en production.
-- Le dernier workflow Supabase a bien démarré Docker, mais le rejeu s'est arrêté
-  dans la migration 26 sur une expression SQL désormais corrigée localement.
-  Le workflow PWA est aussi bloqué tant que GitHub Pages n'est pas activé avec
-  GitHub Actions comme source.
-- Le contrôle interne détecte une collecte muette et la perte de Meteosat, mais
-  pas l'arrêt de `pg_cron`, la pause du projet ou une panne Supabase complète.
-- Le passage à l'échelle nationale (requêtes cartographiques, débit public,
-  volumes PostGIS et notifications) n'a pas encore de test de charge.
+- activer la veille externe en production après migration 30 ;
+- mener les comparaisons MTG/Sentinel pendant deux semaines quand leurs flux
+  sont effectivement disponibles et stables ;
+- obtenir les accords FeuxDeForet.fr, SDIS ou préfectures ;
+- qualifier l'outre-mer, la charge nationale, le RGAA et le cadre juridique.
 
-## Nouvelles sources pertinentes
+## Ce que FeuxDeForet.fr fait bien
 
-| Source | Apport recommandé | Garde-fou |
+L'audit du site, de sa [carte des feux](https://feuxdeforet.fr/cartes/feux/),
+de son [espace chercheurs et données](https://feuxdeforet.fr/data/) et de sa
+[charte de modération](https://feuxdeforet.fr/moderation/) montre :
+
+- une couverture éditoriale large : feux en cours, vigilance journalière,
+  historique, prévention, actualités, régions et moyens de lutte ;
+- un site et des applications iOS/Android centrés sur la consultation et le
+  signalement ;
+- des déclarations structurées autour de l'observation, la localisation, la
+  description et éventuellement une photo récente sans visage ni plaque ;
+- deux voies de validation annoncées : analyse automatique, ou communauté avec
+  validation possible par l'équipe de modération ;
+- un cadre utile contre les faux contenus, les données personnelles et les
+  informations opérationnelles sur les secours.
+
+Leur charte autorise toutefois les messages de visiteurs enregistrés ou non,
+ne publie pas les seuils de l'analyse automatique et prévoit qu'un refus puisse
+rester sans notification. Leur page « chercheurs et data » est rendue
+dynamiquement sans documentation d'API publique visible. Ces constats ne
+prouvent pas une faiblesse de leur moteur ; ils indiquent les endroits où notre
+service peut offrir davantage de transparence.
+
+Les CGU de FeuxDeForet.fr interdisent l'extraction ou la réutilisation
+substantielle sans autorisation écrite. Aucun scraping ni recopie de marqueurs
+ne doit être ajouté. Une intégration exige un accord partenaire définissant
+endpoint, licence, attribution, quotas, cadence, rétention et procédure
+d'incident.
+
+## Positionnement distinctif
+
+Ne pas chercher à devenir un portail d'actualité de plus. Le produit doit être
+le **compagnon d'alerte personnel fondé sur les preuves** :
+
+1. provenance, âge, résolution et incertitude visibles pour chaque observation ;
+2. corrélation indépendante sans double compter VIIRS, MODIS et EFFIS ;
+3. alerte autour des lieux choisis, avec fraîcheur et état des sources ;
+4. modération traçable, contributions réservées aux comptes vérifiés et droit
+   de recours ;
+5. aucune donnée tactique sur les secours et aucun statut présenté comme
+   confirmation officielle sans source officielle.
+
+## Sources à évaluer
+
+| Source | Gain attendu | Garde-fou |
 |---|---|---|
-| [MTG FCI FRP-Pixel (EUMETSAT)](https://user.eumetsat.int/catalogue/EO%3AEUM%3ADAT%3A1156) | Priorité : 1 km, toutes les 10 min, ~20 min typiques | Statut démonstration ; comparer sans alerter avant activation |
-| [MTG Active Fire Monitoring](https://user.eumetsat.int/resources/user-guides/fire-management) | Signal qualitatif précoce toutes les 10 min | Ne jamais rendre critique seul ; corroboration obligatoire |
-| [Sentinel-3 SLSTR NRT FRP](https://documentation.dataspace.copernicus.eu/APIs/STAC.html) | Second processeur européen, confiance et détection 1 km | Latence polaire ; mesurer le gain réel et dédoublonner |
-| [EFFIS](https://forest-fire.emergency.copernicus.eu/downloads-instructions) | Couches WMS de danger, feux actifs et surfaces brûlées pour la carte | Les feux actifs viennent de FIRMS : ne pas compter comme preuve indépendante |
-| [Météo des forêts](https://meteofrance.com/comprendre-la-vigilance/meteo-des-forets-informer-sensibiliser-le-public-au-danger-incendie) | Fond départemental de prévention et adaptation de l'interface | Ce n'est ni une détection de feu en cours ni une prévision d'incendie |
-| [Pyro-SDIS (data.gouv.fr)](https://www.data.gouv.fr/datasets/pyro-sdis-dataset-dimages-pour-la-detection-de-fumees-de-feux-de-foret) | Jeu d'images ouvert pour évaluer un futur classifieur de fumée | Pas un flux temps réel ; revue humaine et tests de biais requis |
-| [FeuxDeForet.fr](https://feuxdeforet.fr/partenariat/) | Signal communautaire complémentaire et diffusion croisée | Intégration uniquement après accord écrit et flux partenaire documenté ; aucun scraping |
-
-MTG FRP est le meilleur gain potentiel immédiat : EUMETSAT le distribue depuis
-le 7 mai 2026, avec une cadence de 10 minutes et une résolution de 1 km. EFFIS
-est surtout utile pour l'affichage et les périmètres ; ses points actifs
-réutilisent MODIS/VIIRS via NASA FIRMS et ne constituent donc pas une troisième
-preuve. La Météo des forêts sert à expliquer le danger, jamais à annoncer un
-incendie.
+| [MTG FCI FRP-Pixel](https://user.eumetsat.int/catalogue/EO%3AEUM%3ADAT%3A1156) | Environ 1 km et cadence 10 min | Exécuter d'abord en observation, comparer à MSG |
+| [Sentinel-3 SLSTR NRT](https://documentation.dataspace.copernicus.eu/APIs/STAC.html) | Deuxième processeur européen | Mesurer la latence et dédoublonner les passages |
+| [EFFIS](https://forest-fire.emergency.copernicus.eu/downloads-instructions) | Périmètres, danger et surfaces brûlées | Les feux actifs réutilisent FIRMS : couche informative seulement |
+| [Météo des forêts](https://meteofrance.com/comprendre-la-vigilance/meteo-des-forets-informer-sensibiliser-le-public-au-danger-incendie) | Contexte départemental de danger | Ce n'est pas une détection de feu en cours |
+| [Pyro-SDIS](https://www.data.gouv.fr/datasets/pyro-sdis-dataset-dimages-pour-la-detection-de-fumees-de-feux-de-foret) | Évaluation hors production d'un classifieur de fumée | Jamais de décision automatique unique |
+| FeuxDeForet.fr partenaire | Témoignage complémentaire | Accord écrit, provenance « communautaire », aucun double compte |
 
 ## Feuille de route priorisée
 
-### P0 — rendre la livraison prouvable
+### P0 — disponibilité observable de l'extérieur
 
-- Publier la correction locale de la migration 26, activer GitHub Pages avec
-  GitHub Actions comme source, configurer les trois secrets Supabase, déployer
-  les migrations 23 à 29 puis contrôler la table des migrations.
-- Déployer les Edge Functions et la PWA, vérifier les routes de santé,
-  d'information publique, d'inscription et de carte.
-- Ajouter un test synthétique hors Supabase pour détecter projet en pause,
-  `pg_cron` arrêté et endpoint inaccessible. Une exécution gratuite externe
-  doit seulement lire un endpoint signé et notifier l'opérateur.
-- Publier une page d'état minimale : fraîcheur de chaque source, dernier envoi,
-  incident connu, sans exposer les secrets ni les données d'abonnés.
+- Ajouter un moniteur gratuit hors Supabase qui appelle une sonde signée toutes
+  les cinq minutes et vérifie HTTP, version déployée, fraîcheur des collecteurs
+  et retard de `pg_cron`.
+- Publier une page d'état sans données d'abonnés : dernière observation par
+  famille, latence, incident connu et version.
+- Déclencher une notification opérateur sur trois échecs consécutifs et tester
+  volontairement la pause du cron et l'indisponibilité du projet.
 
-**Critère de sortie :** un déploiement reproductible, un contrôle externe et une
-preuve horodatée que migrations, fonctions et PWA servent la même version.
+**Sortie :** une panne complète est détectée en moins de 20 minutes par un
+système qui ne dépend pas du projet surveillé.
 
-### P1 — livrer les trois parcours nationaux
+### P1 — fiche d'incident explicable
 
-- Créer un accueil avec deux entrées claires : « Voir la carte » sans compte et
-  « Recevoir des alertes » avec consentement.
-- Initialiser la carte sur la France métropolitaine et la Corse même sans zone,
-  avec zoom, regroupement des points et filtres 24 h / 72 h / 7 jours.
-- Ajouter une route publique cartographique bornée par emprise, temps et nombre
-  de résultats. Appliquer quota, cache, index spatial et pagination.
-- N'afficher précisément que les événements automatiques ou citoyens confirmés.
-  Arrondir ou regrouper les déclarations non confirmées pour limiter harcèlement,
-  panique et atteinte à la vie privée.
-- Séparer visuellement « santé des sources » et « vos zones actives » ; proposer
-  rayon, adresse, géolocalisation facultative et aperçu avant abonnement.
-- Tester clavier, lecteur d'écran, contrastes, mobile, faible débit et mode PWA.
+- Ouvrir au clic une chronologie des observations avec source, heure,
+  résolution, FRP, précision et raison du score.
+- Afficher l'emprise ou le rayon d'incertitude du pixel au lieu de laisser le
+  marqueur suggérer une précision ponctuelle.
+- Faire décroître visuellement la confiance avec l'âge ; statuts explicites :
+  « observé », « probable », « corroboré », « plus observé », « clos ».
+- Ajouter distance aux zones abonnées, vent et évolution, sans donner
+  d'instruction d'évacuation non officielle.
+- Ajouter filtres 6 h / 24 h / 72 h et regroupement des marqueurs au faible
+  zoom ; conserver une forme en plus de la couleur pour l'accessibilité.
 
-**Critère de sortie :** consultation nationale anonyme rapide et abonnement
-localisé compréhensible, sans fuite de données ni confusion sur la couverture.
+**Sortie :** un utilisateur peut expliquer pourquoi un feu apparaît, ce qui
+l'a corroboré et quelle est la précision réelle de chaque preuve.
 
-### P1 — améliorer la détection
+### P1 — détection plus rapide et plus précise
 
-- Adapter `probe-mtg` au canal NRT officiel, écrire un collecteur MTG en mode
-  observation et conserver MSG comme repli.
-- Exécuter au moins deux semaines de comparaison : fraîcheur, disponibilité,
-  doublons, faux positifs, petits feux détectés et coût.
-- Intégrer Sentinel-3 SLSTR NRT comme corroboration indépendante seulement après
-  mesure de latence et validation des identifiants produit.
-- Afficher EFFIS et Météo des forêts en couches informatives séparées des
-  preuves. Conserver la provenance de chaque pixel et interdire le double compte
-  FIRMS/EFFIS.
+- Adapter `probe-mtg` au flux NRT officiel, puis collecter MTG en mode fantôme
+  pendant deux semaines face à MSG et FIRMS.
+- Mesurer disponibilité, latence p50/p95, doublons, petits feux utiles, faux
+  positifs et coût avant d'autoriser MTG à déclencher une alerte.
+- Tester Sentinel-3 selon le même protocole.
+- Conserver EFFIS et Météo des forêts comme liens contextuels séparés tant que
+  le WMS EFFIS dépasse 30 secondes ; interdire qu'EFFIS augmente le nombre de
+  preuves FIRMS.
+- Calibrer le score sur des incidents français clôturés et publier les règles
+  et versions du modèle.
 
-**Critère de sortie :** seuils calibrés sur des données françaises, retour
-automatique à MSG et aucune hausse non mesurée des faux positifs.
+**Sortie :** gain de latence démontré sans hausse non mesurée des faux positifs,
+avec repli automatique sur MSG.
 
-### P2 — renforcer la déclaration citoyenne
+### P1 — modération plus sûre et plus transparente
 
-- Conserver l'exigence déjà implémentée d'un compte actif avec au moins un canal
-  actif et vérifié pour créer ou contester un signalement.
-- Remplacer le simple point par un formulaire court : fumée ou flammes,
-  intensité perçue, heure, précision de localisation et danger immédiat.
-- Mettre en tête l'appel au 18/112 en cas de danger ; rappeler que la déclaration
-  dans l'application ne prévient pas les secours.
-- Prévoir photo facultative seulement après cadrage : suppression EXIF,
-  stockage limité, modération, signalement d'abus et durée de conservation.
-- Utiliser Pyro-SDIS pour un prototype hors production ; ne jamais publier ni
-  rejeter automatiquement une alerte sur la seule décision d'un modèle.
-- Chercher un partenariat SDIS/communes pour confirmer les incidents, avec
-  traçabilité de la source officielle.
+- Garder l'exigence de compte et de canal vérifié ; ne pas ouvrir de commentaire
+  anonyme ou de fil libre.
+- Remplacer les invites par un formulaire structuré : fumée/flammes, intensité
+  perçue, heure, végétation, proximité d'habitations et degré de certitude.
+- Donner à l'auteur un état et un motif codifié : en attente, regroupé,
+  confirmé par quorum, corroboré automatiquement, contesté, expiré ou rejeté.
+- Créer une file modérateur avec journal immuable, double regard pour les cas
+  sensibles, délai cible et procédure de recours.
+- Si les photos sont ajoutées : suppression EXIF, détection de visages et
+  plaques, quarantaine avant publication, consentement, rétention courte et
+  suppression. Une IA assiste la revue mais ne valide ni ne rejette seule.
+- Bloquer les textes contenant positions, mouvements ou stratégies des secours.
 
-### P2 — capacité, coût et gouvernance
+**Sortie :** toute décision est traçable et contestable, sans exposer de donnée
+personnelle ou opérationnelle.
 
-- Tester des scénarios 1 000, 10 000 puis 100 000 abonnés : carte, crons,
-  dispatch, reprise après panne et pics régionaux.
-- Partitionner ou archiver les détections, mettre en cache les tuiles et
-  introduire une file à pression contrôlée avant que Postgres ne sature.
-- Choisir un fournisseur e-mail transactionnel et un domaine SPF/DKIM/DMARC ;
-  documenter les limites du palier gratuit et le mode dégradé.
-- Compléter identité légale, mentions d'hébergement, analyse RGPD, registre,
-  procédure d'incident et revue RGAA avant communication nationale.
+### P2 — expérience nationale supérieure
+
+- Alertes multi-zones avec rayon, géolocalisation facultative, résumé de
+  confiance, précision, âge et état des sources.
+- Mode PWA hors ligne pour consignes de prévention et dernier état connu,
+  clairement horodaté comme potentiellement obsolète.
+- Pages départementales utiles mais factuelles : danger, restrictions
+  officielles sourcées, historique et délais de détection, sans course aux
+  actualités.
+- Badge réservé aux partenaires SDIS/préfectures vérifiés et flux différé ne
+  contenant aucune tactique opérationnelle.
+- Couverture outre-mer source par source, tests clavier/lecteur d'écran,
+  contrastes, faible débit et charge à 1 000, 10 000 puis 100 000 abonnés.
+
+### P2 — gouvernance et gratuité durable
+
+- Compléter l'identité légale, l'hébergement, le registre RGPD, l'analyse
+  d'impact, la procédure d'incident et la revue RGAA.
+- Chiffrer e-mail, stockage, tuiles et notifications par tranche de 1 000
+  abonnés ; documenter les limites gratuites et le mode dégradé.
+- Publier méthode de corrélation, changelog du score et statistiques agrégées
+  de faux positifs, sans ouvrir les données personnelles.
 
 ## Mesures de succès
 
-- fraîcheur médiane et 95e percentile par source ;
-- disponibilité externe et retard de `pg_cron` ;
-- taux de détections corroborées et faux positifs confirmés ;
-- délai détection → notification et taux d'échec par canal ;
-- utilisateurs avec au moins une zone active ;
-- temps d'affichage de la carte par niveau de zoom ;
-- signalements confirmés, contestés et traités ;
-- coût mensuel par 1 000 abonnés.
+- disponibilité externe et retard maximal de `pg_cron` ;
+- latence p50/p95 par source et détection vers notification ;
+- taux de corroboration, faux positifs confirmés et incidents manqués connus ;
+- précision et âge affichés pour 100 % des marqueurs ;
+- délai médian de modération, taux de recours et décisions révisées ;
+- temps d'affichage par zoom, accessibilité et taux d'échec faible débit ;
+- coût mensuel par 1 000 abonnés et taux d'abonnés avec une zone active.
 
-Les alertes doivent toujours indiquer leur source, leur âge, leur précision et
-leur statut vérifié ou non. Le service complète l'information officielle et ne
-remplace jamais le 18, le 112 ou FR-Alert.
+Le service complète l'information officielle. Il ne remplace jamais le 18, le
+112, FR-Alert, les SDIS ou les préfectures.

@@ -11,7 +11,7 @@
     "lineWidth": 100
   },
   "tasks": {
-    "test": "deno test _tests/",
-    "verif": "deno fmt --check && deno lint && deno check **/index.ts _tests/*.ts && deno test _tests/"
+    "test": "deno test --allow-read=../../web/index.html _tests/",
+    "verif": "deno fmt --check && deno lint && deno check **/index.ts _tests/*.ts && deno test --allow-read=../../web/index.html _tests/"
   }
 }

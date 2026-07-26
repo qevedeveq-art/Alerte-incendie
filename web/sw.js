@@ -1,5 +1,7 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v3';
+const CACHE = 'alerte-incendie-v5';
+const CACHE_TUILES = 'alerte-incendie-tuiles-v1';
+const MAX_TUILES = 150;
 const STATIQUE = ['./', './index.html', './confidentialite.html', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
@@ -9,7 +11,9 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((cles) => Promise.all(cles.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((cles) => Promise.all(
+        cles.filter((k) => k !== CACHE && k !== CACHE_TUILES).map((k) => caches.delete(k)),
+      ))
       .then(() => self.clients.claim()),
   );
 });
@@ -19,6 +23,24 @@ self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
   if (u.pathname.includes('/functions/v1/')) return;
+  if (u.hostname === 'data.geopf.fr') {
+    e.respondWith(
+      caches.open(CACHE_TUILES).then(async (cache) => {
+        const connue = await cache.match(e.request);
+        const reseau = fetch(e.request).then(async (r) => {
+          if (r.ok) {
+            await cache.put(e.request, r.clone());
+            const cles = await cache.keys();
+            await Promise.all(cles.slice(0, Math.max(0, cles.length - MAX_TUILES))
+              .map((requete) => cache.delete(requete)));
+          }
+          return r;
+        }).catch(() => connue || Response.error());
+        return connue || reseau;
+      }),
+    );
+    return;
+  }
   e.respondWith(
     fetch(e.request)
       .then((r) => {

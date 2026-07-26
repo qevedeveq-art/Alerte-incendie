@@ -11,6 +11,7 @@ appliquent leurs propres contrôles.
 |---|---|
 | `api` | jeton d'abonné aléatoire de 24 octets (`x-token`), portée limitée à ses propres zones et canaux |
 | `signalement` | lecture publique limitée par IP ; écriture par `x-token`, canal actif vérifié et quotas personne/réseau |
+| `api/sante-publique` | lecture publique limitée ; fraîcheur agrégée sans secret, jeton ni donnée d'abonné |
 | collecteurs, sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
 | `load-communes` | `x-admin-key`, ou service role pour le chargement à la demande depuis `api` |
 | Tables `public.*` | RLS active, zéro policy, `revoke all` sur `anon`/`authenticated` |
@@ -104,6 +105,7 @@ La route générique `canal` refuse donc le type `telegram`.
 | `compte-exporter` | abonné | 3 / 24 h |
 | `compte-supprimer` | abonné | 3 / 24 h |
 | carte des signalements | IP | 120 / minute |
+| état public des sources | IP | 60 / minute |
 | création de signalement | abonné | 3 / heure |
 | création de signalement | IP/réseau | 6 / heure |
 | contestation | abonné | 10 / heure |
@@ -142,6 +144,14 @@ plusieurs comptes pour harceler une même personne.
   recalcule les preuves citoyennes et les contestations afin qu'une action
   effacée ne continue ni à produire ni à rejeter une alerte. Les clés de quota
   contenant son identifiant sont également retirées.
+- Les champs structurés d'un signalement (heure, intensité perçue, végétation,
+  proximité d'habitations, certitude) ne sont accessibles publiquement que sous
+  forme agrégée. Le détail et la décision de modération sont réservés à
+  l'auteur authentifié.
+- `signalement_moderation_audit` est append-only depuis l'application, sous RLS
+  sans policy publique. Il ne contient ni IP en clair ni texte utilisateur.
+- Le texte libre susceptible de révéler position, mouvement ou stratégie des
+  secours est refusé avant stockage.
 - Les appels humains par `admin_key` sont journalisés avec une IP hachée et un
   user-agent pendant 180 jours. Un échec d'écriture du journal ne bloque pas une
   opération de sécurité urgente, mais est consigné dans les logs.

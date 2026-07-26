@@ -108,8 +108,8 @@ Deno.serve(async (req) => {
     if (tempsReel) {
       stats.recommandation =
         "MTG semble desormais publie en continu. Resolution 1 km et cadence 10 min : " +
-        "envisager de l'ajouter comme troisieme source satellite, le seuil de detection " +
-        "tomberait nettement sous les ~20 MW de MSG.";
+        "demarrer une comparaison fantome face a MSG. MTG appartient a la meme famille " +
+        "geostationnaire et ne doit jamais compter comme une preuve independante supplementaire.";
     }
 
     await sb.from("config").upsert({

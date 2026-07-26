@@ -1,0 +1,38 @@
+# Sonde hors Supabase : couvre projet en pause, endpoint inaccessible et
+# pg_cron en retard. Un échec persistant apparaît dans Actions et déclenche
+# les notifications GitHub configurées par le mainteneur.
+name: Veille externe
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: veille-externe
+  cancel-in-progress: true
+
+jobs:
+  sonder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Vérifier Supabase, les collecteurs et pg_cron
+        env:
+          SONDE_URL: https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api/sante-publique
+        shell: bash
+        run: |
+          set -euo pipefail
+          reponse="$(curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 25 \
+            --retry 2 --retry-delay 3 "$SONDE_URL")"
+          echo "$reponse" | jq .
+          echo "$reponse" | jq -e '
+            .ok == true
+            and .collecte_polaire.ok == true
+            and .collecte_geostationnaire.ok == true
+            and .planification.ok == true
+          ' >/dev/null
