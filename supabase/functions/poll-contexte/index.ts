@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
                 texte.slice(0, 200),
                 evt.commune_nom || "",
                 null,
-                1
+                1,
               );
               if (resEval.score >= 70) {
                 nbAssocies++;
