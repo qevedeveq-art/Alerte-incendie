@@ -55,7 +55,7 @@ function validerUrlSecurisee(urlStr: string): boolean {
   }
 }
 
-function calculerScoreAssociation(
+export function calculerScoreAssociation(
   titre: string,
   resume: string,
   communeEvenement: string,
@@ -154,9 +154,22 @@ Deno.serve(async (req) => {
           if (!res.ok) continue;
 
           const texte = await res.text();
-          // Analyse basique du flux RSS/XML/JSON
-          // (Mode shadow : extraction d items normalisés sans exécuter de scripts)
-          nbCollectes++;
+          if (texte.length > 0) {
+            nbCollectes++;
+            // Simulation d'évaluation de score en mode shadow
+            for (const evt of evenements) {
+              const resEval = calculerScoreAssociation(
+                s.nom,
+                texte.slice(0, 200),
+                evt.commune_nom || "",
+                null,
+                1
+              );
+              if (resEval.score >= 70) {
+                nbAssocies++;
+              }
+            }
+          }
         } catch {
           // Erreur réseau tolérée
         }
