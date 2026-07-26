@@ -10,28 +10,25 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État Git constaté localement : `HEAD` sur `3ac2680`, une validation SQL en
-  avance sur `origin/main` (`041bd44`). La correction de la migration 26 et la
-  suppression de l'ancienne migration 28 ne sont donc pas encore sur le dépôt
-  distant ; aucun déploiement distant ne peut les appliquer dans cet état.
+- État Git publié : commit `689596d` sur `main` et `origin/main`.
 - Schéma du dépôt : migrations **01 à 29**.
 - Dernier état de production communiqué : migrations **01 à 22** appliquées ;
-  migrations **23 à 28** encore en attente.
+  migrations **23 à 29** encore en attente.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
   migration distincte `conformite_moderation_audit`.
-- Le run GitHub Actions `30203157669` du commit distant `041bd44` a passé lint,
-  typage et tests, puis Docker a démarré correctement. Le rejeu a échoué dans la
-  migration 26 sur une erreur de précédence (`command ~ (...)`) ; le déploiement
-  a donc été sauté. La correction existe dans le dépôt local, pas encore sur
-  `origin/main`.
+- Le run GitHub Actions `30206844189` du commit `689596d` a passé formatage,
+  lint, typage, 28 tests unitaires et le rejeu Docker intégral des 29
+  migrations. Le job de production s'est ensuite arrêté avant toute mutation :
+  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et `SUPABASE_DB_PASSWORD`
+  sont tous absents des secrets Actions. La machine locale n'a pas non plus de
+  session Supabase authentifiée ; aucun contournement manuel n'est possible.
 - Le workflow PWA échoue séparément dans `actions/configure-pages` parce que
   GitHub Pages n'est pas encore activé et configuré avec « GitHub Actions »
   comme source de publication.
-- Le dernier run de déploiement antérieur au vérificateur montrait les trois
-  secrets GitHub Actions Supabase vides. Avant le prochain déploiement, vérifier
-  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et
-  `SUPABASE_DB_PASSWORD`.
+- Après ajout des trois secrets, relancer manuellement le workflow
+  « Déployer Supabase » sur `main`; ses vérifications déjà passées précéderont
+  à nouveau `db push` et le déploiement des Edge Functions.
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
   de déploiement signale explicitement lequel des trois secrets manque.
 - Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
