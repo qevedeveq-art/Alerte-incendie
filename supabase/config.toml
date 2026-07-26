@@ -11,3 +11,9 @@ verify_jwt = false          # protégée par x-admin-key
 
 [functions.api]
 verify_jwt = false          # protégée par jeton d'abonné (x-token)
+
+[functions.poll-lsasaf]
+verify_jwt = false          # protégée par x-admin-key, appelée par pg_cron
+
+[functions.probe-lsasaf]
+verify_jwt = false          # protégée par x-admin-key, usage diagnostique
