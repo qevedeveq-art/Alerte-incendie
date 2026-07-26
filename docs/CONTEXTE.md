@@ -16,7 +16,8 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Functions déployées.
 - La migration 37 enrichit la fonction `feux_carte` avec la restitution explicite
   du champ `rayon_incertitude_m` (2000 m), permettant le tracé des emprises
-  spatiales d'incertitude sur la carte Leaflet.
+  spatiales d'incertitude sur la carte Leaflet. La PWA intègre un viseur réticule
+  tactique de précision (`viseurSignalement`) pour le ciblage cartographique des départs de feu.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
   migration distincte `conformite_moderation_audit`.

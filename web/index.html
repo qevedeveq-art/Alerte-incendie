@@ -256,6 +256,16 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .point.ok{animation:pulse-ok 2s infinite ease-out}
 .marqueur-feu{animation:pulse-feu 2.2s infinite ease-in-out;transition:transform .2s ease}
 .marqueur-feu:hover{transform:scale(1.18)!important;z-index:1000!important}
+.viseur-tactique{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;
+  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+.viseur-tactique[hidden]{display:none!important}
+.viseur-croix{width:48px;height:48px;border:2px dashed var(--orange);border-radius:50%;
+  box-shadow:0 0 18px rgba(255,146,43,.6);position:relative}
+.viseur-croix:before,.viseur-croix:after{content:"";position:absolute;background:var(--orange)}
+.viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
+.viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
+.viseur-etiquette{background:rgba(19,22,25,.9);backdrop-filter:blur(8px);color:#fff;
+  padding:5px 11px;border-radius:8px;font-size:11px;border:1px solid var(--bord);white-space:nowrap}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 .liste-feux{max-height:290px;overflow:auto;border-top:1px solid var(--bord)}
 .incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
@@ -431,6 +441,10 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
           <button class="btn" type="button" id="btnAutourMoi">Me localiser</button>
         </div>
         <div id="map" aria-label="Carte interactive des feux récents"></div>
+        <div id="viseurSignalement" class="viseur-tactique" hidden>
+          <div class="viseur-croix" aria-hidden="true"></div>
+          <div class="viseur-etiquette">Ciblez le départ de feu au centre</div>
+        </div>
         <div class="chargement-carte" id="chargementCarte" role="status">Chargement des détections…</div>
         <div class="resume-carte" id="resumeCarte" role="status" aria-live="polite">
           <span class="signal" aria-hidden="true">⌁</span>
@@ -1531,10 +1545,12 @@ function basculerModeSignalement(actif) {
   modeSignalement = actif !== undefined ? actif : !modeSignalement;
   const b = $('#btnSignaler');
   const m = document.getElementById('map');
+  const viseur = $('#viseurSignalement');
   b.textContent = modeSignalement ? 'Annuler le signalement' : 'Signaler un départ de feu';
   b.classList.toggle('p', modeSignalement);
   if (m) m.style.cursor = modeSignalement ? 'crosshair' : '';
-  if (modeSignalement) toast('Touchez la carte à l’endroit du départ de feu.');
+  if (viseur) viseur.hidden = !modeSignalement;
+  if (modeSignalement) toast('Ciblez avec le viseur au centre de la carte ou touchez l’emplacement.');
 }
 
 function dessinerCarte() {
