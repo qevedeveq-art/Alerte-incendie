@@ -933,51 +933,83 @@ function distanceKm(a, b) {
   return r * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+/* Pente locale du terrain, par l'API Altimétrie IGN.
+ *
+ * La version précédente comparait le point à un unique voisin décalé au
+ * nord-est : un feu sur un versant orienté sud-ouest ressortait faussement
+ * plat. On échantillonne donc les quatre orientations cardinales en une
+ * seule requête (l'API accepte des listes séparées par des barres) et on
+ * retient la plus forte, avec son orientation. La pente conditionne la
+ * vitesse de propagation ; l'annoncer trop faible est le sens dangereux de
+ * l'erreur. */
 async function calculerPenteIGN(lat, lon) {
+  const d = 0.0025; // ~278 m en latitude
+  const dLon = d / Math.max(0.2, Math.cos(lat * Math.PI / 180));
+  const points = [
+    { nom: 'centre', lat, lon },
+    { nom: 'nord', lat: lat + d, lon },
+    { nom: 'sud', lat: lat - d, lon },
+    { nom: 'est', lat, lon: lon + dLon },
+    { nom: 'ouest', lat, lon: lon - dLon },
+  ];
   try {
-    const p0Url = `https://data.geopf.fr/altimetrie/1.0.0/calcul/elevation.json?lon=${lon.toFixed(5)}&lat=${lat.toFixed(5)}&zonly=true`;
-    const p1Url = `https://data.geopf.fr/altimetrie/1.0.0/calcul/elevation.json?lon=${(lon + 0.002).toFixed(5)}&lat=${(lat + 0.002).toFixed(5)}&zonly=true`;
-    const [r0, r1] = await Promise.all([
-      fetch(p0Url).then((r) => r.json()).catch(() => null),
-      fetch(p1Url).then((r) => r.json()).catch(() => null),
-    ]);
-    const z0 = r0?.elevations?.[0] ?? (Array.isArray(r0) ? r0[0]?.z : null);
-    const z1 = r1?.elevations?.[0] ?? (Array.isArray(r1) ? r1[0]?.z : null);
-    if (typeof z0 !== 'number' || typeof z1 !== 'number') return null;
-    const distM = distanceKm({ lat, lon }, { lat: lat + 0.002, lon: lon + 0.002 }) * 1000;
-    const deltaZ = Math.abs(z1 - z0);
-    const pentePct = Math.min(85, Math.round((deltaZ / Math.max(1, distM)) * 100));
-    return { z: Math.round(z0), pentePct };
+    const url = 'https://data.geopf.fr/altimetrie/1.0.0/calcul/elevation.json' +
+      `?lon=${points.map((p) => p.lon.toFixed(5)).join('|')}` +
+      `&lat=${points.map((p) => p.lat.toFixed(5)).join('|')}&zonly=true`;
+    const rep = await fetch(url).then((r) => r.ok ? r.json() : null).catch(() => null);
+    const brut = rep?.elevations ?? rep;
+    const z = (Array.isArray(brut) ? brut : []).map((e) =>
+      typeof e === 'number' ? e : Number(e?.z)
+    );
+    if (z.length < points.length || z.some((v) => !Number.isFinite(v) || v <= -99999)) return null;
+
+    let meilleure = null;
+    for (let i = 1; i < points.length; i++) {
+      const distM = distanceKm(points[0], points[i]) * 1000;
+      const pentePct = Math.round((Math.abs(z[i] - z[0]) / Math.max(1, distM)) * 100);
+      if (!meilleure || pentePct > meilleure.pentePct) {
+        meilleure = { pentePct: Math.min(120, pentePct), orientation: points[i].nom };
+      }
+    }
+    return { z: Math.round(z[0]), pentePct: meilleure.pentePct, orientation: meilleure.orientation };
   } catch {
     return null;
   }
 }
 
-function triangulerVisees(sigA, sigB) {
-  if (!sigA?.azimut_deg || !sigB?.azimut_deg) return null;
-  const lat1 = sigA.lat * Math.PI / 180, lon1 = sigA.lon * Math.PI / 180, brng1 = sigA.azimut_deg * Math.PI / 180;
-  const lat2 = sigB.lat * Math.PI / 180, lon2 = sigB.lon * Math.PI / 180, brng2 = sigB.azimut_deg * Math.PI / 180;
-  const dLat = lat2 - lat1, dLon = lon2 - lon1;
-  const dist12 = 2 * Math.asin(Math.sqrt(Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2));
-  if (dist12 === 0) return null;
-  const crs13 = Math.acos((Math.sin(lat2) - Math.sin(lat1) * Math.cos(dist12)) / (Math.sin(dist12) * Math.cos(lat1)));
-  const crs23 = Math.acos((Math.sin(lat1) - Math.sin(lat2) * Math.cos(dist12)) / (Math.sin(dist12) * Math.cos(lat2)));
-  const [ang1, ang2] = Math.sin(lon2 - lon1) > 0 ? [crs13, 2 * Math.PI - crs23] : [2 * Math.PI - crs13, crs23];
-  const ang3 = Math.acos(-Math.cos(ang1 - brng1) * Math.cos(brng2 - ang2) + Math.sin(ang1 - brng1) * Math.sin(brng2 - ang2) * Math.cos(dist12));
-  const dist13 = Math.atan2(Math.sin(dist12) * Math.sin(ang1 - brng1) * Math.sin(brng2 - ang2), Math.cos(brng2 - ang2) + Math.cos(ang1 - brng1) * Math.cos(ang3));
-  const lat3 = Math.asin(Math.sin(lat1) * Math.cos(dist13) + Math.cos(lat1) * Math.sin(dist13) * Math.cos(brng1));
-  const lon3 = lon1 + Math.atan2(Math.sin(brng1) * Math.sin(dist13) * Math.cos(lat1), Math.cos(dist13) - Math.sin(lat1) * Math.sin(lat3));
-  return { lat: lat3 * 180 / Math.PI, lon: lon3 * 180 / Math.PI };
-}
-
-function calculerVelociteFeu(f) {
+/* Persistance observée d'un indice : durée entre la première et la dernière
+ * observation, et cadence de détection.
+ *
+ * Remplace un calcul de « vélocité du front en km/h » qui déduisait une
+ * distance parcourue de la puissance thermique, via un coefficient
+ * arbitraire. Ce n'était pas une mesure de déplacement : deux pixels
+ * satellite à 2 km ne disent rien du sens ni de la vitesse d'avancée. Sur un
+ * service d'alerte, un chiffre inventé présenté comme une mesure coûte plus
+ * cher qu'une information absente. Ce qui est réellement mesuré, ici, c'est
+ * la durée et la répétition. */
+function persistanceFeu(f) {
   if (!f.premier_at || !f.dernier_at) return null;
   const heures = (new Date(f.dernier_at) - new Date(f.premier_at)) / 3600000;
-  if (heures <= 0.1) return null;
+  if (!Number.isFinite(heures) || heures < 0) return null;
   const obs = Number(f.nb_observations) || 1;
-  const distKm = Math.min(15, (Number(f.frp_max) || 5) * 0.08 * (obs > 2 ? 1.4 : 0.8));
-  const vitesseKmh = Number((distKm / Math.max(0.5, heures)).toFixed(1));
-  return { heures: heures.toFixed(1), distKm: distKm.toFixed(1), vitesseKmh };
+  const duree = heures < 1
+    ? `${Math.max(1, Math.round(heures * 60))} min`
+    : `${heures.toFixed(heures < 10 ? 1 : 0)} h`;
+  return {
+    heures,
+    duree,
+    obs,
+    cadence: heures >= 1 ? `${(obs / heures).toFixed(1)} obs/h` : null,
+  };
+}
+
+/* Rose des vents à 8 secteurs, en français. Même convention que
+ * supabase/functions/_shared/format.ts, pour que la carte et les
+ * notifications ne racontent jamais deux choses différentes. */
+function secteurVent(deg) {
+  if (deg == null || !Number.isFinite(Number(deg))) return null;
+  const s = ['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ouest', 'ouest', 'nord-ouest'];
+  return s[Math.round((((Number(deg) % 360) + 360) % 360) / 45) % 8];
 }
 
 const cleFeu = (f) => `${Number(f.lat).toFixed(5)}:${Number(f.lon).toFixed(5)}:${f.premier_at || ''}`;
@@ -1477,16 +1509,21 @@ function ouvrirIncident(f) {
         <div><b>${f.frp_max == null ? '—' : `${Number(f.frp_max).toFixed(1)} MW`}</b><small>puissance max.</small></div>
         <div><b>${f.resolution_m ? `${Number(f.resolution_m).toLocaleString('fr-FR')} m` : '—'}</b><small>meilleure résolution</small></div>
       </div>
+    </details>
+    <h4 style="margin-top:14px">Vent au point du feu</h4>
     <div class="incident-grille" id="blocMeteoVent" style="margin-top:10px;background:var(--fond3);padding:10px;border-radius:10px;border:1px solid var(--bord)">
       <div><b id="valVentVitesse">Chargement…</b><small>vent au sol (10 m)</small></div>
-      <div><b id="valVentDirection">—</b><small>direction propagation</small></div>
+      <div><b id="valVentDirection">—</b><small>propagation probable</small></div>
     </div>
     <div class="incident-grille" id="blocCalculsAvances" style="margin-top:10px;background:var(--fond3);padding:10px;border-radius:10px;border:1px solid var(--bord)">
       <div><b id="valPenteIGN">Calcul…</b><small>pente terrain (IGN)</small></div>
-      <div><b id="valVelociteFeu">—</b><small>vitesse avancée</small></div>
+      <div><b id="valPersistance">—</b><small>durée d’activité observée</small></div>
     </div>
-    <h4 style="margin-top:14px">Informations locales associées</h4>
-    <div id="blocContexteLocal"><p class="note" style="color:var(--txt3);font-size:12px">Recherche de communiqués ou d’articles locaux…</p></div>
+    <p class="note" style="font-size:11px;margin-top:6px">
+      Ces observations ne décrivent ni la vitesse, ni le sens de propagation :
+      aucune source disponible ici ne les mesure.
+    </p>
+    <div id="blocContexteLocal" hidden></div>
     <p class="note">
       Le marqueur représente le centre d’un regroupement d’observations à 2 km.
       Il ne décrit ni le périmètre, ni la direction du feu, ni la surface brûlée.
@@ -1505,57 +1542,84 @@ function ouvrirIncident(f) {
   $('#dialogIncident').showModal();
 
   fetch(`https://api.open-meteo.com/v1/forecast?latitude=${Number(f.lat).toFixed(4)}&longitude=${Number(f.lon).toFixed(4)}&current=wind_speed_10m,wind_direction_10m`)
-    .then((r) => r.json())
+    .then((r) => r.ok ? r.json() : null)
     .then((d) => {
-      const c = d.current || {};
-      const vit = c.wind_speed_10m != null ? `${c.wind_speed_10m.toFixed(1)} km/h` : 'Indisponible';
-      const dir = c.wind_direction_10m != null ? `${c.wind_direction_10m}°` : '—';
+      const c = d?.current || {};
       const elV = document.getElementById('valVentVitesse');
       const elD = document.getElementById('valVentDirection');
-      if (elV) elV.textContent = vit;
-      if (elD) elD.textContent = dir;
+      const deg = Number(c.wind_direction_10m);
+      if (elV) {
+        elV.textContent = Number.isFinite(Number(c.wind_speed_10m))
+          ? `${Number(c.wind_speed_10m).toFixed(0)} km/h de ${secteurVent(deg) ?? 'secteur inconnu'}`
+          : 'non disponible';
+      }
+      // Convention météo : la direction fournie est celle d'OU VIENT le vent.
+      // L'afficher telle quelle sous le libellé « propagation » indiquait
+      // exactement le sens inverse. Le serveur inverse déjà pour les alertes.
+      if (elD) {
+        elD.textContent = Number.isFinite(deg)
+          ? `vers le ${secteurVent((deg + 180) % 360)}`
+          : '—';
+      }
     })
     .catch(() => {});
 
-  const velocite = calculerVelociteFeu(f);
-  const elVel = document.getElementById('valVelociteFeu');
-  if (elVel) elVel.textContent = velocite ? `${velocite.vitesseKmh} km/h` : 'Stationnaire / < 1 h';
+  const persistance = persistanceFeu(f);
+  const elPers = document.getElementById('valPersistance');
+  if (elPers) {
+    elPers.textContent = persistance
+      ? persistance.cadence ? `${persistance.duree} · ${persistance.cadence}` : persistance.duree
+      : 'observation unique';
+  }
 
   calculerPenteIGN(Number(f.lat), Number(f.lon)).then((res) => {
     const elPen = document.getElementById('valPenteIGN');
     if (!elPen) return;
-    if (res) {
-      elPen.textContent = `${res.pentePct} % (${res.z} m)`;
-    } else {
-      elPen.textContent = 'Pente modérée';
-    }
+    // Aucune valeur de repli inventée : sans réponse de l'IGN, on le dit.
+    elPen.textContent = res
+      ? `${res.pentePct} % vers le ${res.orientation} (${res.z} m)`
+      : 'non disponible';
   });
 
-  // Charge les informations locales associées (contexte factuel séparé)
-  fetch(`${API_BASE}/contexte?groupe=${encodeURIComponent(f.id || f._cle || '')}`)
-    .then((r) => r.json())
+  chargerContexteLocal(f, $('#blocContexteLocal'), 5);
+}
+
+/* Informations locales associées : contexte sourcé, jamais une preuve.
+ *
+ * La rubrique n'apparaît que si le serveur renvoie au moins une mention
+ * publiée. Tant qu'une source reste en mode fantôme, rien n'est publié :
+ * mieux vaut aucune rubrique qu'une rubrique vide qui laisse croire à une
+ * panne, ou à une absence d'actualité alors que rien n'a été validé. */
+function chargerContexteLocal(f, hote, limite) {
+  if (!hote) return;
+  hote.hidden = true;
+  hote.innerHTML = '';
+  const evenementId = f.evenement_id;
+  if (!evenementId) return;
+
+  fetch(`${API}/contexte?evenement=${encodeURIComponent(evenementId)}`)
+    .then((r) => r.ok ? r.json() : null)
     .then((data) => {
-      const el = $('#blocContexteLocal');
-      if (!el) return;
-      if (!data.mentions || data.mentions.length === 0) {
-        el.innerHTML = '<p class="note" style="color:var(--txt3);font-size:12px">Aucune information locale spécifique actuellement liée à cet incident.</p>';
-        return;
-      }
-      el.innerHTML = data.mentions.map((m) => `
-        <div style="background:var(--fond3);padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--bord)">
-          <div style="font-size:11px;color:var(--txt3);display:flex;justify-content:space-between">
-            <span>${html(m.source_nom)} (${html(m.source_type)})</span>
-            <span>${m.date_publication ? relatif(m.date_publication) : ''}</span>
-          </div>
-          <a href="${html(m.url)}" target="_blank" rel="noopener" style="font-weight:650;font-size:13px;display:block;margin:4px 0">${html(m.titre)}</a>
-          <small style="color:var(--txt3);font-size:11px">Lien contextuel · score ${m.score}/100</small>
-        </div>
-      `).join('');
+      const mentions = (data?.mentions || []).filter((m) => /^https:\/\//i.test(m.url || ''));
+      if (!mentions.length) return;
+      hote.innerHTML = '<h4 style="margin-top:14px">Informations locales associées</h4>' +
+        mentions.slice(0, limite).map((m) => `
+          <div style="background:var(--fond3);padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--bord)">
+            <div style="font-size:11px;color:var(--txt3);display:flex;justify-content:space-between;gap:8px">
+              <span>${html(m.attribution || m.source_nom)}</span>
+              <span>${m.date_publication ? relatif(m.date_publication) : ''}</span>
+            </div>
+            <a href="${html(m.url)}" target="_blank" rel="noopener"
+               style="font-weight:650;font-size:13px;display:block;margin:4px 0">${html(m.titre)}</a>
+            <small style="color:var(--txt3);font-size:11px">
+              Contexte, pas une preuve · ${html((m.raisons || []).join(' · ') || 'lien vérifié')}
+            </small>
+          </div>`).join('') +
+        '<p class="note" style="font-size:11px">Ces publications n’augmentent ni le score, ' +
+        'ni la sévérité de l’incident.</p>';
+      hote.hidden = false;
     })
-    .catch(() => {
-      const el = $('#blocContexteLocal');
-      if (el) el.innerHTML = '<p class="note" style="color:var(--txt3);font-size:12px">Informations locales temporairement indisponibles.</p>';
-    });
+    .catch(() => {});
 }
 
 function creerMarqueurFeu(f) {
@@ -1602,9 +1666,7 @@ function creerMarqueurFeu(f) {
         </div>
       </div>
       <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">Dernier indice : ${relatif(f.dernier_at)} · ${Number(f.nb_observations) || 1} obs.</div>
-      <div class="liste-actu" id="actuPopup_${idSec}">
-        <small style="color:var(--txt3)">Recherche d’actualités locales…</small>
-      </div>
+      <div class="liste-actu" id="actuPopup_${idSec}" hidden></div>
       <button type="button" class="btn sm p" style="margin-top:8px;width:100%" data-voir-incident="${html(f._cle || cleFeu(f))}">Fiche complète & preuves</button>
     </div>`;
 
@@ -1612,28 +1674,24 @@ function creerMarqueurFeu(f) {
 
   let actuChargee = false;
   const chargerActus = () => {
-    if (actuChargee) return;
+    if (actuChargee || !f.evenement_id) return;
     actuChargee = true;
-    fetch(`${API_BASE}/contexte?groupe=${encodeURIComponent(f.id || f._cle || '')}`)
-      .then((r) => r.json())
+    fetch(`${API}/contexte?evenement=${encodeURIComponent(f.evenement_id)}`)
+      .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         const el = document.getElementById(`actuPopup_${idSec}`);
         if (!el) return;
-        if (!data.mentions || data.mentions.length === 0) {
-          el.innerHTML = '<small style="color:var(--txt3)">Aucune actualité spécifique rattachée.</small>';
-          return;
-        }
-        el.innerHTML = '<b style="font-size:11px;color:var(--txt2)">Actualités & dépêches liées :</b>' +
-          data.mentions.slice(0, 2).map((m) => `
+        const mentions = (data?.mentions || []).filter((m) => /^https:\/\//i.test(m.url || ''));
+        if (!mentions.length) return;
+        el.innerHTML = '<b style="font-size:11px;color:var(--txt2)">Contexte local publié :</b>' +
+          mentions.slice(0, 2).map((m) => `
             <div style="margin-top:4px;font-size:11px">
-              <span style="color:var(--txt3)">${html(m.source_nom)}</span><br>
+              <span style="color:var(--txt3)">${html(m.attribution || m.source_nom)}</span><br>
               <a href="${html(m.url)}" target="_blank" rel="noopener" style="color:#79c0ff;font-weight:600">${html(m.titre)}</a>
             </div>`).join('');
+        el.hidden = false;
       })
-      .catch(() => {
-        const el = document.getElementById(`actuPopup_${idSec}`);
-        if (el) el.innerHTML = '<small style="color:var(--txt3)">Actualités indisponibles.</small>';
-      });
+      .catch(() => {});
   };
 
   marker.on('mouseover', () => {
@@ -1740,17 +1798,21 @@ function dessinerSignalements() {
   }
 }
 
+/* Le cap boussole n'est volontairement plus capté ici.
+ *
+ * Le signalement enregistre l'emplacement DU FEU, pointé au viseur ou au
+ * doigt — pas la position du témoin. Un cap mesuré par le téléphone n'a
+ * donc aucune origine géométrique connue : deux « visées » sans point de
+ * départ ne s'intersectent pas, et la triangulation qui existait ici
+ * produisait un point arbitraire.
+ *
+ * La colonne signalements.azimut_deg et la validation côté serveur sont en
+ * place pour un futur parcours « je vois le feu depuis ici », qui
+ * enregistrera la position de l'observateur ET sa visée. Tant que ce
+ * parcours n'existe pas, rien n'est envoyé : mieux vaut un champ vide
+ * qu'une géométrie fausse. */
 async function signaler(lat, lon) {
   signalementCible = { lat, lon };
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    const handler = (ev) => {
-      const cap = ev.webkitCompassHeading || (ev.alpha != null ? (360 - ev.alpha) % 360 : null);
-      if (cap != null && Number.isFinite(cap)) {
-        signalementCible.azimut_deg = Math.round(cap);
-      }
-    };
-    try { window.addEventListener('deviceorientation', handler, { once: true }); } catch {}
-  }
   $('#sigPosition').textContent =
     `Position retenue : ${lat.toFixed(5)}, ${lon.toFixed(5)}. Elle sera regroupée à 50 m avec les témoignages voisins.`;
   const maintenant = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000);
@@ -1761,7 +1823,8 @@ async function signaler(lat, lon) {
 async function envoyerSignalement() {
   if (!signalementCible) return;
   const payload = {
-    ...signalementCible,
+    lat: signalementCible.lat,
+    lon: signalementCible.lon,
     nature: $('#sigNature').value,
     intensite_percue: $('#sigIntensite').value || null,
     vegetation: $('#sigVegetation').value || null,

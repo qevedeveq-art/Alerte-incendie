@@ -43,7 +43,7 @@ dialog::backdrop{background:rgba(0,0,0,.75)}
 </head>
 <body>
 <header>
-  <div><h1>Modération des signalements</h1><small>Console opérateur sécurisée et auditée</small></div>
+  <div><h1>Modération</h1><small>Signalements citoyens et contexte local — console auditée</small></div>
   <a href="./">Retour à la carte</a>
 </header>
 <main>
@@ -56,11 +56,25 @@ dialog::backdrop{background:rgba(0,0,0,.75)}
   </section>
   <section class="carte" id="file" hidden>
     <div class="entete-file">
-      <h2>File des 30 derniers jours</h2>
+      <h2>Signalements citoyens — 30 derniers jours</h2>
       <span id="compte"></span>
       <button id="actualiser">Actualiser</button>
     </div>
     <div id="liste" aria-live="polite"></div>
+  </section>
+  <section class="carte" id="fileContexte" hidden>
+    <div class="entete-file">
+      <h2>Contexte local en attente de validation</h2>
+      <span id="compteContexte"></span>
+      <button id="actualiserContexte">Actualiser</button>
+    </div>
+    <p class="meta">
+      Une association validée devient visible dans la fiche incident. Elle reste
+      du contexte : elle ne modifie ni le score, ni la sévérité, ni les alertes.
+      Vérifier que la publication parle bien du même incident, et que la source
+      autorise la reprise de son titre.
+    </p>
+    <div id="listeContexte" aria-live="polite"></div>
   </section>
 </main>
 <dialog id="dialogDecision" aria-labelledby="titreDecision">
@@ -80,7 +94,9 @@ dialog::backdrop{background:rgba(0,0,0,.75)}
   </form>
 </dialog>
 <script>
-const API='https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/signalement';
+const BASE='https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1';
+const API=`${BASE}/signalement`;
+const API_CONTEXTE=`${BASE}/api`;
 let cleAdmin='';
 let decisionEnAttente=null;
 const $=(s)=>document.querySelector(s);
@@ -89,8 +105,8 @@ const echapper=(v)=>String(v??'').replace(/[&<>"']/g,(c)=>({
 })[c]);
 const date=(v)=>new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
 
-async function requete(route,options={}){
-  const r=await fetch(`${API}/${route}`,{
+async function appelBrut(base,route,options={}){
+  const r=await fetch(`${base}/${route}`,{
     ...options,
     headers:{'Content-Type':'application/json','x-admin-key':cleAdmin,...(options.headers||{})},
   });
@@ -98,6 +114,8 @@ async function requete(route,options={}){
   if(!r.ok) throw new Error(j.erreur||`HTTP ${r.status}`);
   return j;
 }
+const requete=(route,options)=>appelBrut(API,route,options);
+const requeteContexte=(route,options)=>appelBrut(API_CONTEXTE,route,options);
 function rendre(groupes){
   $('#compte').textContent=`${groupes.length} groupe(s)`;
   const ordonnes=[...groupes].sort((a,b)=>
@@ -124,15 +142,53 @@ function rendre(groupes){
       </div>
     </article>`).join(''):'<div class="vide">Aucun signalement récent.</div>';
 }
+function rendreContexte(liens){
+  $('#compteContexte').textContent=`${liens.length} association(s)`;
+  $('#listeContexte').innerHTML=liens.length?liens.map((l)=>`
+    <article class="groupe">
+      <div>
+        <h3>${echapper(l.titre||'Titre absent')}</h3>
+        <p class="meta">
+          ${echapper(l.attribution||l.source_nom||'source inconnue')}
+          · <span class="badge">${echapper(l.source_type||'?')}</span>
+          <span class="badge">${echapper(l.licence||'licence non déclarée')}</span>
+          <span class="badge">mode ${echapper(l.source_mode||'?')}</span>
+        </p>
+        ${l.resume?`<p>${echapper(l.resume)}</p>`:''}
+        <div class="meta">
+          Publié ${date(l.date_publication)} · score ${Number(l.score)||0}/100
+          · écart ${l.ecart_heures==null?'—':`${Number(l.ecart_heures).toFixed(1)} h`}
+          · distance ${l.distance_km==null?'toponyme seul':`${Number(l.distance_km).toFixed(1)} km`}
+          <br>Incident : ${echapper(l.commune_evenement||'commune inconnue')}
+          (${echapper(l.severite_evenement||'?')})
+          <br>Raisons du rapprochement : ${echapper((l.raisons||[]).join(' · ')||'non détaillées')}
+        </div>
+      </div>
+      <div class="actions">
+        <a href="${/^https:\/\//i.test(l.url||'')?echapper(l.url):'#'}"
+           target="_blank" rel="noopener noreferrer">Ouvrir la publication</a>
+        <button data-lien="${echapper(l.lien_id)}" data-contexte="associe">Publier</button>
+        <button class="danger" data-lien="${echapper(l.lien_id)}" data-contexte="rejete">Rejeter</button>
+        <button data-lien="${echapper(l.lien_id)}" data-contexte="retire">Retirer</button>
+      </div>
+    </article>`).join(''):'<div class="vide">Aucune association en attente.</div>';
+}
 async function charger(){
   $('#liste').innerHTML='<div class="vide">Chargement…</div>';
+  $('#listeContexte').innerHTML='<div class="vide">Chargement…</div>';
+  $('#file').hidden=false;
+  $('#fileContexte').hidden=false;
   try{
     const j=await requete('moderation');
-    $('#file').hidden=false;
     rendre(j.groupes||[]);
   }catch(e){
-    $('#file').hidden=false;
     $('#liste').innerHTML=`<div class="vide erreur">${echapper(e.message)}</div>`;
+  }
+  try{
+    const c=await requeteContexte('contexte-moderation');
+    rendreContexte(c.associations||[]);
+  }catch(e){
+    $('#listeContexte').innerHTML=`<div class="vide erreur">${echapper(e.message)}</div>`;
   }
 }
 $('#charger').onclick=()=>{
@@ -142,11 +198,27 @@ $('#charger').onclick=()=>{
   charger();
 };
 $('#actualiser').onclick=charger;
+$('#actualiserContexte').onclick=charger;
+$('#listeContexte').onclick=(e)=>{
+  const b=e.target.closest('[data-contexte]');
+  if(!b)return;
+  const labels={associe:'Publier',rejete:'Rejeter',retire:'Retirer'};
+  decisionEnAttente={cible:'contexte',id:b.dataset.lien,decision:b.dataset.contexte,bouton:b};
+  $('#titreDecision').textContent=`${labels[b.dataset.contexte]} cette information locale`;
+  $('#messageDecision').textContent=b.dataset.contexte==='associe'
+    ?'La publication apparaîtra dans la fiche incident, comme contexte sourcé. Elle ne modifiera ni le score, ni la sévérité.'
+    :'La publication sera retirée de la fiche incident. La décision est auditée.';
+  $('#validerDecision').textContent=labels[b.dataset.contexte];
+  $('#motifDecision').value='';
+  $('#erreurDecision').textContent='';
+  $('#dialogDecision').showModal();
+  $('#motifDecision').focus();
+};
 $('#liste').onclick=(e)=>{
   const b=e.target.closest('[data-decision]');
   if(!b)return;
   const labels={rejeter:'Rejeter',expirer:'Expirer',maintenir:'Annoter'};
-  decisionEnAttente={id:b.dataset.id,decision:b.dataset.decision,bouton:b};
+  decisionEnAttente={cible:'signalement',id:b.dataset.id,decision:b.dataset.decision,bouton:b};
   $('#titreDecision').textContent=`${labels[b.dataset.decision]} ce groupe`;
   $('#messageDecision').textContent=b.dataset.decision==='maintenir'
     ?'Cette annotation sera visible dans le journal de modération.'
@@ -174,9 +246,15 @@ $('#formDecision').onsubmit=async(e)=>{
   action.bouton.disabled=true;
   $('#validerDecision').disabled=true;
   try{
-    await requete('moderer',{method:'POST',body:JSON.stringify({
-      groupe_id:action.id,decision:action.decision,motif,
-    })});
+    if(action.cible==='contexte'){
+      await requeteContexte('contexte-moderer',{method:'POST',body:JSON.stringify({
+        lien_id:action.id,decision:action.decision,motif,
+      })});
+    }else{
+      await requete('moderer',{method:'POST',body:JSON.stringify({
+        groupe_id:action.id,decision:action.decision,motif,
+      })});
+    }
     decisionEnAttente=null;
     $('#dialogDecision').close();
     await charger();

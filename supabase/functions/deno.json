@@ -11,7 +11,7 @@
     "lineWidth": 100
   },
   "tasks": {
-    "test": "deno test --allow-read=../../web/index.html,../../web/moderation.html,../../web/sw.js,api/index.ts,dispatch/index.ts,signalement/index.ts,../migrations/20260726213000_35_notifications_appareil_uniquement.sql _tests/",
-    "verif": "deno fmt --check && deno lint && deno check **/index.ts _tests/*.ts && deno test --allow-read=../../web/index.html,../../web/moderation.html,../../web/sw.js,api/index.ts,dispatch/index.ts,signalement/index.ts,../migrations/20260726213000_35_notifications_appareil_uniquement.sql _tests/"
+    "test": "deno test --allow-read=../../web/index.html,../../web/moderation.html,../../web/sw.js,api/index.ts,dispatch/index.ts,signalement/index.ts,poll-contexte/index.ts,../migrations/20260726213000_35_notifications_appareil_uniquement.sql,../migrations/20260727000000_39_contexte_exploitable_et_azimut.sql _tests/",
+    "verif": "deno fmt --check && deno lint && deno check **/index.ts _tests/*.ts && deno test --allow-read=../../web/index.html,../../web/moderation.html,../../web/sw.js,api/index.ts,dispatch/index.ts,signalement/index.ts,poll-contexte/index.ts,../migrations/20260726213000_35_notifications_appareil_uniquement.sql,../migrations/20260727000000_39_contexte_exploitable_et_azimut.sql _tests/"
   }
 }

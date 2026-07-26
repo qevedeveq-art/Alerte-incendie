@@ -11,25 +11,36 @@ const migrationNotifications = await Deno.readTextFile(
 );
 
 Deno.test("la carte utilise la vue satellite IGN par défaut et sait basculer", () => {
-  const ajoutSatellite = pwa.indexOf("ORTHOIMAGERY.ORTHOPHOTOS");
-  assert(ajoutSatellite >= 0);
-  assert(pwa.includes("(donneesReduites ? planSombre : satellite).addTo(carte)"));
+  assert(pwa.includes("ORTHOIMAGERY.ORTHOPHOTOS"));
+  // Satellite et noms de localités par défaut ; plan sombre seulement quand
+  // le navigateur demande d'économiser les données.
+  assert(pwa.includes("if (donneesReduites) {"));
+  assert(pwa.includes("planSombre.addTo(carte);"));
+  assert(pwa.includes("satellite.addTo(carte);"));
+  assert(pwa.includes("nomsFrancaisIGN.addTo(carte);"));
   assert(pwa.includes("erreursSatellite >= 4"));
-  assert(pwa.includes("'Vue satellite (IGN)': satellite"));
+  assert(pwa.includes("'Vue satellite + Noms français (IGN)'"));
   assert(pwa.includes("'Plan sombre': planSombre"));
 });
 
 Deno.test("la légende française distingue les statuts de preuve", () => {
   for (
     const libelle of [
-      "Au moins 2 familles indépendantes",
-      "Signal unique fort ou répété",
+      "Feux corroborés (≥2 sources)",
+      "Signal fort / répété",
       "Indice automatique isolé",
-      "Déclarations citoyennes vérifiées",
-      "Déclaration non vérifiée",
+      "Témoins vérifiés par quorum",
+      "Témoignage non vérifié",
     ]
   ) {
     assert(pwa.includes(libelle), `Libellé absent : ${libelle}`);
+  }
+  // Chaque ligne de légende filtre la carte et porte son décompte.
+  for (const cle of ["corrobore", "probable", "indice", "citoyen", "signalement"]) {
+    assert(
+      pwa.includes(`data-filtre-legende="${cle}"`),
+      `Filtre de légende absent : ${cle}`,
+    );
   }
 });
 
