@@ -10,7 +10,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié : commit `6badd95` sur `main`.
+- État fonctionnel publié : commit `48ad8d2` sur `main`.
 - Schéma du dépôt : migrations **01 à 38**.
 - État de livraison vérifié : migrations **01 à 38** appliquées et 12 Edge
   Functions déployées.
@@ -28,23 +28,11 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
   migration distincte `conformite_moderation_audit`.
-- Le run GitHub Actions `30206844189` du commit `689596d` a passé formatage,
-  lint, typage, 28 tests unitaires et le rejeu Docker intégral des 29
-  migrations. Après ajout des trois secrets Actions, la relance manuelle
-  « Déployer Supabase » a réussi. Contrôle externe effectué le 26 juillet :
-  `GET /functions/v1/api/carte?heures=24&limite=5` répond HTTP 200 et expose
-  les quatre familles `polaire`, `geostationnaire`, `citoyen`, `aerien`.
-- GitHub Pages est activé avec « GitHub Actions » comme source. Le workflow
-  « Publier la PWA #5 » du commit `af21815` a réussi ; contrôle externe effectué
-  le 26 juillet : `https://qevedeveq-art.github.io/Alerte-incendie/` répond
-  HTTP 200 et contient la carte corrélée, ses filtres et la page de
-  confidentialité.
-- Les secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` et
-  `SUPABASE_DB_PASSWORD` sont désormais configurés dans GitHub Actions.
-- Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
-  de déploiement signale explicitement lequel des trois secrets manque.
-- Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
-  2.109.1 : les **35 migrations** se rejouent intégralement sur une base neuve.
+- Le pipeline GitHub Actions « Publier la PWA » du commit `48ad8d2` a réussi (Run `30220202069`).
+  Contrôle externe effectué le 26 juillet : `https://qevedeveq-art.github.io/Alerte-incendie/`
+  répond HTTP 200 et présente l'interface tactique avec la carte corrélée, ses marqueurs glassmorphic
+  et ses filtres interactifs de légende.
+- Les 38 migrations SQL s'appliquent sur Supabase production.
   Le conteneur Postgres est sain, les 12 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
   contacts RGPD valent `qevedeveq@gmail.com`.
