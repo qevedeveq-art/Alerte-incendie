@@ -64,6 +64,10 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Contrôle externe : PWA HTTP 200 avec parcours appareil uniquement, aucun
   bouton e-mail/Telegram, `/api/sante-publique` HTTP 200 avec `ok=true` et
   l'ancien webhook Telegram répond sans créer de canal (`actif=false`).
+- Étape suivante documentée : enrichissement des fiches par informations
+  locales dans `ETAPE_ACTUALITES_LOCALES.md`. **Rien n'est encore activé** :
+  aucune actualité ou publication sociale n'est collectée, stockée ou exposée
+  et aucune migration 36 n'existe dans l'état livré.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
@@ -132,6 +136,11 @@ role et appliquent les contrôles applicatifs.
 | Notification | `alertes` |
 | Enrichissement | `meteo`, `observations_aero` |
 | Exploitation | `runs`, `config`, `quotas`, `audit_admin` |
+
+Le futur domaine « contexte local » utilisera des tables séparées
+`sources_contexte`, `mentions_contexte`, `evenement_mentions` et
+`contexte_moderation_audit`. Il ne sera ajouté que par une nouvelle migration.
+Il ne doit partager aucune règle de calcul avec les preuves de détection.
 
 ## Planification déclarative
 
@@ -207,6 +216,15 @@ plus de 24 heures.
   saisi et renvoie le centre public de la commune. Elle reste sous le quota
   existant de 60 requêtes par minute, n'envoie pas le jeton d'abonné et ne
   remplace pas la géolocalisation locale.
+- Une actualité ou une publication sociale est un **contexte**, jamais une
+  preuve : elle ne crée, ne corrobore, n'élève et ne clôt aucun événement ou
+  alerte. Son volume et sa popularité n'ont aucun poids.
+- Aucun contenu tiers n'est aspiré sans API, flux, webhook ou accord documenté.
+  Le système ne réhéberge ni article, ni image, ni vidéo et synchronise les
+  suppressions à la source.
+- Tout futur contenu social passe d'abord en mode fantôme puis en modération.
+  L'application n'affiche ni auteur particulier, ni texte social brut, ni
+  information tactique sur les secours.
 
 ## Limites et risques connus
 
@@ -250,6 +268,11 @@ plus de 24 heures.
 11. **WMS EFFIS trop lent.** Le 26 juillet, le GetMap officiel n'a répondu ni
     dans Leaflet ni en 30 secondes. Il reste un lien contextuel et n'est pas
     chargé dans la carte critique.
+12. **Contexte local non encore intégré.** Les sources, le modèle de données,
+    l'association spatio-temporelle, la rétention et les portes de mise en
+    production sont planifiés dans `ETAPE_ACTUALITES_LOCALES.md`. La validation
+    juridique par source et la mise à jour de la politique de confidentialité
+    restent obligatoires avant toute collecte sociale.
 
 Le plan priorisé de réduction de ces risques et d'intégration de nouvelles
 sources est maintenu dans `docs/PLAN_AMELIORATION.md`.

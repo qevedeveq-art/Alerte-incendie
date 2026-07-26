@@ -16,6 +16,13 @@ de corroboration explicable. Le passage à l'échelle, l'outre-mer automatique e
 l'ouverture anonyme complète restent suivis dans
 [`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md).
 
+La prochaine étape est cadrée, mais **pas encore active** : associer à chaque
+feu des communiqués officiels, articles locaux et publications publiques
+pertinentes. Ces éléments resteront du contexte sourcé, sans créer de feu,
+modifier sa sévérité ni déclencher une alerte. Le séquencement, les sources
+envisagées et les garde-fous RGPD sont détaillés dans
+[`docs/ETAPE_ACTUALITES_LOCALES.md`](docs/ETAPE_ACTUALITES_LOCALES.md).
+
 L'interface est organisée autour de la carte : plein écran utile, regroupement
 des marqueurs aux faibles zooms, liste synchronisée, filtres 1/6/24 h et par
 niveau de confiance, recherche par commune ou code postal, résumé automatique
@@ -263,6 +270,8 @@ cd supabase/functions && deno task verif
 | [`docs/CONTEXTE.md`](docs/CONTEXTE.md) | mémoire technique, état de livraison, invariants et risques |
 | [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) | configuration, surveillance et procédures opérateur |
 | [`docs/SECURITE.md`](docs/SECURITE.md) | modèle d'accès, anti-abus et prérequis avant ouverture |
+| [`docs/ETAPE_ACTUALITES_LOCALES.md`](docs/ETAPE_ACTUALITES_LOCALES.md) | plan de passage vers les actualités locales et réseaux sociaux |
+| [`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md) | feuille de route priorisée et critères de succès |
 | [`AGENTS.md`](AGENTS.md) | règles de maintenance et mise à jour systématique du contexte |
 
 ## Installation depuis zéro
@@ -303,6 +312,9 @@ curl -X POST "$URL/functions/v1/load-communes" \
   ils n'augmentent jamais le nombre de preuves.
 - **geo.api.gouv.fr** — découpage communal IGN Admin Express.
 - **Les utilisateurs eux-mêmes**, pour les signalements.
+- **Actualités et réseaux sociaux** — aucune ingestion actuellement. La
+  prochaine étape commencera par des flux officiels et médias autorisés en mode
+  fantôme ; les publications sociales resteront contextuelles et modérées.
 
 ### Corroboration aérienne
 

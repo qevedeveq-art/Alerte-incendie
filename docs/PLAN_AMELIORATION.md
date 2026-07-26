@@ -72,6 +72,18 @@ Restent dépendants d'un tiers ou d'une campagne d'évaluation :
 - obtenir les accords FeuxDeForet.fr, SDIS ou préfectures ;
 - qualifier l'outre-mer, la charge nationale, le RGAA et le cadre juridique.
 
+Prochain lot retenu :
+
+- associer aux événements existants des communiqués officiels, actualités
+  locales et, dans un second temps, publications sociales publiques ;
+- maintenir ce contenu dans un domaine séparé qui ne modifie jamais la
+  détection, la sévérité ou les alertes ;
+- commencer par une collecte fantôme et une validation des droits d'usage.
+
+Le plan d'exécution complet, les sources, le barème d'association et les portes
+de production sont dans
+[`ETAPE_ACTUALITES_LOCALES.md`](ETAPE_ACTUALITES_LOCALES.md).
+
 ## Ce que FeuxDeForet.fr fait bien
 
 L'audit du site, de sa [carte des feux](https://feuxdeforet.fr/cartes/feux/),
@@ -125,8 +137,28 @@ le **compagnon d'alerte personnel fondé sur les preuves** :
 | [Météo des forêts](https://meteofrance.com/comprendre-la-vigilance/meteo-des-forets-informer-sensibiliser-le-public-au-danger-incendie) | Contexte départemental de danger | Ce n'est pas une détection de feu en cours |
 | [Pyro-SDIS](https://www.data.gouv.fr/datasets/pyro-sdis-dataset-dimages-pour-la-detection-de-fumees-de-feux-de-foret) | Évaluation hors production d'un classifieur de fumée | Jamais de décision automatique unique |
 | FeuxDeForet.fr partenaire | Témoignage complémentaire | Accord écrit, provenance « communautaire », aucun double compte |
+| flux officiels locaux et médias autorisés | Contexte fiable et actionnable par incident | Liste blanche, attribution, lien original et aucun effet sur l'alerte |
+| GDELT, Bluesky et Mastodon | Découverte rapide d'informations publiques | Mode fantôme, rétention courte et modération du social |
 
 ## Feuille de route priorisée
+
+### P0 — contexte local sourcé, prochaine étape
+
+- Constituer une liste blanche de flux de préfectures, SDIS, communes et médias
+  locaux dont l'usage est documenté.
+- Ajouter GDELT comme outil de découverte de liens, sans recopier les articles.
+- Créer un domaine de données séparé et une collecte fantôme fondée uniquement
+  sur les événements existants.
+- Associer par commune, distance, temps et vocabulaire avec des raisons
+  explicables ; dédupliquer les reprises du même contenu.
+- Publier d'abord autorités et médias autorisés, puis tester Bluesky et des
+  comptes Mastodon locaux avec modération systématique.
+- Ne jamais faire d'une actualité ou d'un post une famille de preuve et ne
+  déclencher aucune notification dans ce lot.
+
+**Sortie :** au moins 90 % d'associations correctes sur le jeu de référence
+autorité/média, 100 % des éléments publics attribués et horodatés, retrait en
+moins de 6 h, et zéro effet sur `severite`, `score` ou `alertes`.
 
 ### P0 — disponibilité observable de l'extérieur
 
@@ -228,6 +260,8 @@ personnelle ou opérationnelle.
 - délai médian de modération, taux de recours et décisions révisées ;
 - temps d'affichage par zoom, accessibilité et taux d'échec faible débit ;
 - coût mensuel par 1 000 abonnés et taux d'abonnés avec une zone active.
+- précision des associations d'informations locales par type de source, délai
+  de retrait et vérification d'un effet strictement nul sur les alertes.
 
 Le service complète l'information officielle. Il ne remplace jamais le 18, le
 112, FR-Alert, les SDIS ou les préfectures.

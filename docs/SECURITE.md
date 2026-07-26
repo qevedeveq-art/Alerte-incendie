@@ -156,6 +156,43 @@ d'abus.
   authentifiées des Edge Functions ne sont jamais interceptées par le service
   worker.
 
+## Prochaine étape — actualités locales et réseaux sociaux
+
+Cette surface est planifiée dans `ETAPE_ACTUALITES_LOCALES.md` mais n'est pas
+active. Aucune collecte sociale ne doit commencer avant les contrôles de cette
+section.
+
+### Menaces propres à cette fonction
+
+| Menace | Garde-fou obligatoire |
+|---|---|
+| une rumeur crée une fausse alerte | séparation physique des tables ; aucun chemin d'écriture vers score, sévérité ou alertes |
+| doublons et viralité simulent une corroboration | dédoublonnage par identifiant, URL et empreinte ; volume et popularité ignorés |
+| réutilisation illicite ou disproportionnée | source inscrite sur liste blanche, finalité/base légale/CGU/licence/rétention documentées |
+| exposition d'un particulier | aucun nom de particulier ni texte social brut dans la réponse publique ; modération et rétention courte |
+| contenu supprimé toujours visible | revérification, retrait automatique et procédure humaine en moins de 24 h |
+| HTML, traqueur ou lien malveillant | texte simple échappé, aucun embed/image distante, URL `https:` et domaine affiché |
+| SSRF du collecteur | hôtes exacts autorisés, DNS/IP contrôlés, réseaux privés refusés, redirections et taille bornées |
+| fuite d'une clé fournisseur | secrets dans `public.config`, jamais dans les tables de catalogue, les logs ou le client |
+| instruction hostile dans un contenu | aucune IA au premier lot ; toute synthèse future est isolée, sans outil, secret ou capacité d'action |
+| information tactique sur les secours | filtre et file opérateur ; ne pas afficher position, mouvement ou stratégie |
+
+La route publique prévue sera intégrée à `api`, limitée par IP, bornée à cinq
+résultats et ne renverra que source, type, titre/résumé autorisé, URL, dates et
+raisons d'association. Les tables auront RLS sans policy et les privilèges
+seront révoqués comme pour le reste du projet.
+
+Une URL sociale est susceptible d'identifier son auteur même sans nom recopié.
+Elle reste donc une donnée personnelle : information du public, droits
+d'opposition/effacement, minimisation, exactitude et durée limitée doivent être
+effectifs. La politique de confidentialité devra préciser la finalité, les
+sources, la base légale retenue, les destinataires, les transferts éventuels et
+les durées **avant** activation. Le contact est `qevedeveq@gmail.com`.
+
+Les rétentions cibles sont : candidat rejeté 24 h, mention sociale 7 jours,
+autorité/média 30 jours après la dernière observation et audit sans texte ni
+auteur 180 jours. Une modification de ces durées exige une nouvelle revue.
+
 ## Ce qui reste à faire avant une ouverture large
 
 1. **Identité et validation juridique** — la politique de confidentialité et
@@ -169,6 +206,9 @@ d'abus.
    juridique.
 3. **Rotation de `admin_key`** — définir une cadence opératoire et révoquer
    immédiatement la valeur en cas de fuite.
+4. **Réutilisation de contenus publics** — avant le prochain lot, valider la
+   matrice par source, compléter le registre de traitement et la politique de
+   confidentialité, puis démontrer la purge et le retrait à la source.
 
 ## Signalements citoyens — surface d'abus spécifique
 
