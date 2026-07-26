@@ -482,34 +482,7 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
           <input type="range" id="sliderTimeline" min="1" max="24" value="24" step="1" aria-label="Plage horaire de détection">
           <span id="labelTimeline" style="font-size:12px;font-weight:650;min-width:85px">Dernières 24h</span>
         </div>
-        <div class="legende-interactive-barre" id="legendeInteractiveBarre" aria-label="Légende visuelle et filtres de la carte">
-          <b>Légende :</b>
-          <div class="ligne-legende" data-filtre-legende="corrobore" title="Filtrer feux corroborés">
-            <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
-            <span>Corroborés</span>
-            <span class="badge-compteur" id="cntCorroboreB">0</span>
-          </div>
-          <div class="ligne-legende" data-filtre-legende="probable" title="Filtrer signaux forts">
-            <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
-            <span>Signaux forts</span>
-            <span class="badge-compteur" id="cntProbableB">0</span>
-          </div>
-          <div class="ligne-legende" data-filtre-legende="indice" title="Filtrer indices isolés">
-            <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
-            <span>Indices isolés</span>
-            <span class="badge-compteur" id="cntIndiceB">0</span>
-          </div>
-          <div class="ligne-legende" data-filtre-legende="citoyen" title="Filtrer témoins vérifiés">
-            <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
-            <span>Témoins vérifiés</span>
-            <span class="badge-compteur" id="cntCitoyenB">0</span>
-          </div>
-          <div class="ligne-legende" data-filtre-legende="signalement" title="Filtrer témoins non vérifiés">
-            <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
-            <span>Non vérifiés</span>
-            <span class="badge-compteur" id="cntSignalementB">0</span>
-          </div>
-        </div>
+        <div class="legende-interactive-barre" id="legendeInteractiveBarre" aria-label="Légende visuelle et filtres de la carte"></div>
         <div class="filtres-sources panneau-filtres" id="filtresSources"
              aria-label="Filtres des sources de la carte">
           <label class="filtre-source">
@@ -1115,6 +1088,38 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     return div;
   };
   legende.addTo(carte);
+
+  const elBarre = $('#legendeInteractiveBarre');
+  if (elBarre) {
+    elBarre.innerHTML = `
+      <b>Légende :</b>
+      <div class="ligne-legende" data-filtre-legende="corrobore" title="Filtrer feux corroborés">
+        <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
+        <span>Corroborés</span>
+        <span class="badge-compteur" id="cntCorroboreB">0</span>
+      </div>
+      <div class="ligne-legende" data-filtre-legende="probable" title="Filtrer signaux forts">
+        <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
+        <span>Signaux forts</span>
+        <span class="badge-compteur" id="cntProbableB">0</span>
+      </div>
+      <div class="ligne-legende" data-filtre-legende="indice" title="Filtrer indices isolés">
+        <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
+        <span>Indices isolés</span>
+        <span class="badge-compteur" id="cntIndiceB">0</span>
+      </div>
+      <div class="ligne-legende" data-filtre-legende="citoyen" title="Filtrer témoins vérifiés">
+        <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
+        <span>Témoins vérifiés</span>
+        <span class="badge-compteur" id="cntCitoyenB">0</span>
+      </div>
+      <div class="ligne-legende" data-filtre-legende="signalement" title="Filtrer témoins non vérifiés">
+        <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
+        <span>Non vérifiés</span>
+        <span class="badge-compteur" id="cntSignalementB">0</span>
+      </div>`;
+  }
+
   coucheZones = L.layerGroup().addTo(carte);
   coucheDet = L.layerGroup().addTo(carte);
   coucheEvts = L.layerGroup().addTo(carte);
