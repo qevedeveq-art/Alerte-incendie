@@ -1,11 +1,29 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v5';
+const CACHE = 'alerte-incendie-v7';
 const CACHE_TUILES = 'alerte-incendie-tuiles-v1';
 const MAX_TUILES = 150;
-const STATIQUE = ['./', './index.html', './confidentialite.html', './manifest.webmanifest'];
+const STATIQUE = [
+  './',
+  './index.html',
+  './confidentialite.html',
+  './manifest.webmanifest',
+  './icone-192.png',
+  './icone-512.png',
+];
+const DEPENDANCES = [
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIQUE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(async (c) => {
+        await c.addAll(STATIQUE);
+        await Promise.allSettled(DEPENDANCES.map((url) => c.add(url)));
+      })
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -23,7 +41,7 @@ self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
   if (u.pathname.includes('/functions/v1/')) return;
-  if (u.hostname === 'data.geopf.fr') {
+  if (u.hostname === 'data.geopf.fr' || u.hostname.endsWith('.basemaps.cartocdn.com')) {
     e.respondWith(
       caches.open(CACHE_TUILES).then(async (cache) => {
         const connue = await cache.match(e.request);

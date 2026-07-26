@@ -12,7 +12,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `b9d1ee8` sur `main` et `origin/main`
   (suivi d'un commit de mémoire de livraison).
-- Schéma du dépôt : migrations **01 à 33**.
+- Schéma du dépôt : migrations **01 à 35**.
 - État de production vérifié : migrations **01 à 33** appliquées et Edge
   Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
@@ -34,7 +34,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
   de déploiement signale explicitement lequel des trois secrets manque.
 - Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
-  2.109.1 : les **33 migrations** se rejouent intégralement sur une base neuve.
+  2.109.1 : les **34 migrations** se rejouent intégralement sur une base neuve.
   Le conteneur Postgres est sain, les 12 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
   contacts RGPD valent `qevedeveq@gmail.com`.
@@ -47,6 +47,18 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   avec `ok=true`, collecte polaire, Meteosat et `pg_cron` opérationnels. La
   carte de production renvoie 110 groupes : 1 corroboré multi-familles, 59
   probables forts ou répétés et 50 indices isolés.
+- Évolution locale non encore publiée : refonte carte-first responsive,
+  clustering neutre, filtres 1/6/24 h et confiance, liste synchronisée, fiche
+  incident partageable, recherche publique commune/code postal, résumé local,
+  parcours d'alerte recommandé automatisé, formulaires accessibles,
+  actualisation périodique, installation/hors-ligne et console opérateur. La
+  migration 34 ajoute les RPC de modération sans donnée d'identité. La
+  migration 35 retire temporairement e-mail et Telegram, efface leurs
+  destinations et secrets, clôt leurs envois en attente et impose
+  `canaux.type = 'webpush'`. L'interface et les Edge Functions ne proposent
+  désormais que les notifications sur appareil. Validation locale : 35
+  migrations rejouées sur une base neuve, schéma `public` sans erreur de lint,
+  contrainte présente, aucun ancien canal/secret et 40 tests Deno réussis.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.
@@ -78,8 +90,9 @@ Open-Meteo ──> poll-meteo ─> meteo              evenements
                                                      │
                                                      v
                                               dispatch
-                                          /      |       \
-                                      Web Push Telegram  e-mail
+                                                  │
+                                                  v
+                                              Web Push
 ```
 
 La PWA statique appelle uniquement `api` et `signalement`. Toutes les tables
@@ -91,12 +104,12 @@ role et appliquent les contrôles applicatifs.
 | Fonction | Responsabilité | Accès |
 |---|---|---|
 | `api` | carte corrélée, inscription consentie, état, zones, canaux, export et suppression du compte | carte et routes publiques limitées, sinon `x-token` |
-| `signalement` | création, carte et contestation collective des signalements | carte publique limitée ; écriture par `x-token` et canal vérifié |
+| `signalement` | création, carte, contestation et modération des signalements | carte publique limitée ; écriture par `x-token` vérifié ; modération par `admin_key` auditée |
 | `poll-firms` | collecte VIIRS/MODIS et agrégation | admin ou service role |
 | `poll-lsasaf` | collecte Meteosat HDF5 | admin ou service role |
 | `poll-meteo` | vent, humidité, température et risque | admin ou service role |
 | `poll-adsb` | aéronefs de lutte et corroboration | admin ou service role, désactivé par défaut |
-| `dispatch` | reprise et envoi Web Push, Telegram, SMTP | admin ou service role |
+| `dispatch` | reprise et envoi Web Push vers les appareils | admin ou service role |
 | `load-communes` | cache des contours communaux | admin ou service role |
 | `probe-lsasaf` | diagnostic manuel du décodeur HDF5 | admin |
 | `probe-mtg` | veille mensuelle sur le produit MTG | admin ou service role |
@@ -141,7 +154,7 @@ plus de 24 heures.
 
 - Une preuve citoyenne ne compte jamais comme un pixel satellite.
 - Toute création ou contestation citoyenne exige un compte actif avec au moins
-  un canal actif et vérifié ; le jeton d'abonné seul est insuffisant.
+  un appareil Web Push actif et vérifié ; le jeton d'abonné seul est insuffisant.
 - Un signalement confirmé seul reste au maximum `alerte`; `critique` exige une
   corroboration automatique ou les règles satellite.
 - L'ADS-B ne crée jamais d'événement et exige deux positions récentes du même
@@ -150,8 +163,9 @@ plus de 24 heures.
 - Une alerte est idempotente par événement, canal, sévérité et type.
 - Les échecs d'envoi sont retentés avec temporisation puis le canal est
   désactivé après cinq échecs.
-- Les canaux e-mail exigent un double opt-in. Telegram est créé uniquement par
-  le webhook `/start`; la route générique `canal` ne l'accepte pas.
+- Seuls les canaux `webpush` sont autorisés. La migration 35 supprime les
+  destinations e-mail/Telegram historiques et une contrainte de base empêche
+  leur recréation. Les routes historiques répondent sans activer de canal.
 - Aucune fonction ou table métier n'est exécutable par `PUBLIC`, `anon` ou
   `authenticated`.
 - Les textes issus du serveur sont échappés avant insertion dans le HTML de la
@@ -162,8 +176,6 @@ plus de 24 heures.
   exige le même quorum que sa confirmation.
 - Tout appel humain avec `admin_key` est journalisé avec une IP hachée ; les
   appels internes porteurs du service role ne le sont pas.
-- Le webhook Telegram exige `config.telegram_webhook_secret`, généré par la
-  migration 28 et transmis à Telegram lors de `setWebhook`.
 - La carte regroupe les pixels dans un rayon de 2 km et ne compte qu'une fois
   chaque famille indépendante : polaire, géostationnaire, citoyenne et aérienne.
   Son score est indicatif et ne doit jamais être présenté comme une
@@ -179,7 +191,17 @@ plus de 24 heures.
   différents satellites polaires ne se corroborent pas entre eux.
 - Les changements de statut de modération sont append-only dans
   `signalement_moderation_audit`. Leur historique privé est accessible
-  uniquement au porteur du jeton et d'un canal vérifié.
+  uniquement au porteur du jeton et d'un appareil Web Push vérifié.
+- La console de modération ne reçoit ni identité, ni canal, ni empreinte réseau.
+  La clé administrateur reste en mémoire de page, chaque lecture ou décision
+  est auditée et toute décision humaine exige un motif.
+- La géolocalisation « autour de moi » est traitée localement. Elle n'est
+  envoyée au serveur que si l'abonné enregistre explicitement un point de
+  référence.
+- La recherche publique de commune ne transmet que le nom ou le code postal
+  saisi et renvoie le centre public de la commune. Elle reste sous le quota
+  existant de 60 requêtes par minute, n'envoie pas le jeton d'abonné et ne
+  remplace pas la géolocalisation locale.
 
 ## Limites et risques connus
 
@@ -188,18 +210,17 @@ plus de 24 heures.
    dépend des notifications Actions du mainteneur et de la disponibilité de
    GitHub ; il ne remplace pas un contrat de supervision.
 2. **Jeton porteur.** Le jeton d'abonné est conservé dans `localStorage`.
-   Quiconque le récupère contrôle les zones et canaux de cet abonné.
+   Quiconque le récupère contrôle les zones et appareils de cet abonné.
 3. **Réputation non décisionnelle.** L'export expose un historique agrégé
    (confirmés, corroborés, rejetés), mais ce score n'influence pas encore le
    poids d'un futur signalement.
 4. **Dépendances externes.** NASA FIRMS, LSA SAF, Open-Meteo, OpenSky,
-   geo.api.gouv.fr, Telegram et le fournisseur SMTP restent des points de
-   dégradation.
+   geo.api.gouv.fr et les fournisseurs Web Push des navigateurs restent des
+   points de dégradation.
 5. **Ouverture large non prête.** La politique et les droits techniques sont
    présents et le contact public `qevedeveq@gmail.com` est livré par la
-   migration 28. L'identité légale complète du responsable, un expéditeur
-   e-mail transactionnel et les textes doivent encore être validés avant
-   communication large.
+   migration 28. L'identité légale complète du responsable et les textes
+   doivent encore être validés avant communication large.
 6. **Endpoint Supabase lié au déploiement.** La PWA contient actuellement la
    référence du projet dans `web/index.html`; tout changement de projet exige
    sa mise à jour.
@@ -207,7 +228,8 @@ plus de 24 heures.
    couvrent la métropole et la Corse, plus l'enveloppe des zones abonnées. Les
    flux Europe ne garantissent pas encore une couverture automatique homogène
    de tous les territoires ultramarins. La route publique est bornée à 500
-   groupes et 72 h ; l'interface anonyme complète reste à livrer.
+   groupes et 72 h ; la carte anonyme est désormais livrée mais les volumes
+   nationaux et ultramarins restent à qualifier.
 8. **Montée en charge non démontrée.** Le chargement de toutes les communes est
    prévu, mais les volumes d'une carte nationale, les quotas publics et les
    coûts de notification n'ont pas encore été testés.
@@ -217,8 +239,9 @@ plus de 24 heures.
    donnée n'est copiée tant qu'un contrat et un schéma de flux partenaire
    vérifiable ne sont pas disponibles.
 10. **Fond cartographique externe.** La vue satellite dépend du WMTS public
-    IGN/Géoplateforme. Le plan CARTO reste sélectionnable manuellement en cas
-    d'indisponibilité, mais il n'existe pas encore de bascule automatique.
+    IGN/Géoplateforme. Après quatre erreurs de tuiles, la PWA bascule
+    automatiquement sur le plan CARTO ; le mode économie de données le choisit
+    dès l'ouverture. Les deux fournisseurs restent néanmoins externes.
 11. **WMS EFFIS trop lent.** Le 26 juillet, le GetMap officiel n'a répondu ni
     dans Leaflet ni en 30 secondes. Il reste un lien contextuel et n'est pas
     chargé dans la carte critique.

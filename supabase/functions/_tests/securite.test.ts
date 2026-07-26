@@ -43,13 +43,15 @@ Deno.test("Web Push — refuse les clés absentes ou trop courtes", () => {
   );
 });
 
-Deno.test("Signalements — exige au moins un canal actif et vérifié", () => {
+Deno.test("Signalements — exige un appareil Web Push actif et vérifié", () => {
   assertEquals(aUnCanalVerifie(null), false);
   assertEquals(aUnCanalVerifie([]), false);
-  assertEquals(aUnCanalVerifie([{ actif: true, verifie: false }]), false);
-  assertEquals(aUnCanalVerifie([{ actif: false, verifie: true }]), false);
+  assertEquals(aUnCanalVerifie([{ type: "webpush", actif: true, verifie: false }]), false);
+  assertEquals(aUnCanalVerifie([{ type: "webpush", actif: false, verifie: true }]), false);
+  assertEquals(aUnCanalVerifie([{ type: "email", actif: true, verifie: true }]), false);
+  assertEquals(aUnCanalVerifie([{ type: "telegram", actif: true, verifie: true }]), false);
   assert(aUnCanalVerifie([
-    { actif: true, verifie: false },
-    { actif: true, verifie: true },
+    { type: "email", actif: true, verifie: true },
+    { type: "webpush", actif: true, verifie: true },
   ]));
 });

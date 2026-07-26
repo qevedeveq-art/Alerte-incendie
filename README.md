@@ -3,7 +3,8 @@
 Projet de service gratuit destiné au public français : alertes autour de
 localisations choisies, carte nationale zoomable et signalements citoyens,
 complétés par la détection satellite. Les alertes utilisent les
-**notifications push**, **Telegram** et l'**e-mail**.
+**notifications sur l'appareil** (Web Push). Les canaux Telegram et e-mail sont
+temporairement retirés afin de garder un parcours unique et immédiat.
 
 Architecture cible : Supabase (Paris) + PWA statique. L'état exact des
 migrations effectivement livrées est suivi dans `docs/CONTEXTE.md`.
@@ -14,6 +15,15 @@ la Corse. Elle permet de filtrer chaque famille de source et affiche un score
 de corroboration explicable. Le passage à l'échelle, l'outre-mer automatique et
 l'ouverture anonyme complète restent suivis dans
 [`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md).
+
+L'interface est organisée autour de la carte : plein écran utile, regroupement
+des marqueurs aux faibles zooms, liste synchronisée, filtres 1/6/24 h et par
+niveau de confiance, recherche par commune ou code postal, résumé automatique
+autour du lieu choisi, fiche incident partageable et navigation mobile. La
+carte reste consultable sans compte ; un compte vérifié n'est demandé que pour
+créer une alerte ou contribuer. Le parcours recommandé surveille en un geste la
+commune choisie, ses voisines et 3 km autour ; les réglages experts restent
+disponibles mais repliés.
 
 ---
 
@@ -36,8 +46,8 @@ système, et il ne dépend d'aucune source unique.
 ### Signalements citoyens
 
 Chacun peut signaler un départ de feu en pointant la carte après avoir créé un
-compte gratuit et vérifié au moins un canal : notification Push, Telegram ou
-adresse e-mail confirmée. Le jeton seul ne permet pas de contribuer.
+compte gratuit et activé les notifications sur au moins un appareil. Le jeton
+seul ne permet pas de contribuer.
 
 - deux signalements à moins de **50 m** et de moins de 6 h sont le même départ
 - confirmation dès **2 personnes sur 2 réseaux distincts**, ou **3 personnes**
@@ -47,6 +57,8 @@ adresse e-mail confirmée. Le jeton seul ne permet pas de contribuer.
   d'habitations et degré de certitude
 - suivi privé du statut : en attente, confirmé par quorum, corroboré par capteur,
   rejeté ou expiré
+- console opérateur séparée : file agrégée sans identité, clé administrateur
+  gardée uniquement en mémoire, motif obligatoire et décision auditée
 - contestation possible par d'autres abonnés, avec le même quorum ; un groupe
   rejeté retire sa preuve citoyenne sans supprimer une éventuelle preuve satellite
 
@@ -71,7 +83,7 @@ travail planifié :
    permanentes** apprises automatiquement ;
 4. agrège les points restants en **évènements** (2 km / 12 h) et calcule une
    sévérité — `info`, `alerte`, `critique` ;
-5. met en file puis envoie les alertes sur les canaux de chaque abonné, en
+5. met en file puis envoie les alertes sur les appareils de chaque abonné, en
    respectant son seuil et ses heures silencieuses.
 
 La carte des dernières 24 heures regroupe les observations distantes de moins
@@ -80,7 +92,9 @@ VIIRS et MODIS forment une seule famille polaire ; Meteosat, un groupe de
 témoins vérifiés et une corroboration aérienne comptent séparément. Le score
 0–99 aide à lire la concordance mais ne constitue ni une confirmation
 officielle ni une probabilité scientifique. La vue satellite IGN est affichée
-par défaut, avec un plan sombre en repli. Une légende française distingue :
+par défaut, avec passage automatique au plan sombre si ses tuiles échouent. Le
+plan sombre devient aussi le choix initial quand le navigateur demande
+d'économiser les données. Une légende française distingue :
 
 - les indices isolés en jaune, les signaux forts/répétés d'une seule famille en
   orange et les concordances d'au moins deux familles indépendantes en rouge ;
@@ -90,6 +104,13 @@ par défaut, avec un plan sombre en repli. Une légende française distingue :
 La taille d'une flamme combine le score, la puissance thermique maximale et la
 répétition des observations. Elle exprime l'importance de l'indice, jamais la
 surface brûlée.
+
+Au faible zoom, plusieurs incidents sont réunis dans une bulle neutre portant
+leur nombre afin d'éviter les superpositions. En zoomant, les flammes
+réapparaissent individuellement. Chaque fiche donne d'abord la conclusion
+lisible, la chronologie, les sources et la distance ; score, puissance et
+résolution restent accessibles dans « Détails techniques ». Le marqueur ne
+représente jamais un périmètre de feu.
 
 **FeuxDeForet.fr** est proposé comme carte complémentaire. Ses CGU interdisent
 l'extraction ou la réutilisation substantielle sans autorisation écrite et
@@ -105,6 +126,13 @@ Une veille GitHub Actions extérieure interroge aussi l'état public toutes les
 cinq minutes. Elle échoue si le projet est inaccessible, si la collecte polaire
 est trop ancienne ou si `pg_cron` ne passe plus. La PWA affiche la fraîcheur de
 ces trois contrôles sans exposer de donnée d'abonné.
+
+La PWA actualise automatiquement les données publiques toutes les deux minutes
+et au retour au premier plan. Elle conserve au plus les 250 derniers incidents
+publics, 150 tuiles cartographiques et les dépendances nécessaires à la carte
+afin d'afficher un état daté en mode hors ligne. La géolocalisation « autour de
+moi » reste dans le navigateur tant que l'utilisateur ne choisit pas
+explicitement d'enregistrer un point de référence.
 
 ### Le vent, pour rendre l'alerte actionnable
 
@@ -155,8 +183,9 @@ Open-Meteo ──> poll-meteo ─> risque/vent       evenements
                                                    │
                                                    v
                                                 dispatch
-                                         /         |        \
-                                     Web Push   Telegram    SMTP
+                                                   │
+                                                   v
+                                              Web Push
 
 PWA GitHub Pages ── x-token ──> api / signalement
 pg_cron ──> collectes, santé interne, clôture, purge et autotests
@@ -168,7 +197,7 @@ pg_cron ──> collectes, santé interne, clôture, purge et autotests
 |---|---|
 | `communes` | contours IGN simplifiés à ~56 m, sert au calcul des limitrophes |
 | `zones` | commune + limitrophes + marge, géométrie de surveillance précalculée |
-| `abonnes`, `canaux`, `zone_abonnes` | destinataires et leurs canaux |
+| `abonnes`, `canaux`, `zone_abonnes` | destinataires et leurs appareils Web Push |
 | `detections` | points chauds bruts, dédoublonnés par empreinte |
 | `sources_permanentes` | cellules de 500 m identifiées comme industrielles |
 | `signalements`, `signalement_groupes` | signalements citoyens et leur regroupement à 50 m |
@@ -212,9 +241,9 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   33 migrations SQL — schéma, moteur, cron et conformité
+supabase/migrations/   35 migrations SQL — schéma, moteur, cron et conformité
 supabase/functions/    11 Edge Functions Deno + module partagé + tests
-web/                   PWA autonome, politique de confidentialité, service worker
+web/                   PWA autonome, confidentialité, service worker et console de modération
 .github/workflows/     publication Pages + vérification et déploiement Supabase
 docs/                  contexte, exploitation et sécurité
 ```

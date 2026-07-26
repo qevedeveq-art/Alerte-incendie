@@ -48,15 +48,26 @@
     <tbody>
       <tr><td>Jeton aléatoire, prénom facultatif</td><td>Retrouver vos réglages sans mot de passe.</td></tr>
       <tr><td>Communes et point de référence facultatif</td><td>Calculer les zones et distances d’alerte.</td></tr>
-      <tr><td>E-mail, abonnement push ou identifiant Telegram</td><td>Envoyer les alertes demandées.</td></tr>
+      <tr><td>Abonnement Web Push de l’appareil</td><td>Envoyer les alertes demandées sur cet appareil.</td></tr>
       <tr><td>Signalements : position, heure, nature, intensité perçue,
         végétation, proximité d’habitations, certitude et commentaire</td>
         <td>Détecter un départ de feu signalé par plusieurs témoins et permettre
         une modération explicable.</td></tr>
       <tr><td>Empreinte irréversible de l’adresse IP</td><td>Appliquer les quotas et distinguer les réseaux sans conserver l’IP en clair.</td></tr>
       <tr><td>Journal technique et erreurs d’envoi</td><td>Surveiller la collecte et la délivrabilité.</td></tr>
+      <tr><td>Position « autour de moi »</td><td>Centrer et trier la carte localement ; elle n’est pas transmise sans enregistrement explicite comme point de référence.</td></tr>
+      <tr><td>Nom de commune ou code postal recherché</td><td>Interroger
+        geo.api.gouv.fr et centrer la carte sur le centre communal public. La
+        requête n’est pas associée au jeton du compte.</td></tr>
     </tbody>
   </table>
+  <p>
+    Pour le mode hors ligne, le navigateur peut conserver temporairement les
+    250 derniers incidents publics et jusqu’à 150 tuiles cartographiques. Ce
+    cache ne contient ni jeton, ni canal, ni signalement privé. Un lien partagé
+    vers un incident ne contient que des informations déjà visibles sur la
+    carte publique.
+  </p>
   <p>
     Le traitement lié à votre compte repose sur votre démarche volontaire et
     sur le consentement enregistré à l’inscription. Vous pouvez le retirer en
@@ -81,11 +92,11 @@
 
   <h2>Destinataires et sous-traitants techniques</h2>
   <p>
-    Les données sont traitées dans Supabase. Selon les fonctions activées,
-    les messages transitent par le fournisseur Web Push du navigateur,
-    Telegram ou le serveur SMTP configuré. Les données satellite et météo
-    proviennent de NASA FIRMS, LSA SAF/EUMETSAT et Open-Meteo ; elles ne
-    reçoivent pas vos données d’abonné.
+    Les données sont traitées dans Supabase. Les messages transitent uniquement
+    par le fournisseur Web Push du navigateur de l’appareil activé. Les
+    destinations e-mail et Telegram historiques ont été supprimées. Les données
+    satellite et météo proviennent de NASA FIRMS, LSA SAF/EUMETSAT et
+    Open-Meteo ; elles ne reçoivent pas vos données d’abonné.
   </p>
 
   <h2>Vos droits</h2>

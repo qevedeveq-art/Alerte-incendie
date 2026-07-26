@@ -1,11 +1,9 @@
 // =====================================================================
-//  dispatch — vidage de la file d'alertes vers les 3 canaux
+//  dispatch — vidage de la file d'alertes vers les appareils
 // ---------------------------------------------------------------------
-//    Web Push  : VAPID + chiffrement aes128gcm (jsr:@negrel/webpush)
-//    Telegram  : Bot API sendMessage, MarkdownV2 echappe
-//    E-mail    : SMTP implicite TLS (Gmail par defaut)
+//    Web Push : VAPID + chiffrement aes128gcm (jsr:@negrel/webpush)
 //
-//  Trois corrections de fiabilite par rapport a la version precedente :
+//  Corrections de fiabilite conservées :
 //
 //  1. REPRISE REELLE. On ecrivait `tentatives = 4` des le premier echec
 //     alors que la selection filtrait sur `tentatives < 4` : l'alerte
@@ -13,13 +11,8 @@
 //     compteur est desormais incremente d'une unite, avec temporisation
 //     croissante, et la peremption est geree en base (alertes_a_envoyer).
 //
-//  2. UNE SEULE CONNEXION SMTP pour tout le lot. On ouvrait une poignee
-//     de main TLS complete par message : sous un vrai feu, avec beaucoup
-//     d'abonnes, la fonction atteignait sa limite de temps avant d'avoir
-//     vide la file — precisement au moment ou elle sert.
-//
-//  3. ENVOIS CONCURRENTS pour push et Telegram, qui sont des appels HTTP
-//     independants. L'e-mail reste sequentiel : il partage sa connexion.
+//  2. ENVOIS CONCURRENTS des appels Web Push indépendants, par vagues
+//     bornées pour éviter de saturer la fonction.
 //
 //  Idempotent : une alerte deja « envoye » n'est jamais rejouee, grace
 //  a l'index unique (evenement, canal, severite, type). Un canal qui
@@ -36,20 +29,8 @@ import {
   ouvrirRun,
   sb,
 } from "../_shared/mod.ts";
-import { echapperHtml, echapperMdV2 as md } from "../_shared/format.ts";
-import {
-  corpsFinHtml,
-  corpsFinTelegram,
-  corpsFinTexte,
-  corpsHtml,
-  corpsTelegram,
-  corpsTexte,
-  type Payload,
-  titre,
-  titreFin,
-} from "./messages.ts";
+import { corpsFinTexte, corpsTexte, type Payload, titre, titreFin } from "./messages.ts";
 import * as webpush from "jsr:@negrel/webpush@^0.3";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const MAX_ECHECS = 5;
 const MAX_TENTATIVES = 5;
@@ -77,15 +58,10 @@ async function appPush(cfg: Record<string, any>) {
 /** Titre et corps selon le type : incendie, fin d'alerte, panne, test. */
 function composer(p: Payload, type: string) {
   if (type === "alerte") {
-    return { sujet: titre(p), texte: corpsTexte(p), html: corpsHtml(p), tg: corpsTelegram(p) };
+    return { sujet: titre(p), texte: corpsTexte(p) };
   }
   if (type === "fin") {
-    return {
-      sujet: titreFin(p),
-      texte: corpsFinTexte(p),
-      html: corpsFinHtml(p),
-      tg: corpsFinTelegram(p),
-    };
+    return { sujet: titreFin(p), texte: corpsFinTexte(p) };
   }
   if (type === "heartbeat") {
     const m = p?.message ??
@@ -93,18 +69,12 @@ function composer(p: Payload, type: string) {
     return {
       sujet: "Alerte Incendie — surveillance interrompue",
       texte: `${m}\n\nVérifiez l'état du système dans l'application.`,
-      html: `<p style="font-size:16px"><b>Surveillance interrompue</b></p>` +
-        `<p>${echapperHtml(m)}</p>` +
-        `<p style="color:#777;font-size:12px">Vérifiez l'état du système dans l'application.</p>`,
-      tg: `${md("!!!")} *${md("Surveillance interrompue")}*\n\n${md(m)}`,
     };
   }
-  const m = p?.message ?? "Ce canal est opérationnel.";
+  const m = p?.message ?? "Cet appareil est opérationnel.";
   return {
     sujet: "Test — Alerte Incendie",
     texte: m,
-    html: `<p>${echapperHtml(m)}</p>`,
-    tg: `*${md("Test — Alerte Incendie")}*\n\n${md(m)}`,
   };
 }
 
@@ -128,62 +98,6 @@ async function envoyerPush(cfg: Record<string, any>, dest: any, p: Payload, type
   });
 }
 
-async function envoyerTelegram(cfg: Record<string, any>, dest: any, p: Payload, type: string) {
-  if (!cfg.telegram_token) throw new Error("telegram_token non configuré");
-  const r = await fetch(`https://api.telegram.org/bot${cfg.telegram_token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: dest.chat_id,
-      text: composer(p, type).tg,
-      parse_mode: "MarkdownV2",
-      link_preview_options: { is_disabled: true },
-      disable_notification: false,
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  const j = await r.json();
-  if (!j.ok) throw new Error(`telegram: ${j.description ?? r.status}`);
-}
-
-/** Connexion SMTP paresseuse, partagée par tout le lot. */
-function poolSmtp(cfg: Record<string, any>) {
-  let client: SMTPClient | null = null;
-  return {
-    async envoyer(dest: any, p: Payload, type: string) {
-      const s = cfg.smtp ?? {};
-      if (!s.user || !s.pass) throw new Error("smtp non configuré (user/pass)");
-      if (!client) {
-        client = new SMTPClient({
-          connection: {
-            hostname: s.host ?? "smtp.gmail.com",
-            port: s.port ?? 465,
-            tls: true,
-            auth: { username: s.user, password: s.pass },
-          },
-        });
-      }
-      const c = composer(p, type);
-      await client.send({
-        from: s.from ?? s.user,
-        to: dest.adresse,
-        subject: c.sujet,
-        content: c.texte,
-        html: c.html,
-        priority: p?.severite === "critique" && type === "alerte" ? "high" : "normal",
-      });
-    },
-    async fermer() {
-      if (client) {
-        try {
-          await client.close();
-        } catch { /* connexion déjà fermée */ }
-        client = null;
-      }
-    },
-  };
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   await req.json().catch(() => ({}));
@@ -198,13 +112,8 @@ Deno.serve(async (req) => {
     par_canal: {} as Record<string, number>,
   };
 
-  // Déclaré hors du try pour être fermé dans tous les cas, mais renseigné
-  // dedans : une configuration illisible doit clore le run proprement.
-  let smtp: ReturnType<typeof poolSmtp> | null = null;
-
   try {
     const cfg = await config(true);
-    smtp = poolSmtp(cfg);
 
     // La file prête à l'envoi est définie en base : péremption des alertes
     // incendie à 2 h, temporisation, priorité au critique.
@@ -272,33 +181,23 @@ Deno.serve(async (req) => {
       }
       try {
         const p = a.payload as Payload;
-        if (canal.type === "webpush") await envoyerPush(cfg, canal.destination, p, a.type);
-        else if (canal.type === "telegram") {
-          await envoyerTelegram(cfg, canal.destination, p, a.type);
-        } else if (canal.type === "email") await smtp!.envoyer(canal.destination, p, a.type);
-        else throw new Error(`type de canal inconnu: ${canal.type}`);
+        if (canal.type !== "webpush") {
+          throw new Error(`canal désactivé : ${canal.type}`);
+        }
+        await envoyerPush(cfg, canal.destination, p, a.type);
         await succes(a, canal);
       } catch (e) {
         await echec(a, canal, e);
       }
     };
 
-    // Push et Telegram : appels HTTP indépendants, traités par vagues.
-    const paralleles = alertes.filter((a) => canaux.get(a.canal_id)?.type !== "email");
-    for (let i = 0; i < paralleles.length; i += CONCURRENCE) {
-      await Promise.all(paralleles.slice(i, i + CONCURRENCE).map(traiter));
+    for (let i = 0; i < alertes.length; i += CONCURRENCE) {
+      await Promise.all(alertes.slice(i, i + CONCURRENCE).map(traiter));
     }
 
-    // E-mail : séquentiel, sur une connexion SMTP unique.
-    for (const a of alertes.filter((x) => canaux.get(x.canal_id)?.type === "email")) {
-      await traiter(a);
-    }
-
-    await smtp?.fermer();
     await fermerRun(runId, true, stats);
     return json({ ok: true, stats });
   } catch (e) {
-    await smtp?.fermer();
     await fermerRun(runId, false, stats, String(e));
     return json({ ok: false, erreur: String(e), stats }, 500);
   }

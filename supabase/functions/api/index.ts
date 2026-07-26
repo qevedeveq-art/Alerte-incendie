@@ -12,26 +12,22 @@
 //    GET  /api/sante-publique   fraîcheur des collectes et de pg_cron
 //    GET  /api/communes?q=      recherche de commune (France entière)
 //    POST /api/inscription      crée un abonné, renvoie son jeton
-//    POST /api/canal            ajoute un canal (webpush|email)
-//    POST /api/canal-verifier   confirme un e-mail par code a 6 chiffres
+//    POST /api/canal            ajoute un appareil (Web Push)
+//    POST /api/canal-verifier   retiré temporairement (410)
 //    POST /api/canal-supprimer
 //    POST /api/zone             ajoute une zone par code INSEE
 //    POST /api/zone-supprimer
 //    POST /api/reglages         seuil, heures silencieuses, sensibilité
-//    POST /api/test             alerte de test sur tous les canaux
+//    POST /api/test             alerte de test sur les appareils actifs
 //    GET  /api/compte-exporter  export des données personnelles
 //    POST /api/compte-supprimer effacement irréversible du compte
-//    POST /api/telegram-webhook liaison chat_id ↔ abonné
+//    POST /api/telegram-webhook retiré temporairement (accusé sans action)
 //  Anti-abus, indispensable pour un service ouvert au public :
 //    - quota par IP sur la creation de compte et la recherche
-//    - quota par abonne sur l'ajout de canal, de zone et les tests
-//    - double opt-in obligatoire sur l'e-mail : sans code confirme,
-//      aucune alerte n'est envoyee (sinon le service serait un relais
-//      de spam et l'expediteur finirait sur liste noire)
-//    - plafonds : 10 zones et 8 canaux par abonne
+//    - quota par abonne sur l'ajout d'appareil, de zone et les tests
+//    - plafond : 10 zones et 8 appareils par abonne
 // =====================================================================
 import {
-  comparerSecret,
   config,
   CORS,
   ipAppelant,
@@ -77,9 +73,6 @@ async function declencherDispatch() {
     body: JSON.stringify({ interne: true }),
   }).catch(() => {});
 }
-
-const codeA6Chiffres = () =>
-  String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -151,9 +144,13 @@ Deno.serve(async (req) => {
       if (!await quota(`communes:${ip}`, 60, 60)) return json(TROP_DE_REQUETES, 429);
       const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
       if (q.length < 2) return json([]);
+      const critere = /^\d{5}$/.test(q)
+        ? `codePostal=${encodeURIComponent(q)}`
+        : `nom=${encodeURIComponent(q)}`;
       const r = await fetch(
-        `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}` +
-          `&fields=nom,code,codesPostaux,departement,population&boost=population&limit=12`,
+        `https://geo.api.gouv.fr/communes?${critere}` +
+          `&fields=nom,code,codesPostaux,departement,population,centre` +
+          `&boost=population&limit=12`,
       );
       const l = await r.json();
       return json((Array.isArray(l) ? l : []).map((c: any) => ({
@@ -162,6 +159,8 @@ Deno.serve(async (req) => {
         cp: c.codesPostaux?.[0] ?? null,
         departement: c.departement?.nom ?? null,
         population: c.population ?? null,
+        lat: c.centre?.coordinates?.[1] ?? null,
+        lon: c.centre?.coordinates?.[0] ?? null,
       })));
     }
 
@@ -187,52 +186,13 @@ Deno.serve(async (req) => {
     }
 
     if (route === "telegram-webhook") {
-      const secretRecu = req.headers.get("x-telegram-bot-api-secret-token") ?? "";
-      const secretAttendu = String(cfg.telegram_webhook_secret ?? "");
-      if (!comparerSecret(secretRecu, secretAttendu)) {
-        return json({ erreur: "webhook non autorisé" }, 401);
-      }
-      // Le bot ne fait qu'une chose : lier un chat_id à un jeton d'abonné
-      // via la commande /start <jeton>.
-      const msg = body?.message;
-      const texte: string = msg?.text ?? "";
-      const chatId = msg?.chat?.id;
-      if (!chatId) return json({ ok: true });
-
-      const repondre = (t: string) =>
-        fetch(`https://api.telegram.org/bot${cfg.telegram_token}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: t, parse_mode: "Markdown" }),
-        }).catch(() => {});
-
-      const m = texte.match(/^\/start\s+(\S+)/);
-      if (!m) {
-        await repondre(
-          "Pour activer les alertes, ouvrez l'application et utilisez le bouton *Connecter Telegram*.",
-        );
-        return json({ ok: true });
-      }
-      const { data: ab } = await sb.from("abonnes").select("id, nom").eq("token", m[1])
-        .maybeSingle();
-      if (!ab) {
-        await repondre("Jeton invalide ou expiré.");
-        return json({ ok: true });
-      }
-      await sb.from("canaux").upsert({
-        abonne_id: ab.id,
-        type: "telegram",
-        destination: { chat_id: chatId },
-        libelle: String(msg?.chat?.first_name ?? "Telegram").slice(0, 40),
-        // chat_id fourni par Telegram lui-meme : le canal est verifie par construction
-        verifie: true,
-        actif: true,
-        echecs: 0,
-      }, { onConflict: "abonne_id,type,destination", ignoreDuplicates: false });
-      await repondre(
-        "Canal Telegram activé. Vous recevrez ici les alertes incendie de vos zones surveillées.",
-      );
-      return json({ ok: true });
+      // Accuser réception évite les relances automatiques de Telegram tant que
+      // l'ancien webhook n'a pas encore été supprimé côté fournisseur.
+      return json({
+        ok: true,
+        actif: false,
+        message: "Telegram est temporairement désactivé ; notifications sur appareil uniquement.",
+      });
     }
 
     // ---------- routes authentifiées ----------
@@ -247,7 +207,8 @@ Deno.serve(async (req) => {
         sb.from("v_sante").select("*").single(),
         sb.from("canaux")
           .select("id,type,libelle,actif,verifie,last_ok_at,last_error,echecs")
-          .eq("abonne_id", ab.id),
+          .eq("abonne_id", ab.id)
+          .eq("type", "webpush"),
         sb.rpc("detections_abonne", { p_abonne: ab.id, p_heures: 72 }),
         sb.rpc("meteo_abonne", { p_abonne: ab.id }),
       ]);
@@ -255,7 +216,6 @@ Deno.serve(async (req) => {
         abonne: {
           id: ab.id,
           nom: ab.nom,
-          email: ab.email,
           seuil_min: ab.seuil_min,
           quiet_start: ab.quiet_start,
           quiet_end: ab.quiet_end,
@@ -269,71 +229,25 @@ Deno.serve(async (req) => {
         sante: sante.data ?? null,
         meteo: meteo.data ?? {},
         vapid: cfg.vapid_public,
-        telegram_bot: cfg.telegram_bot_nom ?? null,
       });
     }
 
     if (route === "canal") {
+      if (body.type !== "webpush") {
+        return json({
+          erreur: "seules les notifications sur appareil sont disponibles",
+        }, 410);
+      }
       if (!await quota(`canal:${ab.id}`, 10, 3600)) return json(TROP_DE_REQUETES, 429);
       const { data: place } = await sb.rpc("verifier_plafonds", {
         p_abonne: ab.id,
         p_quoi: "canaux",
       });
-      if (!place) return json({ erreur: "maximum de 8 canaux atteint" }, 400);
+      if (!place) return json({ erreur: "maximum de 8 appareils atteint" }, 400);
 
       const { type, destination, libelle } = body;
-      // Telegram ne peut être lié que par le webhook /start : accepter ici
-      // un chat_id fourni par le client contredirait la vérification par
-      // construction décrite dans le modèle de sécurité.
-      if (!["webpush", "email"].includes(type)) return json({ erreur: "type invalide" }, 400);
-
-      // --- e-mail : double opt-in obligatoire ---
-      if (type === "email") {
-        const adresse = String(destination?.adresse ?? "").trim().toLowerCase();
-        if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(adresse) || adresse.length > 254) {
-          return json({ erreur: "adresse e-mail invalide" }, 400);
-        }
-        // 2 sollicitations maximum par adresse et par 24 h, quel que soit l'abonne :
-        // empeche d'utiliser le service pour harceler une adresse tierce
-        if (!await quota(`email:${adresse}`, 2, 86400)) {
-          return json({ erreur: "cette adresse a deja recu un code recemment" }, 429);
-        }
-
-        const code = codeA6Chiffres();
-        const { data: canal, error } = await sb.from("canaux").upsert({
-          abonne_id: ab.id,
-          type: "email",
-          destination: { adresse },
-          libelle: adresse,
-          actif: true,
-          verifie: false,
-          echecs: 0,
-          last_error: null,
-          code_verif: code,
-          code_expire_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-          tentatives_verif: 0,
-        }, { onConflict: "abonne_id,type,destination" }).select("id").single();
-        if (error) throw new Error(error.message);
-
-        await sb.from("alertes").insert({
-          canal_id: canal.id,
-          abonne_id: ab.id,
-          type: "test",
-          severite: "info",
-          statut: "en_attente",
-          payload: {
-            severite: "info",
-            message: `Votre code de confirmation est ${code}\n\n` +
-              `Saisissez-le dans l'application pour activer les alertes incendie sur cette adresse. ` +
-              `Le code expire dans 30 minutes.\n\n` +
-              `Si vous n'avez rien demande, ignorez ce message : sans ce code, aucune alerte ne sera envoyee ici.`,
-          },
-        });
-        await declencherDispatch();
-        return json({ ok: true, verification_requise: true, canal_id: canal.id });
-      }
-
-      // --- Web Push : abonnement produit par le navigateur ---
+      // L'abonnement Web Push est produit par le navigateur : sa destination
+      // ne peut donc pas être remplacée par une adresse ou un identifiant tiers.
       const destinationPush = normaliserAbonnementPush(destination);
       if (!destinationPush) return json({ erreur: "abonnement push invalide" }, 400);
       const { data, error } = await sb.from("canaux").upsert({
@@ -351,33 +265,7 @@ Deno.serve(async (req) => {
     }
 
     if (route === "canal-verifier") {
-      if (!await quota(`verif:${ab.id}`, 20, 3600)) return json(TROP_DE_REQUETES, 429);
-      const { data: c } = await sb.from("canaux")
-        .select("id, code_verif, code_expire_at, tentatives_verif")
-        .eq("id", body.id).eq("abonne_id", ab.id).maybeSingle();
-      if (!c) return json({ erreur: "canal introuvable" }, 404);
-      if ((c.tentatives_verif ?? 0) >= 5) {
-        return json({ erreur: "trop d'essais, redemandez un code" }, 429);
-      }
-      if (!c.code_expire_at || new Date(c.code_expire_at) < new Date()) {
-        return json({ erreur: "code expire, redemandez-en un" }, 400);
-      }
-
-      const fourni = String(body.code ?? "").trim();
-      if (fourni !== c.code_verif) {
-        await sb.from("canaux").update({ tentatives_verif: (c.tentatives_verif ?? 0) + 1 }).eq(
-          "id",
-          c.id,
-        );
-        return json({ erreur: "code incorrect" }, 400);
-      }
-      await sb.from("canaux").update({
-        verifie: true,
-        code_verif: null,
-        code_expire_at: null,
-        tentatives_verif: 0,
-      }).eq("id", c.id);
-      return json({ ok: true });
+      return json({ erreur: "la vérification e-mail est temporairement désactivée" }, 410);
     }
 
     if (route === "canal-supprimer") {
@@ -478,10 +366,13 @@ Deno.serve(async (req) => {
 
     if (route === "test") {
       if (!await quota(`test:${ab.id}`, 5, 3600)) return json(TROP_DE_REQUETES, 429);
-      // un canal non verifie ne recoit rien : evite d'en faire un vecteur d'envoi
+      // Seuls les abonnements Web Push actifs de l'abonné reçoivent le test.
       const { data: canaux } = await sb.from("canaux")
-        .select("id").eq("abonne_id", ab.id).eq("actif", true).eq("verifie", true);
-      if (!canaux?.length) return json({ erreur: "aucun canal vérifié" }, 400);
+        .select("id").eq("abonne_id", ab.id).eq("type", "webpush").eq("actif", true).eq(
+          "verifie",
+          true,
+        );
+      if (!canaux?.length) return json({ erreur: "aucune notification appareil active" }, 400);
 
       const faux = {
         zone: "Test",
@@ -496,7 +387,7 @@ Deno.serve(async (req) => {
         lon: 1.3197,
         debut_ts: new Date().toISOString(),
         evenement_id: "test",
-        message: "Test réussi : ce canal est opérationnel et recevra les alertes incendie.",
+        message: "Test réussi : cet appareil recevra les alertes incendie.",
       };
       await sb.from("alertes").insert(canaux.map((c) => ({
         canal_id: c.id,
@@ -514,7 +405,7 @@ Deno.serve(async (req) => {
       if (!await quota(`export:${ab.id}`, 3, 86400)) return json(TROP_DE_REQUETES, 429);
       const [profil, zones, canaux, signalements, contestations, fiabilite] = await Promise.all([
         sb.from("abonnes").select(
-          "id,nom,email,seuil_min,quiet_start,quiet_end,fuseau,ref_libelle,created_at,last_seen_at,conditions_version,conditions_acceptees_at",
+          "id,nom,seuil_min,quiet_start,quiet_end,fuseau,ref_libelle,created_at,last_seen_at,conditions_version,conditions_acceptees_at",
         ).eq("id", ab.id).single(),
         sb.rpc("zones_abonne", { p_abonne: ab.id }),
         sb.from("canaux")

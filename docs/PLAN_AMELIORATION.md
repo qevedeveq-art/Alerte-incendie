@@ -15,12 +15,19 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
   française sépare flammes automatiques, flammes citoyennes vérifiées et points
   gris non vérifiés. La taille 1–3 exprime l'importance de l'indice, pas une
   surface brûlée.
-- Un compte actif avec au moins un canal vérifié est obligatoire pour créer ou
-  contester un signalement.
+- Un compte actif avec les notifications Web Push activées sur au moins un
+  appareil est obligatoire pour créer ou contester un signalement.
 - La veille GitHub extérieure contrôle désormais Supabase et `pg_cron` toutes
   les cinq minutes. Elle reste dépendante de GitHub et de ses notifications.
 - L'outre-mer homogène, la charge nationale et l'identité légale complète de
   l'exploitant ne sont pas encore validés.
+- Évolution locale suivant le commit de production `b9d1ee8` : interface
+  carte-first, clustering, filtres temps/confiance, liste et fiche incident,
+  parcours d'alerte guidé, navigation mobile, installation/hors-ligne,
+  recherche commune/code postal, résumé automatique, réglage recommandé,
+  formulaires sans invites système, accessibilité renforcée et console de
+  modération auditée. Les migrations 34 et 35 restent à publier ; la seconde
+  simplifie les alertes aux notifications sur appareil uniquement.
 
 ### Avancement du plan prioritaire
 
@@ -36,6 +43,27 @@ Réalisé, déployé et vérifié le 26 juillet :
 - correction de la corroboration ADS-B, qui ne pouvait pas ajouter sa source
   au tableau SQL dans la version précédente ;
 - liens EFFIS et Météo des forêts séparés des preuves.
+
+Réalisé et validé localement dans le lot d'interface suivant :
+
+- carte anonyme prioritaire occupant 56 % de la hauteur mobile et jusqu'à
+  760 px sur ordinateur ;
+- clusters neutres aux faibles zooms, liste triée par distance ou confiance,
+  fiche détaillée et lien direct partageable ;
+- filtres 1/6/24 h, tous/forts/corroborés et familles de sources ;
+- navigation mobile Carte/Alertes/Signaler/Compte et parcours d'activation en
+  trois étapes ;
+- recherche publique par commune ou code postal, résumé du signal le plus
+  proche et ajout direct d'une surveillance recommandée ;
+- actualisation toutes les deux minutes, au retour dans l'application et à la
+  demande, sans rechargement de page ;
+- choix automatique d'un fond léger si l'économie de données est active et
+  repli automatique si les tuiles satellite échouent ;
+- dialogues accessibles pour la clé privée, la contestation et les
+  confirmations destructives ;
+- cache borné de 250 incidents publics, état hors ligne et invite
+  d'installation ;
+- console opérateur sans PII, clé en mémoire, motif obligatoire et audit.
 
 Restent dépendants d'un tiers ou d'une campagne d'évaluation :
 
@@ -147,8 +175,8 @@ avec repli automatique sur MSG.
 
 ### P1 — modération plus sûre et plus transparente
 
-- Garder l'exigence de compte et de canal vérifié ; ne pas ouvrir de commentaire
-  anonyme ou de fil libre.
+- Garder l'exigence de compte et d'appareil Web Push actif ; ne pas ouvrir de
+  commentaire anonyme ou de fil libre.
 - Remplacer les invites par un formulaire structuré : fumée/flammes, intensité
   perçue, heure, végétation, proximité d'habitations et degré de certitude.
 - Donner à l'auteur un état et un motif codifié : en attente, regroupé,
@@ -159,6 +187,11 @@ avec repli automatique sur MSG.
   plaques, quarantaine avant publication, consentement, rétention courte et
   suppression. Une IA assiste la revue mais ne valide ni ne rejette seule.
 - Bloquer les textes contenant positions, mouvements ou stratégies des secours.
+
+La file simple, le motif obligatoire et le journal sont réalisés localement.
+Le double regard, le recours formel et les photos restent volontairement hors
+activation : une photo exigerait suppression EXIF, détection de visages et
+plaques, quarantaine, consentement spécifique et purge de stockage démontrée.
 
 **Sortie :** toute décision est traçable et contestable, sans exposer de donnée
 personnelle ou opérationnelle.
@@ -181,7 +214,7 @@ personnelle ou opérationnelle.
 
 - Compléter l'identité légale, l'hébergement, le registre RGPD, l'analyse
   d'impact, la procédure d'incident et la revue RGAA.
-- Chiffrer e-mail, stockage, tuiles et notifications par tranche de 1 000
+- Chiffrer stockage, tuiles et notifications Web Push par tranche de 1 000
   abonnés ; documenter les limites gratuites et le mode dégradé.
 - Publier méthode de corrélation, changelog du score et statistiques agrégées
   de faux positifs, sans ouvrir les données personnelles.

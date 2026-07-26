@@ -1,5 +1,5 @@
 // =====================================================================
-//  Mise en forme des messages d'alerte, par canal.
+//  Mise en forme des notifications Web Push.
 // ---------------------------------------------------------------------
 //  Le texte se DEDUIT des sources de l'evenement. La version precedente
 //  ecrivait en dur « NASA FIRMS (VIIRS/MODIS), latence 2 a 3 h,
@@ -8,7 +8,7 @@
 //  (instantanes, non verifies). Le message decrivait donc une source
 //  que l'alerte n'avait pas utilisee.
 // =====================================================================
-import { echapperHtml, echapperMdV2, secteurVent } from "../_shared/format.ts";
+import { secteurVent } from "../_shared/format.ts";
 
 export type Meteo = {
   vent_kmh: number | null;
@@ -42,7 +42,6 @@ export type Payload = {
   message?: string;
 };
 
-const PICTO = { info: "i", alerte: "!", critique: "!!!" } as const;
 const TITRE = {
   info: "Point chaud détecté",
   alerte: "ALERTE INCENDIE",
@@ -152,7 +151,7 @@ function carteUrl(p: Payload) {
 }
 
 // ---------------------------------------------------------------------
-//  Texte brut (e-mail, notification push)
+//  Texte de la notification appareil
 // ---------------------------------------------------------------------
 export function corpsTexte(p: Payload) {
   const preuve = p.origine === "citoyen"
@@ -188,101 +187,5 @@ export function corpsFinTexte(p: Payload) {
     `que le feu soit éteint : un foyer résiduel, couvert par les arbres ou les nuages, ` +
     `reste invisible depuis l'espace.`,
     `En cas de doute ou de danger, appelez le 18 ou le 112.`,
-  ].join("\n");
-}
-
-// ---------------------------------------------------------------------
-//  HTML (e-mail)
-// ---------------------------------------------------------------------
-export function corpsHtml(p: Payload) {
-  const couleur = p.severite === "critique"
-    ? "#b3261e"
-    : p.severite === "alerte"
-    ? "#e06c00"
-    : "#5c6970";
-  const ligne = (l: string, v: string) =>
-    `<tr><td style="padding:6px 0;color:#666">${l}</td><td style="padding:6px 0;font-weight:600">${v}</td></tr>`;
-  const vent = phraseVent(p.meteo);
-
-  return `<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:560px">
-<div style="background:${couleur};color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">
-<div style="font-size:13px;letter-spacing:.08em;opacity:.85">${TITRE[p.severite]}</div>
-<div style="font-size:22px;font-weight:700;margin-top:2px">${echapperHtml(p.commune)}</div></div>
-<div style="border:1px solid #e3e3e3;border-top:0;padding:20px;border-radius:0 0 10px 10px">
-<p style="margin:0 0 14px;font-size:16px">${echapperHtml(localisation(p))}</p>
-${
-    vent
-      ? `<p style="margin:0 0 14px;font-size:15px;background:#fff5e6;padding:10px 12px;border-radius:8px">${
-        echapperHtml(vent)
-      }</p>`
-      : ""
-  }
-<table style="font-size:14px;border-collapse:collapse;width:100%">
-${p.origine === "citoyen" ? "" : ligne("Points chauds", String(p.nb_detections))}
-${p.nb_signalements ? ligne("Témoins", String(p.nb_signalements)) : ""}
-${ligne("Puissance max", p.frp_max ? Number(p.frp_max).toFixed(1) + " MW" : "n/d")}
-${ligne("Capteurs", echapperHtml(capteursLisibles(p.sources)))}
-${ligne("Observation", heureFr(p.debut_ts))}
-${ligne("Position", `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`)}
-</table>
-<p style="margin:18px 0 0"><a href="${
-    echapperHtml(carteUrl(p))
-  }" style="background:#1a1a1a;color:#fff;padding:11px 18px;border-radius:8px;text-decoration:none;font-size:14px">Voir sur la carte</a></p>
-<p style="margin:18px 0 0;font-size:12px;color:#777;line-height:1.5">
-${echapperHtml(avertissement(p))} En cas de danger immédiat, appelez le 18 ou le 112.</p>
-</div></div>`;
-}
-
-export function corpsFinHtml(p: Payload) {
-  return `<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:560px">
-<div style="background:#2e7d32;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">
-<div style="font-size:13px;letter-spacing:.08em;opacity:.85">FIN D'ALERTE</div>
-<div style="font-size:22px;font-weight:700;margin-top:2px">${echapperHtml(p.commune)}</div></div>
-<div style="border:1px solid #e3e3e3;border-top:0;padding:20px;border-radius:0 0 10px 10px">
-<p style="margin:0 0 14px;font-size:16px">Plus aucune détection depuis 3 heures.</p>
-<p style="margin:0 0 14px;font-size:14px;color:#444">${echapperHtml(localisation(p))}<br>
-Dernière observation : ${heureFr(p.derniere_maj ?? p.debut_ts)}</p>
-<p style="margin:0;font-size:12px;color:#777;line-height:1.5">
-Les capteurs ne voient plus de point chaud à cet endroit. Cela ne garantit pas que le feu
-soit éteint : un foyer résiduel, couvert par les arbres ou les nuages, reste invisible
-depuis l'espace. En cas de doute, appelez le 18 ou le 112.</p>
-</div></div>`;
-}
-
-// ---------------------------------------------------------------------
-//  Telegram (MarkdownV2, intégralement échappé)
-// ---------------------------------------------------------------------
-export function corpsTelegram(p: Payload) {
-  const e = echapperMdV2;
-  const vent = phraseVent(p.meteo);
-  const preuve = p.origine === "citoyen"
-    ? `Témoins : *${p.nb_signalements ?? 0}*`
-    : `Points chauds : *${p.nb_detections}*` +
-      (p.frp_max ? ` — puissance *${e(Number(p.frp_max).toFixed(1))} MW*` : "");
-
-  return [
-    `${e(PICTO[p.severite])} *${e(TITRE[p.severite])}*`,
-    ``,
-    e(localisation(p)),
-    vent ? `_${e(vent)}_` : null,
-    preuve,
-    `Capteurs : ${e(capteursLisibles(p.sources))}`,
-    `Observation : ${e(heureFr(p.debut_ts))}`,
-    ``,
-    `[${e("Ouvrir la carte")}](https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon})`,
-    ``,
-    `_${e(avertissement(p))}_`,
-  ].filter((l) => l !== null).join("\n");
-}
-
-export function corpsFinTelegram(p: Payload) {
-  const e = echapperMdV2;
-  return [
-    `*${e("Fin d'alerte")} — ${e(p.commune)}*`,
-    ``,
-    e("Plus aucune détection sur cet évènement depuis 3 heures."),
-    e(`Dernière observation : ${heureFr(p.derniere_maj ?? p.debut_ts)}`),
-    ``,
-    `_${e("Un foyer résiduel reste invisible depuis l'espace. En cas de doute, appelez le 18.")}_`,
   ].join("\n");
 }

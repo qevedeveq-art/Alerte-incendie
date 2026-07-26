@@ -44,7 +44,7 @@ jobs:
 
       - name: Tests unitaires
         working-directory: supabase/functions
-        run: deno test --allow-read=../../web/index.html _tests/
+        run: deno test --allow-read=../../web/index.html,../../web/moderation.html,../../web/sw.js,api/index.ts,dispatch/index.ts,signalement/index.ts,../migrations/20260726213000_35_notifications_appareil_uniquement.sql _tests/
 
       # Une migration doit toujours pouvoir s'appliquer sur une base
       # vierge : c'est la seule verification qui attrape une erreur de

@@ -20,6 +20,7 @@
   --r:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{margin:0;height:100%}
 body{
   background:var(--fond);color:var(--txt);
@@ -50,6 +51,7 @@ header .sous{font-size:11.5px;color:var(--txt3);margin-top:1px}
 
 main{max-width:760px;margin:0 auto;padding:16px 16px 40px}
 section{margin-bottom:20px}
+section[id]{scroll-margin-top:82px}
 .anonyme [data-prive]{display:none!important}
 h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);
   margin:0 0 10px 2px;font-weight:600}
@@ -170,9 +172,10 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
 .sugg{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:1000;
   background:#252220;border:1px solid var(--bord);border-radius:11px;overflow:hidden;
   box-shadow:0 14px 44px rgba(0,0,0,.55);max-height:270px;overflow-y:auto}
-.sugg div{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--bord);font-size:14px}
-.sugg div:last-child{border-bottom:0}
-.sugg div:hover{background:var(--fond3)}
+.sugg div,.sugg button{display:block;width:100%;text-align:left;color:var(--txt);background:#252220;
+  padding:11px 14px;cursor:pointer;border:0;border-bottom:1px solid var(--bord);font-size:14px}
+.sugg div:last-child,.sugg button:last-child{border-bottom:0}
+.sugg div:hover,.sugg button:hover,.sugg button:focus{background:var(--fond3)}
 .sugg small{color:var(--txt3);font-size:12px}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--bord)}
@@ -181,10 +184,166 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
 .stats small{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 
 @media(max-width:560px){ .grille2{grid-template-columns:1fr} #map{height:270px} }
+
+/* ---------- interface carte-first ---------- */
+:root{
+  --fond:#0f1113;--fond2:#171a1d;--fond3:#22262a;--bord:#343a40;
+  --txt:#fff;--txt2:#d0d4d8;--txt3:#aeb5bc;
+  --rouge:#f04438;--orange:#ff922b;--jaune:#ffd43b;--violet:#b197fc;
+  --ombre:0 18px 55px rgba(0,0,0,.28);
+}
+body{font-size:16px;line-height:1.55}
+button,input,select{min-height:44px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{
+  outline:3px solid #79c0ff;outline-offset:2px
+}
+.lien-evitement{position:fixed;left:12px;top:8px;z-index:3000;transform:translateY(-160%);
+  background:#fff;color:#111;padding:10px 14px;border-radius:9px;font-weight:700}
+.lien-evitement:focus{transform:translateY(0)}
+header{padding-inline:max(16px,calc((100vw - 1440px)/2));min-height:64px}
+header .sous{font-size:12px;color:var(--txt3)}
+.pastille{min-height:38px}
+main{max-width:1440px;padding:18px 20px 96px}
+h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
+.carte{box-shadow:0 8px 30px rgba(0,0,0,.12)}
+#vueApp{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(330px,.72fr);
+  align-items:start;gap:18px}
+#sectionCarte{grid-column:1;grid-row:1/span 20;min-width:0;position:relative}
+.colonne-panneau{grid-column:2;min-width:0}
+#map{height:clamp(520px,calc(100vh - 190px),760px)}
+.carte-carte{overflow:visible;position:relative}
+.carte-carte>#map{border-radius:var(--r) var(--r) 0 0;overflow:hidden}
+.barre-carte{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 12px;
+  border-bottom:1px solid var(--bord);background:var(--fond2)}
+.controle-segmente{display:flex;gap:3px;padding:3px;background:var(--fond3);border-radius:11px}
+.controle-segmente button{min-height:36px;padding:7px 11px;background:transparent;color:var(--txt2);
+  border-radius:8px;font-size:13px}
+.controle-segmente button[aria-pressed="true"]{background:#eef2f5;color:#111417;font-weight:700}
+.barre-carte>.btn{min-height:42px}
+.recherche-carte{position:relative;display:grid;grid-template-columns:minmax(220px,480px) auto;
+  gap:8px;padding:12px;background:var(--fond2);border-bottom:1px solid var(--bord)}
+.recherche-carte label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.recherche-carte .rech{min-width:0}
+.resume-carte{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
+  padding:12px 14px;background:linear-gradient(110deg,rgba(121,192,255,.08),transparent 55%);
+  border-bottom:1px solid var(--bord)}
+.resume-carte .signal{width:42px;height:42px;border-radius:12px;background:var(--fond3);
+  display:grid;place-items:center;font-size:20px}
+.resume-carte b{display:block;font-size:15px}.resume-carte small{display:block;color:var(--txt2)}
+.resume-carte[data-niveau="proche"]{background:linear-gradient(110deg,rgba(240,68,56,.15),transparent 60%)}
+.resume-carte[data-niveau="calme"]{background:linear-gradient(110deg,rgba(63,168,107,.12),transparent 60%)}
+.details-avances{margin-top:12px;border-top:1px solid var(--bord);padding-top:10px}
+.details-avances summary{cursor:pointer;color:var(--txt2);font-size:13px;font-weight:650}
+.details-avances[open] summary{margin-bottom:10px}
+.mode-economie{display:inline-flex;align-items:center;gap:6px;color:var(--txt3);font-size:11px}
+.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.chargement-carte{position:absolute;inset:0;z-index:600;display:grid;place-items:center;
+  background:linear-gradient(110deg,#171a1d 28%,#242a2f 40%,#171a1d 52%);
+  background-size:220% 100%;animation:squelette 1.25s linear infinite;color:var(--txt2)}
+.chargement-carte[hidden]{display:none}
+@keyframes squelette{to{background-position-x:-220%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.liste-feux{max-height:290px;overflow:auto;border-top:1px solid var(--bord)}
+.incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
+  display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:10px 13px;
+  border-bottom:1px solid var(--bord)}
+.incident-ligne:hover{background:var(--fond3)}
+.incident-ligne small{display:block;color:var(--txt3)}
+.incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12px}
+.cluster-feu{background:transparent;border:0}
+.cluster-bulle{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;font-weight:800;border:3px solid rgba(255,255,255,.9);
+  background:radial-gradient(circle at 35% 30%,#52616d,#27323a 72%);
+  box-shadow:0 4px 16px rgba(0,0,0,.55)}
+.legende-carte .toggle-legende{display:none}
+.panneau-filtres{display:none}
+.panneau-filtres.ouvert{display:grid}
+.offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:#8a4b08;color:#fff;
+  text-align:center;padding:8px 16px;font-size:13px;font-weight:650}
+.offline[hidden]{display:none}
+.navigation-mobile{display:none}
+.accueil-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.accueil-hero h2{font-size:25px;letter-spacing:-.025em;text-transform:none;color:var(--txt);margin-bottom:8px}
+.accueil-hero .promesse{font-size:16px;color:var(--txt2)}
+#blocInscription{display:none}
+.inscription-ouverte #blocInscription{display:block}
+[data-anonyme]{display:none!important}
+.anonyme [data-anonyme]{display:flex!important}
+.consentement{border-top:1px solid var(--bord);padding-top:14px}
+.etat-source b{font-size:13px}.etat-source small{font-size:12px;color:var(--txt3)}
+.badge{letter-spacing:.035em}
+.btn-danger{color:#ffb4ad!important}
+.tiroir-incident{width:min(620px,calc(100vw - 24px))}
+.incident-entete{display:flex;gap:12px;align-items:flex-start}
+.incident-entete .icone{width:42px;display:grid;place-items:center}
+.incident-entete .cr{flex:1}
+.incident-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.incident-grille>div{padding:11px;border:1px solid var(--bord);border-radius:10px;background:var(--fond3)}
+.incident-grille b{display:block;font-size:17px}.incident-grille small{color:var(--txt3)}
+.chronologie{position:relative;padding-left:20px;margin:16px 0}
+.chronologie:before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--bord)}
+.chronologie div{position:relative;margin:10px 0;color:var(--txt2)}
+.chronologie div:before{content:"";position:absolute;left:-19px;top:7px;width:8px;height:8px;
+  border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px var(--fond2)}
+.parcours-alerte{display:grid;gap:1px;background:var(--bord)}
+.etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;
+  padding:12px;background:var(--fond2)}
+.etape-alerte .numero{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:var(--fond3);color:var(--txt2);font-weight:750}
+.etape-alerte.faite .numero{background:var(--vert);color:#fff}
+.etape-alerte b{display:block}.etape-alerte small{color:var(--txt3)}
+.anonyme main{display:flex;flex-direction:column}
+.anonyme #vueApp{order:1}.anonyme #vueAccueil{order:2}
+
+@media(max-width:900px){
+  main{padding:12px 14px 96px}
+  #vueApp{display:block}
+  #sectionCarte{position:static}
+  .colonne-panneau{display:block}
+  #map{height:max(430px,58vh)}
+}
+@media(max-width:560px){
+  body{font-size:15px}
+  header{min-height:62px}
+  header .sous{max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pastille{padding:7px 9px;font-size:0}.pastille span:last-child{font-size:11px}
+  #pastilleTxt{display:none}.pastille:after{content:attr(data-mobile-label);font-size:11px}
+  main{padding:10px 10px 92px}
+  section{margin-bottom:16px}
+  #map{height:max(410px,56vh)}
+  .barre-carte{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .barre-carte::-webkit-scrollbar{display:none}
+  .barre-carte .btn{white-space:nowrap}
+  .recherche-carte{grid-template-columns:1fr;padding:10px}
+  .recherche-carte>.btn{display:none}
+  .resume-carte{grid-template-columns:auto 1fr;padding:10px}
+  .resume-carte>.btn{grid-column:1/-1;width:100%;justify-content:center}
+  .filtres-sources{display:none}
+  .panneau-filtres.ouvert{display:grid}
+  .liste-feux{max-height:230px}
+  .legende-carte{width:auto;max-width:210px;padding:8px}
+  .legende-carte .toggle-legende{display:flex;width:100%;min-height:34px;align-items:center;
+    justify-content:space-between;background:transparent;color:#fff;font-weight:700;padding:0}
+  .legende-carte .contenu-legende{display:none}
+  .legende-carte.ouverte .contenu-legende{display:block}
+  .navigation-mobile{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);z-index:1000;
+    left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));background:rgba(23,26,29,.96);
+    border:1px solid var(--bord);border-radius:16px;box-shadow:var(--ombre);overflow:hidden}
+  .navigation-mobile a,.navigation-mobile button{min-height:58px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;background:transparent;color:var(--txt2);
+    font-size:11px;text-decoration:none}
+  .navigation-mobile .primaire{color:#fff;background:rgba(240,68,56,.18)}
+  .anonyme .navigation-mobile{grid-template-columns:1fr 1fr}
+  .accueil-actions{grid-template-columns:1fr}
+  .accueil-hero h2{font-size:22px}
+  .incident-grille{grid-template-columns:1fr 1fr}
+  dialog{max-height:calc(100vh - 12px);width:calc(100vw - 12px)}
+}
 </style>
 </head>
 <body>
 
+<a class="lien-evitement" href="#sectionCarte">Aller directement à la carte</a>
 <header>
   <div class="logo">
     <svg viewBox="0 0 24 24" fill="none">
@@ -194,24 +353,32 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
   </div>
   <div>
     <h1>Alerte Incendie</h1>
-    <div class="sous">Surveillance satellite — communes et limitrophes</div>
+    <div class="sous">Feux en cours, alertes et signalements</div>
   </div>
-  <div class="pastille" id="pastille"><span class="point" id="point"></span><span id="pastilleTxt">…</span></div>
+  <button class="pastille" id="pastille" type="button" aria-label="État des collectes">
+    <span class="point" id="point"></span><span id="pastilleTxt">Vérification…</span>
+  </button>
 </header>
+<div class="offline" id="bandeauOffline" role="status" hidden>
+  Mode hors ligne — affichage des dernières données disponibles.
+</div>
 
 <main>
   <!-- ============ ACCUEIL / ONBOARDING ============ -->
   <section id="vueAccueil" hidden>
-    <div class="carte pad">
-      <h2 style="margin-top:0">Bienvenue</h2>
-      <p style="margin:0 0 16px;color:var(--txt2);font-size:14px">
-        Ce service surveille les points chauds détectés par les satellites de la NASA
-        (VIIRS et MODIS) sur la commune de votre choix, ses communes limitrophes et une
-        marge réglable, puis vous alerte par notification, Telegram et e-mail.
+    <div class="carte pad accueil-hero">
+      <h2>Recevez une alerte avant de voir la fumée</h2>
+      <p class="promesse" style="margin:0">
+        Consultez gratuitement les feux détectés en France. Créez ensuite une alerte
+        autour de votre domicile, de vos proches ou de votre exploitation.
       </p>
+      <div class="accueil-actions">
+        <button class="btn pleine" type="button" id="btnVoirCarte">Voir les feux maintenant</button>
+        <button class="btn p pleine" type="button" id="btnOuvrirInscription">Créer une alerte</button>
+      </div>
+      <div id="blocInscription">
       <label for="nom">Votre prénom (facultatif)</label>
       <input id="nom" placeholder="Quentin" autocomplete="given-name">
-      <button class="btn p pleine" style="margin-top:14px" id="btnCommencer">Créer mon espace</button>
       <p class="note" style="margin:16px 0 0">
         <b>À savoir.</b> Meteosat apporte une première détection en environ 25 minutes
         avec une résolution de 3 km ; VIIRS/MODIS confirment généralement en 2 à 3 h,
@@ -219,30 +386,69 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
         les nuages peut rester invisible.
         Ce service complète <b>FR-Alert</b> et ne remplace jamais le <b>18</b> ou le <b>112</b>.
       </p>
-      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px">
+      <label class="consentement" style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px">
         <input type="checkbox" id="consentement" style="width:auto;margin-top:2px">
         <span>J’ai lu et j’accepte les
           <a href="./confidentialite.html" target="_blank" rel="noopener">informations de confidentialité,
           les durées de conservation et les limites du service</a>.
         </span>
       </label>
+      <button class="btn p pleine" style="margin-top:14px" id="btnCommencer" disabled>
+        Créer mon espace d’alerte
+      </button>
+      </div>
     </div>
   </section>
 
   <!-- ============ APPLICATION ============ -->
   <div id="vueApp" hidden>
 
-    <section>
-      <h2>Carte des feux et indices récents</h2>
-      <div class="carte"><div id="map"></div>
-        <div class="filtres-sources" aria-label="Filtres des sources de la carte">
+    <section id="sectionCarte">
+      <h2>La situation en France</h2>
+      <div class="carte carte-carte">
+        <div class="recherche-carte">
+          <label for="rechLieu">Rechercher un lieu</label>
+          <div class="rech">
+            <input id="rechLieu" type="search"
+                   placeholder="Rechercher une commune ou un code postal"
+                   autocomplete="postal-code" enterkeyhint="search">
+            <div class="sugg" id="suggLieu" role="listbox" hidden></div>
+          </div>
+          <button class="btn" type="button" id="btnAutourMoi">Me localiser</button>
+        </div>
+        <div id="map" aria-label="Carte interactive des feux récents"></div>
+        <div class="chargement-carte" id="chargementCarte" role="status">Chargement des détections…</div>
+        <div class="resume-carte" id="resumeCarte" role="status" aria-live="polite">
+          <span class="signal" aria-hidden="true">⌁</span>
+          <span><b>Analyse de la situation en cours…</b>
+            <small>Les sources indépendantes sont recoupées automatiquement.</small></span>
+          <button class="btn sm" type="button" id="btnActionResume">Créer une alerte</button>
+        </div>
+        <div class="barre-carte" aria-label="Commandes de la carte">
+          <button class="btn sm" type="button" id="btnFiltres" aria-expanded="false">Sources et méthode</button>
+          <div class="controle-segmente" aria-label="Période">
+            <button type="button" data-heures="1" aria-pressed="false">1 h</button>
+            <button type="button" data-heures="6" aria-pressed="false">6 h</button>
+            <button type="button" data-heures="24" aria-pressed="true">24 h</button>
+          </div>
+          <div class="controle-segmente" aria-label="Niveau de confiance">
+            <button type="button" data-confiance="tous" aria-pressed="true">Tous</button>
+            <button type="button" data-confiance="probable" aria-pressed="false">Plus fiables</button>
+            <button type="button" data-confiance="corrobore" aria-pressed="false">Plusieurs sources</button>
+          </div>
+          <button class="btn sm" type="button" id="btnActualiser">Actualiser</button>
+          <button class="btn sm" type="button" id="btnInstaller" hidden>Installer</button>
+          <span class="mode-economie" id="modeEconomie" hidden>Mode données réduites</span>
+        </div>
+        <div class="filtres-sources panneau-filtres" id="filtresSources"
+             aria-label="Filtres des sources de la carte">
           <label class="filtre-source">
             <input type="checkbox" data-famille="polaire" checked>
-            <span><b>VIIRS &amp; MODIS</b><small>Satellites polaires · 375 m à 1 km · latence habituelle 2–3 h</small></span>
+            <span><b>Satellites précis</b><small>VIIRS &amp; MODIS · 375 m à 1 km · délai habituel 2–3 h</small></span>
           </label>
           <label class="filtre-source">
             <input type="checkbox" data-famille="geostationnaire" checked>
-            <span><b>Meteosat</b><small>Géostationnaire · environ 3 km · mise à jour proche de 25 min</small></span>
+            <span><b>Satellite rapide</b><small>Meteosat · environ 3 km · mise à jour proche de 25 min</small></span>
           </label>
           <label class="filtre-source">
             <input type="checkbox" data-famille="citoyen" checked>
@@ -250,7 +456,7 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
           </label>
           <label class="filtre-source">
             <input type="checkbox" data-famille="aerien" checked>
-            <span><b>Corroboration aérienne</b><small>Avion spécialisé proche · preuve complémentaire, jamais suffisante seule</small></span>
+            <span><b>Avions de lutte</b><small>Présence répétée près d’un indice · complément, jamais suffisant seul</small></span>
           </label>
           <div class="source-note">
             Les observations à moins de 2 km et 12 h sont regroupées. VIIRS et MODIS
@@ -265,10 +471,11 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
             documenté ne sont pas obtenus.
           </div>
         </div>
+        <div class="liste-feux" id="listeFeuxVisibles" aria-live="polite"></div>
         <div class="pad" data-prive style="border-top:1px solid var(--bord)">
           <button class="btn pleine" id="btnSignaler">Signaler un départ de feu</button>
           <p style="margin:10px 0 0;font-size:12px;color:var(--txt3);line-height:1.55">
-            Un compte avec au moins un canal actif et vérifié est obligatoire
+            Un compte avec les notifications actives sur au moins un appareil est obligatoire
             pour créer ou contester un signalement.
             Un signalement est confirmé quand deux personnes sur deux réseaux distincts,
             ou trois personnes quel que soit le réseau, pointent le même endroit à moins
@@ -280,13 +487,18 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
         <div class="stats" id="stats" data-prive></div>
       </div>
       <div class="carte" id="listeZones" data-prive></div>
-      <div class="carte pad" data-prive>
-        <label for="rechCommune">Ajouter une commune</label>
+      <div class="carte pad" id="blocAjoutZone" data-prive>
+        <label for="rechCommune">Où voulez-vous être alerté ?</label>
         <div class="rech">
-          <input id="rechCommune" placeholder="Nom de commune, ex. Cornebarrieu" autocomplete="off">
+          <input id="rechCommune" placeholder="Commune ou code postal" autocomplete="postal-code">
           <div class="sugg" id="sugg" hidden></div>
         </div>
-        <div class="grille2" style="margin-top:12px">
+        <p class="note" style="margin:10px 0 0">
+          Le réglage recommandé surveille automatiquement la commune, ses voisines et 3 km autour.
+        </p>
+        <details class="details-avances">
+          <summary>Personnaliser la portée et la sensibilité</summary>
+        <div class="grille2">
           <div>
             <label for="selSens">Sensibilité</label>
             <select id="selSens">
@@ -306,25 +518,28 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
             </select>
           </div>
         </div>
+        </details>
       </div>
     </section>
 
-    <section>
+    <div class="colonne-panneau">
+    <section id="sectionEtat">
       <h2>État public des sources</h2>
       <div class="carte etat-sources" id="santePublique" aria-live="polite">
         <div class="etat-source"><b>Chargement…</b><small>Vérification indépendante en cours</small></div>
       </div>
     </section>
 
-    <section data-prive>
-      <h2>Canaux d’alerte</h2>
+    <section id="sectionAlertes" data-prive>
+      <h2>Notifications sur vos appareils</h2>
+      <div class="carte parcours-alerte" id="parcoursAlerte"></div>
       <div class="carte" id="listeCanaux"></div>
       <div class="carte pad">
-        <button class="btn pleine" id="btnPush">Activer les notifications sur cet appareil</button>
-        <div class="grille2" style="margin-top:12px">
-          <button class="btn" id="btnTelegram">Connecter Telegram</button>
-          <button class="btn" id="btnEmail">Ajouter un e-mail</button>
-        </div>
+        <button class="btn p pleine" id="btnPush">Activer les notifications sur cet appareil</button>
+        <p class="note" style="margin:10px 0 0">
+          Répétez cette action sur chaque téléphone ou ordinateur qui doit être averti.
+          Aucun e-mail ni messagerie externe n’est nécessaire.
+        </p>
         <button class="btn pleine" style="margin-top:12px" id="btnTest">Envoyer une alerte de test</button>
       </div>
       <p class="note" style="margin-top:10px" id="noteIos" hidden>
@@ -334,16 +549,16 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
       </p>
     </section>
 
-    <section data-prive>
-      <h2>Réglages</h2>
+    <section id="sectionReglages" data-prive>
+      <h2>Préférences d’alerte</h2>
       <div class="carte pad">
         <div class="grille2">
           <div>
             <label for="selSeuil">Me prévenir à partir de</label>
             <select id="selSeuil">
-              <option value="info">Tout point chaud (info)</option>
-              <option value="alerte" selected>Alerte confirmée</option>
-              <option value="critique">Alertes critiques uniquement</option>
+              <option value="info">Tous les indices — plus de notifications</option>
+              <option value="alerte" selected>Signaux fiables — recommandé</option>
+              <option value="critique">Plusieurs sources seulement</option>
             </select>
           </div>
           <div>
@@ -356,7 +571,7 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
           </div>
         </div>
         <div style="margin-top:14px">
-          <label for="refLibelle">Mon point de référence
+          <label for="refLibelle">Calculer la distance depuis un lieu précis
             <span style="color:var(--txt3)">(facultatif)</span></label>
           <p class="note" style="margin:2px 0 8px">
             Les alertes indiquent aujourd’hui la distance au centre de la commune.
@@ -376,17 +591,17 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
       </div>
     </section>
 
-    <section data-prive>
+    <section id="sectionHistorique" data-prive>
       <h2>Historique — 30 derniers jours</h2>
       <div class="carte" id="listeEvts"></div>
     </section>
 
-    <section data-prive>
+    <section id="sectionSignalements" data-prive>
       <h2>Mes signalements et leur modération</h2>
       <div class="carte" id="listeMesSignalements"></div>
     </section>
 
-    <section data-prive>
+    <section id="sectionCompte" data-prive>
       <h2>Mes données</h2>
       <div class="carte pad">
         <p class="note" style="margin-top:0">
@@ -404,7 +619,9 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
     </section>
 
     <section>
-      <p class="note">
+      <details class="carte pad details-avances">
+        <summary>Comprendre les sources et les limites</summary>
+      <p class="note" style="margin:10px 0 0">
         <b>Sources.</b> Trois niveaux indépendants qui se corroborent :
         <b>signalements de témoins</b> (instantanés, non vérifiés) ;
         <b>Meteosat / LSA SAF</b>, géostationnaire, environ 25 minutes de latence pour
@@ -417,15 +634,71 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
         automatiquement après apprentissage.
         <b>Ce service ne remplace ni FR-Alert ni le 18/112.</b>
       </p>
+      </details>
     </section>
 
-    <section style="text-align:center">
+    <section style="text-align:center" data-prive>
       <button class="btn g" id="btnJeton">Afficher mon jeton d’accès</button>
     </section>
+    </div>
   </div>
 </main>
 
+<nav class="navigation-mobile" aria-label="Navigation principale">
+  <a href="#sectionCarte"><span aria-hidden="true">⌖</span>Carte</a>
+  <a href="#sectionAlertes" data-prive><span aria-hidden="true">◉</span>Alertes</a>
+  <button type="button" class="primaire" id="btnSignalerMobile" data-prive>
+    <span aria-hidden="true">＋</span>Signaler
+  </button>
+  <a href="#sectionCompte" data-prive><span aria-hidden="true">●</span>Compte</a>
+  <a href="#vueAccueil" data-anonyme><span aria-hidden="true">＋</span>Créer une alerte</a>
+</nav>
+
 <div id="toast"></div>
+
+<dialog id="dialogIncident" class="tiroir-incident" aria-labelledby="titreIncident">
+  <div class="dialog-entete incident-entete">
+    <div class="icone" id="incidentIcone"></div>
+    <div class="cr">
+      <h3 id="titreIncident">Détail de l’incident</h3>
+      <small id="incidentSousTitre"></small>
+    </div>
+    <button class="btn g" type="button" id="btnFermerIncident" aria-label="Fermer">✕</button>
+  </div>
+  <div class="dialog-corps" id="incidentCorps"></div>
+</dialog>
+
+<dialog id="dialogJeton" aria-labelledby="titreJeton">
+  <div class="dialog-entete"><h3 id="titreJeton">Retrouver mon espace</h3></div>
+  <div class="dialog-corps">
+    <p>Conservez cette clé privée pour retrouver vos alertes sur un autre appareil.</p>
+    <label for="champJeton">Clé d’accès personnelle</label>
+    <input id="champJeton" readonly>
+    <p class="note" style="margin:10px 0 0">Ne la partagez pas : elle donne accès à vos réglages.</p>
+    <div class="dialog-actions">
+      <button class="btn g" type="button" id="btnFermerJeton">Fermer</button>
+      <button class="btn p" type="button" id="btnCopierJeton">Copier la clé</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dialogAction" aria-labelledby="titreAction">
+  <form id="formAction">
+    <div class="dialog-entete"><h3 id="titreAction">Confirmer l’action</h3></div>
+    <div class="dialog-corps">
+      <p id="messageAction"></p>
+      <div id="blocChampAction" hidden>
+        <label for="champAction" id="labelChampAction">Précision</label>
+        <input id="champAction" maxlength="160">
+        <small id="aideChampAction"></small>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn g" type="button" id="btnAnnulerAction">Annuler</button>
+        <button class="btn p" type="submit" id="btnConfirmerAction">Confirmer</button>
+      </div>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="dialogSignalement" aria-labelledby="titreSignalement">
   <form id="formSignalement">
@@ -510,8 +783,14 @@ const CLE_JETON = 'alerte-incendie:jeton';
 
 let jeton = localStorage.getItem(CLE_JETON);
 let etat = null, carte = null, coucheZones = null, coucheDet = null, coucheEvts = null;
-let coucheFeux = null, coucheSig = null, signalements = [], feuxCarte = [], modeSignalement = false;
+let coucheFeux = null, coucheSig = null, couchePosition = null;
+let signalements = [], feuxCarte = [], modeSignalement = false;
 let mesSignalements = [], signalementCible = null, santePublique = null;
+let heuresCarte = 24, confianceCarte = 'tous', positionUtilisateur = null;
+let demandeInstallation = null, derniereMajCarte = null;
+let lieuReference = null, lieuAActiver = null, controleCarte = null, actionEnAttente = null;
+const donneesReduites = navigator.connection?.saveData === true;
+let actualisationEnCours = false;
 
 /* ---------- utilitaires ---------- */
 const $ = (s) => document.querySelector(s);
@@ -528,6 +807,37 @@ function toast(msg, err = false) {
   toast._t = setTimeout(() => (t.className = ''), 4200);
 }
 
+function demanderAction({
+  titre,
+  message,
+  bouton = 'Confirmer',
+  champ = null,
+}) {
+  if (actionEnAttente) actionEnAttente.resolve(null);
+  $('#titreAction').textContent = titre;
+  $('#messageAction').textContent = message;
+  $('#btnConfirmerAction').textContent = bouton;
+  const bloc = $('#blocChampAction');
+  const saisie = $('#champAction');
+  bloc.hidden = !champ;
+  saisie.value = '';
+  saisie.setCustomValidity('');
+  if (champ) {
+    $('#labelChampAction').textContent = champ.label || 'Précision';
+    $('#aideChampAction').textContent = champ.aide || '';
+    saisie.placeholder = champ.placeholder || '';
+    saisie.maxLength = champ.maxlength || 160;
+    saisie.required = champ.required === true;
+  } else {
+    saisie.required = false;
+  }
+  $('#dialogAction').showModal();
+  if (champ) setTimeout(() => saisie.focus(), 0);
+  return new Promise((resolve) => {
+    actionEnAttente = { resolve, attendu: champ?.attendu || null };
+  });
+}
+
 async function appel(route, options = {}) {
   const r = await fetch(`${API}/${route}`, {
     ...options,
@@ -536,6 +846,15 @@ async function appel(route, options = {}) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.erreur || `HTTP ${r.status}`);
   return j;
+}
+
+async function rechercherCommunes(q) {
+  const terme = String(q || '').trim();
+  if (terme.length < 2) return [];
+  const r = await fetch(`${API}/communes?q=${encodeURIComponent(terme)}`);
+  const j = await r.json().catch(() => []);
+  if (!r.ok) throw new Error(j.erreur || `HTTP ${r.status}`);
+  return Array.isArray(j) ? j : [];
 }
 
 const heure = (iso) => new Date(iso).toLocaleString('fr-FR',
@@ -548,6 +867,29 @@ function relatif(iso) {
   return `il y a ${Math.round(m / 1440)} j`;
 }
 
+function distanceKm(a, b) {
+  if (!a || !b) return null;
+  const r = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return r * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+const cleFeu = (f) => `${Number(f.lat).toFixed(5)}:${Number(f.lon).toFixed(5)}:${f.premier_at || ''}`;
+
+const nomsSources = {
+  MSG_SEVIRI: 'Meteosat',
+  CITOYEN: 'témoins vérifiés',
+  ADSB: 'corroboration aérienne',
+  MODIS: 'MODIS',
+  VIIRS_SNPP: 'VIIRS S-NPP',
+  VIIRS_NOAA20: 'VIIRS NOAA-20',
+  VIIRS_NOAA21: 'VIIRS NOAA-21',
+};
+
 /* ---------- carte ---------- */
 function initCarte(centre = [46.6, 2.5], zoom = 5) {
   if (carte) return;
@@ -559,10 +901,22 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
       maxZoom: 19,
       attribution: '&copy; IGN / Géoplateforme — photographies aériennes',
     },
-  ).addTo(carte);
+  );
   const planSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 18, subdomains: 'abcd',
     attribution: '&copy; OpenStreetMap, &copy; CARTO',
+  });
+  (donneesReduites ? planSombre : satellite).addTo(carte);
+  $('#modeEconomie').hidden = !donneesReduites;
+  let erreursSatellite = 0;
+  satellite.on('tileload', () => (erreursSatellite = 0));
+  satellite.on('tileerror', () => {
+    erreursSatellite++;
+    if (erreursSatellite >= 4 && carte.hasLayer(satellite)) {
+      carte.removeLayer(satellite);
+      planSombre.addTo(carte);
+      toast('Vue satellite indisponible : passage automatique au plan.');
+    }
   });
   L.control.layers({
     'Vue satellite (IGN)': satellite,
@@ -575,6 +929,10 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     div.setAttribute('role', 'note');
     div.setAttribute('aria-label', 'Légende des feux');
     div.innerHTML = `
+      <button type="button" class="toggle-legende" aria-expanded="false">
+        <span>Légende</span><span aria-hidden="true">⌃</span>
+      </button>
+      <div class="contenu-legende">
       <b>Légende des feux</b>
       <div class="ligne"><span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span><span>Au moins 2 familles indépendantes</span></div>
       <div class="ligne"><span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span><span>Signal unique fort ou répété</span></div>
@@ -583,8 +941,14 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
       <div class="ligne"><span class="symbole"><i class="point-non-verifie"></i></span><span>Déclaration non vérifiée</span></div>
       <span class="aide">Taille = importance des indices, jamais surface brûlée.<br>
         <a href="https://meteofrance.com/meteo-des-forets" target="_blank" rel="noopener">Météo des forêts officielle</a>
-        · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a></span>`;
+        · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a></span>
+      </div>`;
     L.DomEvent.disableClickPropagation(div);
+    const bouton = div.querySelector('.toggle-legende');
+    bouton.addEventListener('click', () => {
+      const ouverte = div.classList.toggle('ouverte');
+      bouton.setAttribute('aria-expanded', String(ouverte));
+    });
     return div;
   };
   legende.addTo(carte);
@@ -593,6 +957,7 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
   coucheEvts = L.layerGroup().addTo(carte);
   coucheFeux = L.layerGroup().addTo(carte);
   coucheSig = L.layerGroup().addTo(carte);
+  couchePosition = L.layerGroup().addTo(carte);
 
   carte.on('click', (e) => {
     if (modeChoixReference) {
@@ -606,6 +971,11 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     if (!modeSignalement) return;
     signaler(e.latlng.lat, e.latlng.lng);
   });
+  carte.on('zoomend moveend', () => {
+    dessinerFeuxCarte();
+    rendreListeFeux();
+    rendreResumeCarte();
+  });
 }
 
 /* ---------- signalements citoyens ---------- */
@@ -618,16 +988,35 @@ async function chargerSignalements() {
 }
 
 async function chargerFeuxCarte() {
+  const controle = new AbortController();
+  controleCarte?.abort();
+  controleCarte = controle;
+  const chargement = $('#chargementCarte');
+  if (chargement) chargement.hidden = false;
   try {
-    const j = await appel('carte?heures=24&limite=500');
-    feuxCarte = Array.isArray(j.feux) ? j.feux : [];
+    const j = await appel(`carte?heures=${heuresCarte}&limite=500`, { signal: controle.signal });
+    feuxCarte = Array.isArray(j.feux) ? j.feux.map((f) => ({ ...f, _cle: cleFeu(f) })) : [];
+    derniereMajCarte = new Date().toISOString();
+    localStorage.setItem('alerte-incendie:derniere-maj-carte', derniereMajCarte);
+    localStorage.setItem('alerte-incendie:feux-cache', JSON.stringify(feuxCarte.slice(0, 250)));
     const el = $('#etatCarteSources');
-    if (el) el.textContent = `${feuxCarte.length} indice(s) corrélé(s) sur les dernières 24 h.`;
-  } catch {
-    feuxCarte = [];
+    if (el) el.textContent = `${feuxCarte.length} incident(s) ou indice(s) sur les dernières ${heuresCarte} h.`;
+  } catch (e) {
+    if (e?.name === 'AbortError') return;
+    try {
+      feuxCarte = JSON.parse(localStorage.getItem('alerte-incendie:feux-cache') || '[]');
+      derniereMajCarte = localStorage.getItem('alerte-incendie:derniere-maj-carte');
+    } catch {
+      feuxCarte = [];
+    }
     const el = $('#etatCarteSources');
-    if (el) el.textContent = 'Les indices nationaux sont momentanément indisponibles.';
+    if (el) el.textContent = feuxCarte.length && derniereMajCarte
+      ? `Données hors ligne enregistrées ${relatif(derniereMajCarte)}.`
+      : 'Les indices nationaux sont momentanément indisponibles.';
+  } finally {
+    if (controleCarte === controle && chargement) chargement.hidden = true;
   }
+  rendreResumeCarte();
 }
 
 async function chargerSantePublique() {
@@ -662,6 +1051,14 @@ function rendreSantePublique() {
         ${html(nom)} · ${html(statut)}</b>
       <small>${html(detail)}</small>
     </div>`).join('');
+  if (!jeton) {
+    const ok = santePublique.ok === true;
+    $('#point').className = `point ${ok ? 'ok' : 'ko'}`;
+    $('#pastille').dataset.mobileLabel = ok ? 'À jour' : 'Perturbé';
+    $('#pastilleTxt').textContent = ok
+      ? `Données à jour · ${p.age_minutes ?? 0} min`
+      : 'Collecte perturbée';
+  }
 }
 
 async function chargerMesSignalements() {
@@ -757,65 +1154,232 @@ function apparenceFeu(f) {
     libelle: 'Indice automatique isolé', importance, type: 'indice', niveau };
 }
 
-function dessinerFeuxCarte() {
-  if (!coucheFeux) return;
-  coucheFeux.clearLayers();
+function feuxFiltres() {
   const actives = new Set(
     [...document.querySelectorAll('[data-famille]:checked')].map((e) => e.dataset.famille),
   );
-  const nomsSources = {
-    MSG_SEVIRI: 'Meteosat (géostationnaire)',
-    CITOYEN: 'témoins vérifiés',
-    ADSB: 'corroboration aérienne',
-    MODIS: 'MODIS (polaire)',
-    VIIRS_SNPP: 'VIIRS S-NPP (polaire)',
-    VIIRS_NOAA20: 'VIIRS NOAA-20 (polaire)',
-    VIIRS_NOAA21: 'VIIRS NOAA-21 (polaire)',
-  };
-  for (const f of feuxCarte) {
-    if (!(f.familles || []).some((source) => actives.has(source))) continue;
+  return feuxCarte.filter((f) => {
     const aspect = apparenceFeu(f);
-    const c = aspect.couleur;
-    const sources = (f.sources || []).map((s) => html(nomsSources[s] || s)).join(', ');
-    const preuves = (f.sources || []).map((s) =>
-      `<span class="chip">${html(nomsSources[s] || s)}</span>`).join('');
-    const precision = f.resolution_m
-      ? ` · précision source ~${Number(f.resolution_m).toLocaleString('fr-FR')} m`
-      : '';
-    const ageMin = Math.max(0, Math.round((Date.now() - new Date(f.dernier_at)) / 60000));
-    const fraicheur = ageMin <= 60 ? 'preuve fraîche'
-      : ageMin <= 180 ? 'preuve récente' : 'preuve vieillissante';
-    const explication = aspect.niveau === 'corrobore'
-      ? 'Au moins deux familles réellement indépendantes concordent.'
-      : aspect.niveau === 'probable'
-      ? 'Une seule famille de capteurs fournit un signal fort ou répété.'
-      : f.explication || 'Indice isolé à confirmer.';
-    L.marker([f.lat, f.lon], {
-      icon: L.divIcon({
-        className: 'marqueur-feu',
-        html: svgFlamme(c, aspect.taille, aspect.type),
-        iconSize: [Math.round(aspect.taille * .78), aspect.taille],
-        iconAnchor: [Math.round(aspect.taille * .39), aspect.taille],
-        popupAnchor: [0, -aspect.taille + 3],
-      }),
-      title: aspect.libelle,
-      alt: aspect.libelle,
-    }).addTo(coucheFeux).bindPopup(
-      `<b style="color:${c}">${html(aspect.libelle)}</b>` +
-      `${f.commune ? ` · ${html(f.commune)}` : ''}<br>` +
-      `${Number(f.nb_observations) || 0} observation(s) · importance ${aspect.importance}/3 · score indicatif ${Number(f.score) || 0}/99<br>` +
-      `${sources}${precision}<br>` +
-      `<span style="color:#a09892">${heure(f.dernier_at)} · ${relatif(f.dernier_at)}</span><br>` +
-      `<span style="font-size:12px">${html(explication)}</span>` +
-      `<details style="margin-top:8px"><summary>Voir les preuves et l’incertitude</summary>` +
-      `<div class="chips">${preuves}</div>` +
-      `<span style="font-size:12px;color:#a09892">` +
-      `${html(fraicheur)} · première observation ${heure(f.premier_at)} · dernière ${heure(f.dernier_at)}.<br>` +
-      `Le marqueur représente le centre d’un groupe à 2 km. ` +
-      `${f.resolution_m ? `La meilleure résolution source est d’environ ${Number(f.resolution_m).toLocaleString('fr-FR')} m.` : ''}` +
-      ` Il ne décrit ni le périmètre ni la surface brûlée.</span></details>`,
-    );
+    const sourceActive = (f.familles || []).some((source) => actives.has(source));
+    const confianceOk = confianceCarte === 'tous' ||
+      confianceCarte === 'corrobore' && aspect.niveau === 'corrobore' ||
+      confianceCarte === 'probable' && ['corrobore', 'probable', 'temoins'].includes(aspect.niveau);
+    return sourceActive && confianceOk;
+  });
+}
+
+function rendreResumeCarte() {
+  const el = $('#resumeCarte');
+  if (!el) return;
+  const filtres = feuxFiltres();
+  const corrobores = filtres.filter((f) => apparenceFeu(f).niveau === 'corrobore').length;
+  const fiables = filtres.filter((f) =>
+    ['corrobore', 'probable', 'temoins'].includes(apparenceFeu(f).niveau)).length;
+  const maj = derniereMajCarte ? `Actualisé ${relatif(derniereMajCarte)}` : 'Actualisation en cours';
+  const bouton = $('#btnActionResume');
+  let titre;
+  let detail;
+  let niveau = '';
+
+  if (positionUtilisateur) {
+    const distances = filtres.map((f) => ({
+      f,
+      km: distanceKm(positionUtilisateur, { lat: Number(f.lat), lon: Number(f.lon) }),
+    })).filter((x) => Number.isFinite(x.km)).sort((a, b) => a.km - b.km);
+    const proche = distances[0];
+    const lieu = lieuReference?.nom || 'ce lieu';
+    if (!proche || proche.km > 80) {
+      titre = `Aucun indice affiché à moins de 80 km de ${lieu}`;
+      detail = `${maj}. Une absence sur la carte ne garantit jamais l’absence de feu.`;
+      niveau = 'calme';
+    } else {
+      const aspect = apparenceFeu(proche.f);
+      titre = `${aspect.libelle} à ${proche.km.toFixed(1)} km de ${lieu}`;
+      detail = `${proche.f.commune || 'Localisation approchée'} · ${relatif(proche.f.dernier_at)} · ${explicationFeu(proche.f, aspect)}`;
+      niveau = proche.km <= 20 ? 'proche' : '';
+    }
+    bouton.textContent = jeton ? `Surveiller ${lieuReference?.nom || 'ce lieu'}` : 'Créer une alerte ici';
+  } else {
+    titre = filtres.length
+      ? `${filtres.length} indice${filtres.length > 1 ? 's' : ''} sur les dernières ${heuresCarte} h`
+      : `Aucun indice avec les filtres choisis`;
+    detail = `${corrobores} recoupé${corrobores > 1 ? 's' : ''} par plusieurs sources · ` +
+      `${fiables} parmi les plus fiables · ${maj}.`;
+    bouton.textContent = 'Créer une alerte';
   }
+
+  el.dataset.niveau = niveau;
+  el.querySelector('b').textContent = titre;
+  el.querySelector('small').textContent = detail;
+}
+
+function afficherLieu(c) {
+  const lat = Number(c.lat);
+  const lon = Number(c.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return toast('Le centre de cette commune est momentanément indisponible.', true);
+  }
+  lieuReference = { nom: c.nom, code: c.code, cp: c.cp || null };
+  positionUtilisateur = { lat, lon };
+  couchePosition?.clearLayers();
+  L.circleMarker([lat, lon], {
+    radius: 8, color: '#fff', weight: 3, fillColor: '#1971c2', fillOpacity: .95,
+  }).addTo(couchePosition).bindTooltip(html(c.nom), { permanent: false });
+  carte.setView([lat, lon], 10);
+  $('#rechLieu').value = `${c.nom}${c.cp ? ` (${c.cp})` : ''}`;
+  $('#suggLieu').hidden = true;
+  rendreListeFeux();
+  rendreResumeCarte();
+  toast(`Situation affichée autour de ${c.nom}.`);
+}
+
+function explicationFeu(f, aspect = apparenceFeu(f)) {
+  if (aspect.niveau === 'corrobore') {
+    return 'Au moins deux familles réellement indépendantes concordent.';
+  }
+  if (aspect.niveau === 'probable') {
+    return 'Une famille de capteurs fournit un signal fort ou répété.';
+  }
+  if (aspect.niveau === 'temoins') {
+    return 'Plusieurs déclarations vérifiées concordent, sans confirmation officielle.';
+  }
+  return f.explication || 'Indice automatique isolé à confirmer.';
+}
+
+function ouvrirIncident(f) {
+  const aspect = apparenceFeu(f);
+  const distance = positionUtilisateur
+    ? distanceKm(positionUtilisateur, { lat: Number(f.lat), lon: Number(f.lon) })
+    : null;
+  const sources = (f.sources || []).map((s) =>
+    `<span class="chip">${html(nomsSources[s] || s)}</span>`).join('');
+  $('#incidentIcone').innerHTML = svgFlamme(aspect.couleur, 38, aspect.type);
+  $('#titreIncident').textContent = f.commune || aspect.libelle;
+  $('#incidentSousTitre').textContent = `${aspect.libelle} · ${relatif(f.dernier_at)}`;
+  $('#incidentCorps').innerHTML = `
+    <p>${html(explicationFeu(f, aspect))}</p>
+    <div class="incident-grille">
+      <div><b>${Number(f.nb_observations) || 0}</b><small>observations</small></div>
+      <div><b>${distance == null ? '—' : `${distance.toFixed(1)} km`}</b><small>distance de vous</small></div>
+      <div><b>${relatif(f.dernier_at).replace('il y a ', '')}</b><small>dernière observation</small></div>
+    </div>
+    <h4>Preuves disponibles</h4>
+    <div class="chips">${sources || '<span class="chip">source non précisée</span>'}</div>
+    <div class="chronologie">
+      <div>Première observation : <b>${heure(f.premier_at)}</b></div>
+      <div>Dernière observation : <b>${heure(f.dernier_at)}</b> (${relatif(f.dernier_at)})</div>
+    </div>
+    <details class="details-avances">
+      <summary>Détails techniques de l’indice</summary>
+      <div class="incident-grille">
+        <div><b>${Number(f.score) || 0}/99</b><small>score indicatif</small></div>
+        <div><b>${aspect.importance}/3</b><small>importance visuelle</small></div>
+        <div><b>${f.frp_max == null ? '—' : `${Number(f.frp_max).toFixed(1)} MW`}</b><small>puissance max.</small></div>
+        <div><b>${f.resolution_m ? `${Number(f.resolution_m).toLocaleString('fr-FR')} m` : '—'}</b><small>meilleure résolution</small></div>
+      </div>
+    </details>
+    <p class="note">
+      Le marqueur représente le centre d’un regroupement d’observations à 2 km.
+      Il ne décrit ni le périmètre, ni la direction du feu, ni la surface brûlée.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn p" type="button" data-centrer-incident="${html(f._cle || cleFeu(f))}">Voir sur la carte</button>
+      <button class="btn" type="button" data-partager-incident="${html(f._cle || cleFeu(f))}">Partager</button>
+      <a class="btn" target="_blank" rel="noopener"
+         href="https://www.google.com/maps?q=${Number(f.lat)},${Number(f.lon)}">Ouvrir dans Plans</a>
+    </div>
+    <p class="alerte-secours" style="margin-top:14px">
+      <b>Vous voyez directement un départ de feu ? Appelez le 18 ou le 112.</b>
+      La carte ne remplace pas les consignes officielles ni FR-Alert.
+    </p>`;
+  history.replaceState(null, '', `#feu=${encodeURIComponent(f._cle || cleFeu(f))}`);
+  $('#dialogIncident').showModal();
+}
+
+function creerMarqueurFeu(f) {
+  const aspect = apparenceFeu(f);
+  const marker = L.marker([f.lat, f.lon], {
+    icon: L.divIcon({
+      className: 'marqueur-feu',
+      html: svgFlamme(aspect.couleur, aspect.taille, aspect.type),
+      iconSize: [Math.round(aspect.taille * .78), aspect.taille],
+      iconAnchor: [Math.round(aspect.taille * .39), aspect.taille],
+    }),
+    title: `${aspect.libelle}${f.commune ? ` · ${f.commune}` : ''}`,
+    alt: aspect.libelle,
+  });
+  marker.on('click', () => ouvrirIncident(f));
+  return marker;
+}
+
+function dessinerFeuxCarte() {
+  if (!coucheFeux || !carte) return;
+  coucheFeux.clearLayers();
+  const filtres = feuxFiltres();
+  const zoom = carte.getZoom();
+  if (zoom <= 7) {
+    const pas = zoom <= 5 ? 1.5 : zoom === 6 ? .75 : .38;
+    const groupes = new Map();
+    for (const f of filtres) {
+      const cle = `${Math.round(Number(f.lat) / pas)}:${Math.round(Number(f.lon) / pas)}`;
+      if (!groupes.has(cle)) groupes.set(cle, []);
+      groupes.get(cle).push(f);
+    }
+    for (const groupe of groupes.values()) {
+      if (groupe.length === 1) {
+        creerMarqueurFeu(groupe[0]).addTo(coucheFeux);
+        continue;
+      }
+      const lat = groupe.reduce((a, f) => a + Number(f.lat), 0) / groupe.length;
+      const lon = groupe.reduce((a, f) => a + Number(f.lon), 0) / groupe.length;
+      const critiques = groupe.filter((f) => apparenceFeu(f).niveau === 'corrobore').length;
+      const marker = L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: 'cluster-feu',
+          html: `<span class="cluster-bulle" aria-label="${groupe.length} incidents">${groupe.length}</span>`,
+          iconSize: [48, 48], iconAnchor: [24, 24],
+        }),
+        title: `${groupe.length} incidents${critiques ? `, dont ${critiques} corroboré(s)` : ''}`,
+      });
+      marker.on('click', () => carte.setView([lat, lon], Math.min(10, zoom + 2)));
+      marker.addTo(coucheFeux);
+    }
+  } else {
+    filtres.forEach((f) => creerMarqueurFeu(f).addTo(coucheFeux));
+  }
+  rendreListeFeux();
+  rendreResumeCarte();
+}
+
+function rendreListeFeux() {
+  const el = $('#listeFeuxVisibles');
+  if (!el) return;
+  let feux = feuxFiltres();
+  if (carte) {
+    const b = carte.getBounds();
+    feux = feux.filter((f) => b.contains([Number(f.lat), Number(f.lon)]));
+  }
+  feux = feux.map((f) => ({
+    f,
+    distance: positionUtilisateur
+      ? distanceKm(positionUtilisateur, { lat: Number(f.lat), lon: Number(f.lon) })
+      : null,
+  })).sort((a, b) => {
+    if (a.distance != null && b.distance != null) return a.distance - b.distance;
+    const niveaux = { corrobore: 0, temoins: 1, probable: 2, a_confirmer: 3 };
+    return (niveaux[apparenceFeu(a.f).niveau] ?? 4) - (niveaux[apparenceFeu(b.f).niveau] ?? 4) ||
+      new Date(b.f.dernier_at) - new Date(a.f.dernier_at);
+  }).slice(0, 30);
+  el.innerHTML = feux.length
+    ? feux.map(({ f, distance }) => {
+      const a = apparenceFeu(f);
+      return `<button class="incident-ligne" type="button" data-incident="${html(f._cle || cleFeu(f))}">
+        <span>${svgFlamme(a.couleur, 27, a.type)}</span>
+        <span><b>${html(f.commune || a.libelle)}</b><small>${html(a.libelle)} · ${relatif(f.dernier_at)}</small></span>
+        <span class="distance">${distance == null ? `${Number(f.nb_observations) || 0} obs.` : `${distance.toFixed(1)} km`}</span>
+      </button>`;
+    }).join('')
+    : '<div class="vide">Aucun incident visible avec ces filtres. Déplacez la carte ou élargissez la période.</div>';
 }
 
 function dessinerSignalements() {
@@ -876,19 +1440,16 @@ async function envoyerSignalement() {
   await Promise.all([chargerSignalements(), chargerMesSignalements()]);
   dessinerSignalements();
   rendreMesSignalements();
-  alert(
-    (j.message || 'Signalement enregistré.') + '\n\n' +
-    'Vous pourrez suivre sa confirmation ou sa modération dans « Mes signalements ». ' +
-    'Cette déclaration ne prévient pas les secours : appelez le 18 ou le 112.');
+  toast(j.message || 'Signalement enregistré. Son statut est visible dans votre suivi.');
+  $('#sectionSignalements').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function basculerModeSignalement(actif) {
-  const compteVerifie = etat?.canaux?.some((c) => c.actif && c.verifie);
+  const compteVerifie = etat?.canaux?.some((c) =>
+    c.type === 'webpush' && c.actif && c.verifie
+  );
   if (!compteVerifie) {
-    return toast(
-      'Vérifiez d’abord une notification Push, Telegram ou une adresse e-mail.',
-      true,
-    );
+    return toast('Activez d’abord les notifications sur cet appareil.', true);
   }
   modeSignalement = actif !== undefined ? actif : !modeSignalement;
   const b = $('#btnSignaler');
@@ -926,17 +1487,33 @@ function rendre() {
   const min = s.minutes_depuis_poll;
   const ok = min != null && min <= 45;
   $('#point').className = 'point ' + (min == null ? 'ko' : ok ? 'ok' : 'ko');
-  $('#pastilleTxt').textContent = min == null ? 'hors service'
-    : ok ? `actif · ${min} min` : `retard ${min} min`;
+  $('#pastille').dataset.mobileLabel = ok ? 'À jour' : 'Perturbé';
+  $('#pastilleTxt').textContent = min == null ? 'Collecte indisponible'
+    : ok ? `Données à jour · ${min} min` : `Collecte en retard · ${min} min`;
 
   /* statistiques */
   const actifs = etat.evenements.filter((e) => e.statut === 'actif');
+  const appareils = etat.canaux.filter((c) => c.type === 'webpush');
   $('#stats').innerHTML = [
     [etat.zones.reduce((a, z) => a + (+z.surface_km2), 0).toFixed(0), 'km² suivis'],
-    [feuxCarte.length, 'indices nationaux 24 h'],
+    [feuxCarte.length, `indices nationaux ${heuresCarte} h`],
     [actifs.length, 'évèn. actifs'],
-    [etat.canaux.filter((c) => c.actif).length, 'canaux'],
+    [appareils.filter((c) => c.actif).length, 'appareils'],
   ].map(([v, l]) => `<div><b>${v}</b><small>${l}</small></div>`).join('');
+
+  const zoneFaite = etat.zones.length > 0;
+  const canalFait = appareils.some((c) => c.actif && c.verifie);
+  const testFait = appareils.some((c) => c.actif && c.verifie && c.last_ok_at);
+  $('#parcoursAlerte').innerHTML = [
+    [zoneFaite, '1', 'Zone surveillée', zoneFaite ? `${etat.zones.length} zone(s) active(s)` : 'Choisissez une commune', 'zone'],
+    [canalFait, '2', 'Appareil prêt', canalFait ? 'Prêt à recevoir les alertes' : 'Activez les notifications ici', 'canal'],
+    [testFait, '3', 'Alerte testée', testFait ? 'Un envoi a déjà réussi' : 'Vérifiez la réception réelle', 'test'],
+  ].map(([faite, numero, titre, detail, action]) => `
+    <div class="etape-alerte ${faite ? 'faite' : ''}">
+      <span class="numero">${faite ? '✓' : numero}</span>
+      <span><b>${titre}</b><small>${html(detail)}</small></span>
+      ${faite ? '' : `<button class="btn sm" type="button" data-etape="${action}">Faire</button>`}
+    </div>`).join('');
 
   /* zones */
   $('#listeZones').innerHTML = etat.zones.length
@@ -951,30 +1528,26 @@ function rendre() {
       </div>`).join('')
     : '<div class="vide">Aucune zone surveillée. Ajoutez une commune ci-dessous.</div>';
 
-  /* canaux */
-  const nomCanal = { webpush: 'Notifications', telegram: 'Telegram', email: 'E-mail' };
-  const compteVerifie = etat.canaux.some((c) => c.actif && c.verifie);
+  /* appareils autorisés à recevoir les notifications Web Push */
+  const compteVerifie = appareils.some((c) => c.actif && c.verifie);
   $('#btnSignaler').disabled = !compteVerifie;
   $('#btnSignaler').title = compteVerifie
     ? 'Pointer un départ de feu sur la carte'
-    : 'Vérifiez d’abord une notification Push, Telegram ou une adresse e-mail';
-  $('#listeCanaux').innerHTML = etat.canaux.length
-    ? etat.canaux.map((c) => `
+    : 'Activez d’abord les notifications sur cet appareil';
+  $('#listeCanaux').innerHTML = appareils.length
+    ? appareils.map((c) => `
       <div class="rangee">
         <span class="point ${c.actif && c.verifie ? 'ok' : c.actif ? '' : 'ko'}"></span>
         <div class="cr">
-          <b>${html(nomCanal[c.type] || c.type)}${c.libelle ? ` — ${html(c.libelle)}` : ''}
-            ${!c.verifie ? '<span class="badge alerte">à confirmer</span>' : ''}</b>
+          <b>${c.libelle ? html(c.libelle) : 'Notifications appareil'}</b>
           <small>${!c.actif ? `désactivé — ${c.last_error ? html(c.last_error.slice(0, 90)) : 'trop d’échecs'}`
-            : !c.verifie ? 'aucune alerte ne partira avant confirmation du code'
+            : !c.verifie ? 'activation incomplète — réactivez les notifications'
             : c.last_ok_at ? `dernier envoi réussi ${relatif(c.last_ok_at)}`
             : 'en attente d’un premier envoi — faites un test'}</small>
         </div>
-        ${!c.verifie && c.type === 'email'
-          ? `<button class="btn sm" data-verif="${html(c.id)}" data-adresse="${html(c.libelle || '')}">Confirmer</button>` : ''}
-        <button class="btn g" data-canal="${html(c.id)}" title="Supprimer">✕</button>
+        <button class="btn g" data-canal="${html(c.id)}" title="Retirer cet appareil">✕</button>
       </div>`).join('')
-    : '<div class="vide">Aucun canal. Activez au moins les notifications ci-dessous.</div>';
+    : '<div class="vide">Aucun appareil actif. Autorisez les notifications ci-dessous.</div>';
 
   /* évènements */
   $('#listeEvts').innerHTML = etat.evenements.length
@@ -1065,6 +1638,211 @@ async function activerPush() {
 }
 
 /* ---------- évènements UI ---------- */
+$('#consentement').onchange = (e) => {
+  $('#btnCommencer').disabled = !e.target.checked;
+};
+$('#btnVoirCarte').onclick = () =>
+  $('#sectionCarte').scrollIntoView({ behavior: 'smooth', block: 'start' });
+$('#btnOuvrirInscription').onclick = () => {
+  $('#vueAccueil').classList.add('inscription-ouverte');
+  $('#nom').focus();
+};
+$('#pastille').onclick = () =>
+  $('#sectionEtat').scrollIntoView({ behavior: 'smooth', block: 'start' });
+$('#btnFiltres').onclick = () => {
+  const panneau = $('#filtresSources');
+  const ouvert = panneau.classList.toggle('ouvert');
+  $('#btnFiltres').setAttribute('aria-expanded', String(ouvert));
+};
+$('#btnAutourMoi').onclick = () => {
+  if (!navigator.geolocation) return toast('Géolocalisation indisponible.', true);
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      positionUtilisateur = { lat: p.coords.latitude, lon: p.coords.longitude };
+      lieuReference = { nom: 'votre position', code: null, cp: null };
+      couchePosition?.clearLayers();
+      L.circleMarker([positionUtilisateur.lat, positionUtilisateur.lon], {
+        radius: 8, color: '#fff', weight: 3, fillColor: '#1971c2', fillOpacity: .95,
+      }).addTo(couchePosition);
+      carte.setView([positionUtilisateur.lat, positionUtilisateur.lon], 10);
+      rendreListeFeux();
+      rendreResumeCarte();
+      toast('Carte centrée autour de votre position.');
+    },
+    () => toast('Position refusée ou indisponible.', true),
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+  );
+};
+let tmrLieu;
+$('#rechLieu').oninput = (e) => {
+  clearTimeout(tmrLieu);
+  const q = e.target.value.trim();
+  if (q.length < 2) return ($('#suggLieu').hidden = true);
+  tmrLieu = setTimeout(async () => {
+    try {
+      const resultats = await rechercherCommunes(q);
+      if ($('#rechLieu').value.trim() !== q) return;
+      const s = $('#suggLieu');
+      s.hidden = !resultats.length;
+      s.innerHTML = resultats.map((c, i) => `
+        <button type="button" role="option" data-lieu="${i}">
+          ${html(c.nom)}
+          <small> — ${html(c.cp || '')} ${html(c.departement || '')}</small>
+        </button>`).join('');
+      s.querySelectorAll('[data-lieu]').forEach((b) => {
+        b.onclick = () => afficherLieu(resultats[Number(b.dataset.lieu)]);
+      });
+    } catch {
+      $('#suggLieu').hidden = true;
+    }
+  }, 220);
+};
+$('#btnActionResume').onclick = async () => {
+  if (!jeton) {
+    lieuAActiver = lieuReference?.code ? { ...lieuReference } : null;
+    $('#vueAccueil').classList.add('inscription-ouverte');
+    $('#vueAccueil').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('#nom').focus();
+    return;
+  }
+  if (!lieuReference?.code) {
+    $('#blocAjoutZone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('#rechCommune').focus();
+    return toast('Recherchez la commune à surveiller.');
+  }
+  try {
+    const r = await appel('zone', {
+      method: 'POST',
+      body: JSON.stringify({
+        code: lieuReference.code,
+        sensibilite: 'equilibre',
+        buffer_m: 3000,
+      }),
+    });
+    toast(`${r.zone.nom} et ses alentours sont maintenant surveillés.`);
+    await recharger();
+    $('#sectionAlertes').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    toast(String(e).replace('Error: ', ''), true);
+  }
+};
+document.querySelectorAll('[data-heures]').forEach((b) => {
+  b.onclick = async () => {
+    heuresCarte = Number(b.dataset.heures);
+    document.querySelectorAll('[data-heures]').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    await chargerFeuxCarte();
+    dessinerFeuxCarte();
+  };
+});
+document.querySelectorAll('[data-confiance]').forEach((b) => {
+  b.onclick = () => {
+    confianceCarte = b.dataset.confiance;
+    document.querySelectorAll('[data-confiance]').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    dessinerFeuxCarte();
+  };
+});
+$('#btnFermerIncident').onclick = () => {
+  $('#dialogIncident').close();
+  history.replaceState(null, '', location.pathname + location.search);
+};
+$('#btnSignalerMobile').onclick = () => {
+  $('#sectionCarte').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  basculerModeSignalement(true);
+};
+$('#listeFeuxVisibles').onclick = (e) => {
+  const b = e.target.closest('[data-incident]');
+  if (!b) return;
+  const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === b.dataset.incident);
+  if (f) ouvrirIncident(f);
+};
+$('#dialogIncident').onclick = async (e) => {
+  const centrer = e.target.closest('[data-centrer-incident]');
+  const partager = e.target.closest('[data-partager-incident]');
+  const cle = centrer?.dataset.centrerIncident || partager?.dataset.partagerIncident;
+  if (!cle) return;
+  const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === cle);
+  if (!f) return;
+  if (centrer) {
+    $('#dialogIncident').close();
+    carte.setView([Number(f.lat), Number(f.lon)], Math.max(11, carte.getZoom()));
+    return;
+  }
+  const url = `${location.origin}${location.pathname}#feu=${encodeURIComponent(cle)}`;
+  const texte = `${f.commune || 'Indice de feu'} · ${apparenceFeu(f).libelle}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Alerte Incendie', text: texte, url }); } catch { /* annulé */ }
+  } else {
+    await navigator.clipboard.writeText(url);
+    toast('Lien de l’incident copié.');
+  }
+};
+$('#formAction').onsubmit = (e) => {
+  e.preventDefault();
+  if (!actionEnAttente) return;
+  const valeur = $('#blocChampAction').hidden ? true : $('#champAction').value.trim();
+  if (actionEnAttente.attendu && valeur !== actionEnAttente.attendu) {
+    $('#champAction').setCustomValidity(`Saisissez exactement ${actionEnAttente.attendu}.`);
+    $('#champAction').reportValidity();
+    return;
+  }
+  const { resolve } = actionEnAttente;
+  actionEnAttente = null;
+  $('#dialogAction').close();
+  resolve(valeur);
+};
+$('#champAction').oninput = () => $('#champAction').setCustomValidity('');
+$('#btnAnnulerAction').onclick = () => {
+  const attente = actionEnAttente;
+  actionEnAttente = null;
+  $('#dialogAction').close();
+  attente?.resolve(null);
+};
+$('#dialogAction').addEventListener('cancel', (e) => {
+  e.preventDefault();
+  $('#btnAnnulerAction').click();
+});
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  demandeInstallation = e;
+  $('#btnInstaller').hidden = false;
+});
+$('#btnInstaller').onclick = async () => {
+  if (!demandeInstallation) return;
+  demandeInstallation.prompt();
+  await demandeInstallation.userChoice;
+  demandeInstallation = null;
+  $('#btnInstaller').hidden = true;
+};
+$('#btnActualiser').onclick = () => actualiserDonnees();
+function majConnexion() {
+  $('#bandeauOffline').hidden = navigator.onLine;
+  document.body.classList.toggle('hors-ligne', !navigator.onLine);
+}
+window.addEventListener('online', () => {
+  majConnexion();
+  actualiserDonnees();
+});
+window.addEventListener('offline', majConnexion);
+majConnexion();
+
+async function actualiserDonnees() {
+  if (actualisationEnCours || !navigator.onLine) return;
+  actualisationEnCours = true;
+  try {
+    if (jeton) {
+      await recharger();
+    } else {
+      await Promise.all([chargerFeuxCarte(), chargerSignalements(), chargerSantePublique()]);
+      dessinerFeuxCarte();
+      dessinerSignalements();
+    }
+  } finally {
+    actualisationEnCours = false;
+  }
+}
+
 $('#btnCommencer').onclick = async () => {
   try {
     if (!$('#consentement').checked) {
@@ -1082,8 +1860,22 @@ $('#btnCommencer').onclick = async () => {
     localStorage.setItem(CLE_JETON, jeton);
     $('#vueAccueil').hidden = true;
     $('#vueApp').hidden = false;
+    if (lieuAActiver?.code) {
+      await appel('zone', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: lieuAActiver.code,
+          sensibilite: 'equilibre',
+          buffer_m: 3000,
+        }),
+      });
+      toast(`${lieuAActiver.nom} et ses alentours sont maintenant surveillés.`);
+      lieuAActiver = null;
+    }
     await recharger();
-    toast('Espace créé. Ajoutez votre commune.');
+    const cible = etat.zones.length ? $('#sectionAlertes') : $('#rechCommune');
+    cible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!etat.zones.length) toast('Espace créé. Choisissez maintenant la commune à surveiller.');
   } catch (e) { toast(String(e), true); }
 };
 $('#formSignalement').onsubmit = async (e) => {
@@ -1103,50 +1895,10 @@ $('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace
 
 $('#btnSignaler').onclick = () => basculerModeSignalement();
 
-/* L'e-mail exige un double opt-in : sans le code reçu, aucune alerte ne part.
-   C'est ce qui empêche d'utiliser le service pour spammer un tiers. */
-$('#btnEmail').onclick = async () => {
-  const a = prompt('Adresse e-mail à alerter :', etat.abonne.email || '');
-  if (!a) return;
-  try {
-    const r = await appel('canal', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'email', destination: { adresse: a.trim().toLowerCase() } }),
-    });
-    recharger();
-    if (!r.verification_requise) return toast('E-mail ajouté.');
-    toast('Code de confirmation envoyé par e-mail.');
-    await saisirCode(r.canal_id, a.trim());
-  } catch (e) { toast(String(e).replace('Error: ', ''), true); }
-};
-
-async function saisirCode(canalId, adresse) {
-  for (let essai = 0; essai < 3; essai++) {
-    const code = prompt(
-      `Un code à 6 chiffres a été envoyé à ${adresse}.\n` +
-      `Saisissez-le pour activer les alertes sur cette adresse.\n` +
-      `(vérifiez les indésirables — le code expire dans 30 minutes)`, '');
-    if (code === null) return toast('Adresse non confirmée : elle ne recevra aucune alerte.', true);
-    try {
-      await appel('canal-verifier', { method: 'POST', body: JSON.stringify({ id: canalId, code: code.trim() }) });
-      toast('Adresse confirmée.');
-      return recharger();
-    } catch (e) { toast(String(e).replace('Error: ', ''), true); }
-  }
-}
-
-$('#btnTelegram').onclick = () => {
-  const bot = etat.telegram_bot;
-  if (!bot) return toast('Le bot Telegram n’est pas encore configuré côté serveur.', true);
-  window.open(`https://t.me/${bot}?start=${jeton}`, '_blank', 'noopener');
-  toast('Validez dans Telegram, puis revenez ici.');
-  setTimeout(recharger, 9000);
-};
-
 $('#btnTest').onclick = async () => {
   try {
     const r = await appel('test', { method: 'POST', body: '{}' });
-    toast(`Test envoyé sur ${r.canaux} canal(aux).`);
+    toast(`Test envoyé sur ${r.canaux} appareil(s).`);
     setTimeout(recharger, 5000);
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 };
@@ -1222,7 +1974,18 @@ $('#btnReglages').onclick = async () => {
 };
 
 $('#btnJeton').onclick = () => {
-  prompt('Jeton d’accès — conservez-le pour retrouver vos réglages sur un autre appareil :', jeton);
+  $('#champJeton').value = jeton;
+  $('#dialogJeton').showModal();
+};
+$('#btnFermerJeton').onclick = () => $('#dialogJeton').close();
+$('#btnCopierJeton').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(jeton);
+    toast('Clé d’accès copiée.');
+  } catch {
+    $('#champJeton').select();
+    toast('Sélectionnez puis copiez la clé.');
+  }
 };
 
 $('#btnExporter').onclick = async () => {
@@ -1240,11 +2003,19 @@ $('#btnExporter').onclick = async () => {
 };
 
 $('#btnSupprimerCompte').onclick = async () => {
-  if (!confirm(
-    'Cette opération supprime définitivement le compte, ses canaux, ses réglages et ses signalements. Continuer ?',
-  )) return;
-  const confirmation = prompt('Tapez SUPPRIMER pour confirmer la suppression définitive :', '');
-  if (confirmation !== 'SUPPRIMER') return toast('Suppression annulée.');
+  const confirmation = await demanderAction({
+    titre: 'Supprimer définitivement mon compte',
+    message: 'Les appareils, réglages et signalements associés seront supprimés sans possibilité de récupération.',
+    bouton: 'Supprimer mon compte',
+    champ: {
+      label: 'Saisissez SUPPRIMER pour confirmer',
+      placeholder: 'SUPPRIMER',
+      attendu: 'SUPPRIMER',
+      required: true,
+      maxlength: 9,
+    },
+  });
+  if (confirmation !== 'SUPPRIMER') return;
   try {
     await appel('compte-supprimer', {
       method: 'POST',
@@ -1252,21 +2023,39 @@ $('#btnSupprimerCompte').onclick = async () => {
     });
     localStorage.removeItem(CLE_JETON);
     jeton = null;
-    alert('Votre compte et ses données personnelles ont été supprimés.');
-    location.reload();
+    toast('Votre compte et ses données ont été supprimés.');
+    setTimeout(() => location.reload(), 900);
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 };
 
-/* suppression zone / canal */
+/* suppression zone / appareil */
 document.addEventListener('click', async (ev) => {
   const bz = ev.target.closest('[data-zone]');
   const bc = ev.target.closest('[data-canal]');
-  const bv = ev.target.closest('[data-verif]');
   const bs = ev.target.closest('[data-contester]');
+  const be = ev.target.closest('[data-etape]');
   try {
-    if (bs) {
-      if (!confirm('Confirmer que ce signalement vous paraît erroné ?')) return;
-      const motif = prompt('Pourquoi ? (facultatif, 160 caractères)', '') || null;
+    if (be) {
+      if (be.dataset.etape === 'zone') {
+        $('#rechCommune').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        $('#rechCommune').focus();
+      } else if (be.dataset.etape === 'canal') {
+        $('#btnPush').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        $('#btnTest').click();
+      }
+    } else if (bs) {
+      const motif = await demanderAction({
+        titre: 'Signaler une information erronée',
+        message: 'Votre avis sera ajouté au contrôle collectif. Vous ne pouvez pas contester votre propre déclaration.',
+        bouton: 'Envoyer la contestation',
+        champ: {
+          label: 'Pourquoi ? (facultatif)',
+          placeholder: 'Ex. fumée industrielle, feu déjà éteint…',
+          maxlength: 160,
+        },
+      });
+      if (motif === null) return;
       const r = await fetch(`${API_SIG}/contester`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-token': jeton },
@@ -1279,16 +2068,24 @@ document.addEventListener('click', async (ev) => {
         : 'Contestation enregistrée.');
       await chargerSignalements();
       dessinerSignalements();
-    } else if (bv) {
-      return saisirCode(bv.dataset.verif, bv.dataset.adresse);
     } else if (bz) {
-      if (!confirm('Retirer cette zone de votre surveillance ?')) return;
+      const ok = await demanderAction({
+        titre: 'Retirer cette zone ?',
+        message: 'Vous ne recevrez plus d’alerte pour cette zone.',
+        bouton: 'Retirer la zone',
+      });
+      if (!ok) return;
       await appel('zone-supprimer', { method: 'POST', body: JSON.stringify({ id: bz.dataset.zone }) });
       toast('Zone retirée.'); recharger();
     } else if (bc) {
-      if (!confirm('Supprimer ce canal d’alerte ?')) return;
+      const ok = await demanderAction({
+        titre: 'Retirer cet appareil ?',
+        message: 'Les autres appareils actifs continueront de recevoir les alertes.',
+        bouton: 'Retirer l’appareil',
+      });
+      if (!ok) return;
       await appel('canal-supprimer', { method: 'POST', body: JSON.stringify({ id: bc.dataset.canal }) });
-      toast('Canal supprimé.'); recharger();
+      toast('Appareil retiré.'); recharger();
     }
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 });
@@ -1301,15 +2098,16 @@ $('#rechCommune').oninput = (e) => {
   if (q.length < 2) return ($('#sugg').hidden = true);
   tmr = setTimeout(async () => {
     try {
-      const l = await appel(`communes?q=${encodeURIComponent(q)}`);
+      const l = await rechercherCommunes(q);
       const s = $('#sugg');
       s.hidden = !l.length;
-      s.innerHTML = l.map((c) => `
-        <div data-code="${html(c.code)}">${html(c.nom)}
+      s.innerHTML = l.map((c, i) => `
+        <button type="button" data-commune="${i}">${html(c.nom)}
           <small> — ${html(c.cp || '')} ${html(c.departement || '')}${c.population ? ` · ${Number(c.population).toLocaleString('fr-FR')} hab.` : ''}</small>
-        </div>`).join('');
-      s.querySelectorAll('[data-code]').forEach((d) => {
+        </button>`).join('');
+      s.querySelectorAll('[data-commune]').forEach((d) => {
         d.onclick = async () => {
+          const commune = l[Number(d.dataset.commune)];
           s.hidden = true;
           $('#rechCommune').value = '';
           toast('Calcul des communes limitrophes…');
@@ -1317,7 +2115,7 @@ $('#rechCommune').oninput = (e) => {
             const r = await appel('zone', {
               method: 'POST',
               body: JSON.stringify({
-                code: d.dataset.code,
+                code: commune.code,
                 sensibilite: $('#selSens').value,
                 buffer_m: +$('#selBuffer').value,
               }),
@@ -1331,7 +2129,10 @@ $('#rechCommune').oninput = (e) => {
   }, 260);
 };
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.rech')) $('#sugg').hidden = true;
+  if (!e.target.closest('.rech')) {
+    $('#sugg').hidden = true;
+    $('#suggLieu').hidden = true;
+  }
 });
 document.addEventListener('change', (e) => {
   if (e.target.matches('[data-famille]')) dessinerFeuxCarte();
@@ -1358,8 +2159,21 @@ document.addEventListener('change', (e) => {
   } else {
     $('#vueApp').hidden = false;
     await recharger();
-    setInterval(recharger, 120000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) recharger(); });
+  }
+  setInterval(actualiserDonnees, 120000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) actualiserDonnees();
+  });
+  requestAnimationFrame(() => carte?.invalidateSize());
+  const cleDemandee = location.hash.startsWith('#feu=')
+    ? decodeURIComponent(location.hash.slice(5))
+    : null;
+  if (cleDemandee) {
+    const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === cleDemandee);
+    if (f) {
+      carte.setView([Number(f.lat), Number(f.lon)], 11);
+      ouvrirIncident(f);
+    }
   }
 })();
 </script>

@@ -1,8 +1,8 @@
 // =====================================================================
 //  Module partagé par toutes les Edge Functions.
 // ---------------------------------------------------------------------
-//  Les secrets (clés VAPID, jeton Telegram, identifiants SMTP, clé
-//  d'administration) vivent dans la table public.config plutôt que dans
+//  Les secrets (clés VAPID et clé d'administration) vivent dans la table
+//  public.config plutôt que dans
 //  des variables d'environnement : cela permet de les modifier sans
 //  redéployer, et la table est inaccessible hors service role (RLS
 //  active, aucune policy).
@@ -31,7 +31,7 @@ export async function config(force = false): Promise<Record<string, any>> {
 }
 
 /** Version de la configuration : change à chaque rechargement effectif.
- *  Permet aux caches dérivés (serveur Web Push, client SMTP) de savoir
+ *  Permet au cache dérivé du serveur Web Push de savoir
  *  qu'ils doivent être reconstruits, sans quoi une rotation de secret
  *  exigerait un redéploiement — ce que la table config est justement
  *  censée éviter. */
@@ -159,8 +159,6 @@ export const TROP_DE_REQUETES = { erreur: "trop de requêtes, patientez quelques
 export {
   aUnCanalVerifie,
   comparerSecret,
-  echapperHtml,
-  echapperMdV2,
   empriseFranceEtZones,
   fetchRetry,
   normaliserAbonnementPush,

@@ -40,23 +40,6 @@ export async function fetchRetry(
   throw derniere instanceof Error ? derniere : new Error(String(derniere));
 }
 
-/** Échappe le MarkdownV2 de Telegram.
- *  Le mode « Markdown » historique rejetait tout message contenant un
- *  caractère spécial non apparié : un nom de commune avec un tiret bas ou
- *  une parenthèse, ou un message d'erreur repris dans un heartbeat,
- *  faisaient échouer l'envoi — donc perdre l'alerte. */
-export function echapperMdV2(s: string): string {
-  return String(s).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => `\\${c}`);
-}
-
-/** Échappe le HTML des corps d'e-mail. */
-export function echapperHtml(s: string): string {
-  return String(s).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string),
-  );
-}
-
 /** Rose des vents à 8 secteurs, en français, depuis un cap en degrés. */
 export function secteurVent(deg: number | null | undefined): string | null {
   if (deg == null || !Number.isFinite(deg)) return null;
@@ -95,14 +78,15 @@ export function normaliserAbonnementPush(v: any): Record<string, unknown> | null
   };
 }
 
-/** Un compte peut contribuer aux signalements seulement après vérification
- *  d'au moins un canal lui appartenant. Le jeton seul prouve la possession du
- *  navigateur, pas l'existence d'un moyen de contact confirmé. */
+/** Un compte peut contribuer aux signalements seulement après activation
+ *  d'une notification Web Push sur l'un de ses appareils. Le jeton seul
+ *  prouve la possession du navigateur, pas l'existence d'un appareil joignable. */
 export function aUnCanalVerifie(canaux: unknown): boolean {
   if (!Array.isArray(canaux)) return false;
   return canaux.some((canal) =>
     canal !== null &&
     typeof canal === "object" &&
+    (canal as { type?: unknown }).type === "webpush" &&
     (canal as { actif?: unknown }).actif === true &&
     (canal as { verifie?: unknown }).verifie === true
   );

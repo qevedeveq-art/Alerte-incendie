@@ -1,15 +1,28 @@
 {
   "name": "Alerte Incendie",
   "short_name": "Alerte Feu",
-  "description": "Surveillance satellite des feux de forêt sur une commune et ses communes limitrophes.",
+  "description": "Carte nationale des feux, alertes locales et signalements citoyens vérifiés.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#12100e",
-  "theme_color": "#b3261e",
+  "background_color": "#0f1113",
+  "theme_color": "#0f1113",
   "categories": ["utilities", "weather"],
+  "shortcuts": [
+    {
+      "name": "Voir la carte",
+      "short_name": "Carte",
+      "url": "./#sectionCarte",
+      "icons": [{ "src": "./icone-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Mes alertes",
+      "short_name": "Alertes",
+      "url": "./#sectionAlertes",
+      "icons": [{ "src": "./icone-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     { "src": "./icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

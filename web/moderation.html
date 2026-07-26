@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1113">
+<title>Modération — Alerte Incendie</title>
+<style>
+:root{color-scheme:dark;--fond:#0f1113;--carte:#171a1d;--champ:#22262a;--bord:#343a40;
+  --txt:#fff;--txt2:#d0d4d8;--txt3:#aeb5bc;--rouge:#f04438;--vert:#3fa86b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--txt);font:15px/1.55 system-ui,sans-serif}
+header{position:sticky;top:0;z-index:2;background:rgba(15,17,19,.96);border-bottom:1px solid var(--bord);
+  padding:14px max(16px,calc((100vw - 1100px)/2));display:flex;gap:12px;align-items:center}
+h1{font-size:18px;margin:0}header small{color:var(--txt3)}header a{margin-left:auto;color:var(--txt2)}
+main{max-width:1100px;margin:auto;padding:22px 16px 60px}
+.carte{background:var(--carte);border:1px solid var(--bord);border-radius:14px;padding:16px;margin-bottom:14px}
+.connexion{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+label{display:block;color:var(--txt2);font-size:13px;margin-bottom:5px}
+input,textarea,button{min-height:44px;border-radius:10px;border:1px solid var(--bord);font:inherit}
+input,textarea{width:100%;background:var(--champ);color:var(--txt);padding:10px 12px}
+textarea{min-height:110px;resize:vertical}
+button{background:var(--champ);color:var(--txt);padding:9px 14px;cursor:pointer;font-weight:650}
+button.primaire{background:var(--rouge);border-color:var(--rouge)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #79c0ff;outline-offset:2px}
+.entete-file{display:flex;align-items:center;gap:10px}.entete-file h2{font-size:16px;margin:0}
+.entete-file span{color:var(--txt3)}.entete-file button{margin-left:auto}
+.groupe{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;border-top:1px solid var(--bord);padding:16px 0}
+.groupe:first-child{border-top:0}.groupe h3{font-size:16px;margin:0 0 5px}
+.groupe p{margin:4px 0;color:var(--txt2)}.meta{font-size:13px;color:var(--txt3)}
+.badge{display:inline-block;border:1px solid var(--bord);border-radius:99px;padding:3px 8px;font-size:12px}
+.actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.actions .danger{color:#ffb4ad}
+.vide{text-align:center;color:var(--txt3);padding:30px}.erreur{color:#ffb4ad}
+dialog{width:min(520px,calc(100vw - 24px));padding:0;border:1px solid var(--bord);
+  border-radius:14px;background:var(--carte);color:var(--txt)}
+dialog::backdrop{background:rgba(0,0,0,.75)}
+.dialog-entete{padding:16px;border-bottom:1px solid var(--bord)}.dialog-entete h2{margin:0;font-size:18px}
+.dialog-corps{padding:16px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.message-action{color:var(--txt2)}#erreurDecision{min-height:22px;margin:8px 0 0}
+@media(max-width:650px){.connexion{grid-template-columns:1fr}.groupe{grid-template-columns:1fr}.actions{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Modération des signalements</h1><small>Console opérateur sécurisée et auditée</small></div>
+  <a href="./">Retour à la carte</a>
+</header>
+<main>
+  <section class="carte connexion" id="connexion">
+    <div>
+      <label for="cle">Clé administrateur — conservée uniquement en mémoire jusqu’à la fermeture</label>
+      <input id="cle" type="password" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="primaire" id="charger">Ouvrir la file</button>
+  </section>
+  <section class="carte" id="file" hidden>
+    <div class="entete-file">
+      <h2>File des 30 derniers jours</h2>
+      <span id="compte"></span>
+      <button id="actualiser">Actualiser</button>
+    </div>
+    <div id="liste" aria-live="polite"></div>
+  </section>
+</main>
+<dialog id="dialogDecision" aria-labelledby="titreDecision">
+  <form id="formDecision">
+    <div class="dialog-entete"><h2 id="titreDecision">Décision de modération</h2></div>
+    <div class="dialog-corps">
+      <p class="message-action" id="messageDecision"></p>
+      <label for="motifDecision">Motif obligatoire, au moins 5 caractères</label>
+      <textarea id="motifDecision" minlength="5" maxlength="500" required
+                placeholder="Éléments factuels justifiant la décision"></textarea>
+      <p class="erreur" id="erreurDecision" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" id="annulerDecision">Annuler</button>
+        <button class="primaire" type="submit" id="validerDecision">Confirmer</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+<script>
+const API='https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/signalement';
+let cleAdmin='';
+let decisionEnAttente=null;
+const $=(s)=>document.querySelector(s);
+const echapper=(v)=>String(v??'').replace(/[&<>"']/g,(c)=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
+})[c]);
+const date=(v)=>new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
+
+async function requete(route,options={}){
+  const r=await fetch(`${API}/${route}`,{
+    ...options,
+    headers:{'Content-Type':'application/json','x-admin-key':cleAdmin,...(options.headers||{})},
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.erreur||`HTTP ${r.status}`);
+  return j;
+}
+function rendre(groupes){
+  $('#compte').textContent=`${groupes.length} groupe(s)`;
+  const ordonnes=[...groupes].sort((a,b)=>
+    (a.moderation_statut==='en_attente'?0:1)-(b.moderation_statut==='en_attente'?0:1)||
+    new Date(b.dernier_at)-new Date(a.dernier_at));
+  $('#liste').innerHTML=ordonnes.length?ordonnes.map((g)=>`
+    <article class="groupe">
+      <div>
+        <h3>${echapper(g.commune||'Localisation non nommée')}
+          <span class="badge">${echapper(g.moderation_statut||g.statut)}</span>
+        </h3>
+        <p>${Number(g.nb_personnes)||0} personne(s) · ${Number(g.nb_reseaux)||0} réseau(x)
+          · ${echapper((g.natures||[]).join(', ')||'nature non précisée')}</p>
+        <div class="meta">Premier : ${date(g.premier_at)} · dernier : ${date(g.dernier_at)}
+          ${g.moderation_motif?`<br>Motif actuel : ${echapper(g.moderation_motif)}`:''}</div>
+      </div>
+      <div class="actions">
+        <a href="https://www.openstreetmap.org/?mlat=${Number(g.lat)}&mlon=${Number(g.lon)}#map=15/${Number(g.lat)}/${Number(g.lon)}"
+           target="_blank" rel="noopener">Voir la position</a>
+        ${g.statut==='actif'?`
+          <button data-id="${echapper(g.id)}" data-decision="maintenir">Annoter</button>
+          <button data-id="${echapper(g.id)}" data-decision="expirer">Expirer</button>
+          <button class="danger" data-id="${echapper(g.id)}" data-decision="rejeter">Rejeter</button>`:''}
+      </div>
+    </article>`).join(''):'<div class="vide">Aucun signalement récent.</div>';
+}
+async function charger(){
+  $('#liste').innerHTML='<div class="vide">Chargement…</div>';
+  try{
+    const j=await requete('moderation');
+    $('#file').hidden=false;
+    rendre(j.groupes||[]);
+  }catch(e){
+    $('#file').hidden=false;
+    $('#liste').innerHTML=`<div class="vide erreur">${echapper(e.message)}</div>`;
+  }
+}
+$('#charger').onclick=()=>{
+  cleAdmin=$('#cle').value.trim();
+  $('#cle').value='';
+  if(!cleAdmin)return;
+  charger();
+};
+$('#actualiser').onclick=charger;
+$('#liste').onclick=(e)=>{
+  const b=e.target.closest('[data-decision]');
+  if(!b)return;
+  const labels={rejeter:'Rejeter',expirer:'Expirer',maintenir:'Annoter'};
+  decisionEnAttente={id:b.dataset.id,decision:b.dataset.decision,bouton:b};
+  $('#titreDecision').textContent=`${labels[b.dataset.decision]} ce groupe`;
+  $('#messageDecision').textContent=b.dataset.decision==='maintenir'
+    ?'Cette annotation sera visible dans le journal de modération.'
+    :'Cette décision modifiera la visibilité du signalement et sera auditée.';
+  $('#validerDecision').textContent=labels[b.dataset.decision];
+  $('#motifDecision').value='';
+  $('#erreurDecision').textContent='';
+  $('#dialogDecision').showModal();
+  $('#motifDecision').focus();
+};
+$('#annulerDecision').onclick=()=>{
+  decisionEnAttente=null;
+  $('#dialogDecision').close();
+};
+$('#dialogDecision').addEventListener('cancel',(e)=>{
+  e.preventDefault();
+  $('#annulerDecision').click();
+});
+$('#formDecision').onsubmit=async(e)=>{
+  e.preventDefault();
+  if(!decisionEnAttente)return;
+  const motif=$('#motifDecision').value.trim();
+  if(motif.length<5)return;
+  const action=decisionEnAttente;
+  action.bouton.disabled=true;
+  $('#validerDecision').disabled=true;
+  try{
+    await requete('moderer',{method:'POST',body:JSON.stringify({
+      groupe_id:action.id,decision:action.decision,motif,
+    })});
+    decisionEnAttente=null;
+    $('#dialogDecision').close();
+    await charger();
+  }catch(err){
+    $('#erreurDecision').textContent=err.message;
+    action.bouton.disabled=false;
+  }finally{
+    $('#validerDecision').disabled=false;
+  }
+};
+</script>
+</body>
+</html>

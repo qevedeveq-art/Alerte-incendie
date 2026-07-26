@@ -14,12 +14,11 @@ import { assert, assertEquals, assertStringIncludes } from "./assert.ts";
 import {
   avertissement,
   capteursLisibles,
-  corpsTelegram,
   corpsTexte,
   type Payload,
   phraseVent,
 } from "../dispatch/messages.ts";
-import { echapperMdV2, secteurVent } from "../_shared/format.ts";
+import { secteurVent } from "../_shared/format.ts";
 
 function payload(p: Partial<Payload> = {}): Payload {
   return {
@@ -140,24 +139,4 @@ Deno.test("secteurVent — les huit secteurs et le bouclage à 360°", () => {
   assertEquals(secteurVent(180), "sud");
   assertEquals(secteurVent(315), "nord-ouest");
   assertEquals(secteurVent(null), null);
-});
-
-// ---------------------------------------------------------------------
-//  Telegram : le mode Markdown historique rejetait tout message
-//  contenant un caractère spécial non apparié. Un nom de commune avec
-//  un tiret ou une parenthèse suffisait à faire échouer l'envoi, donc
-//  à perdre l'alerte.
-// ---------------------------------------------------------------------
-Deno.test("echapperMdV2 — échappe tous les caractères réservés", () => {
-  assertEquals(echapperMdV2("Saint-Jean (Haute-Garonne)"), "Saint\\-Jean \\(Haute\\-Garonne\\)");
-  assertEquals(echapperMdV2("a_b*c"), "a\\_b\\*c");
-  assertEquals(echapperMdV2("fin."), "fin\\.");
-});
-
-Deno.test("corpsTelegram — un nom de commune à tiret ne casse pas le balisage", () => {
-  const t = corpsTelegram(payload({ commune: "Saint-Jean", zone: "Saint-Jean" }));
-  assertStringIncludes(t, "Saint\\-Jean");
-  // Toute astérisque restante doit être un délimiteur voulu, donc en nombre pair.
-  const etoiles = (t.match(/(?<!\\)\*/g) ?? []).length;
-  assertEquals(etoiles % 2, 0, "délimiteurs gras non appariés");
 });

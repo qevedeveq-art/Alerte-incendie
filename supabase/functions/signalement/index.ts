@@ -27,7 +27,15 @@
 //    GET  /signalement/carte    couche publique, 24 h par défaut
 //    GET  /signalement/mes-signalements historique privé            x-token
 // =====================================================================
-import { CORS, ipAppelant, json, quota, sb, TROP_DE_REQUETES } from "../_shared/mod.ts";
+import {
+  autoriserOperation,
+  CORS,
+  ipAppelant,
+  json,
+  quota,
+  sb,
+  TROP_DE_REQUETES,
+} from "../_shared/mod.ts";
 import { aUnCanalVerifie } from "../_shared/format.ts";
 
 const NATURES = ["fumee", "flammes", "odeur", "autre"];
@@ -54,6 +62,37 @@ Deno.serve(async (req) => {
       return json({ ok: true, heures, signalements: data ?? [] });
     }
 
+    // ---------- console opérateur, clé admin et audit obligatoires ----------
+    if (req.method === "GET" && route === "moderation") {
+      if (!await autoriserOperation(req, "signalement:moderation:lire", false)) {
+        return json({ erreur: "non autorisé" }, 401);
+      }
+      const { data, error } = await sb.rpc("moderation_signalements", { p_limite: 100 });
+      if (error) throw new Error(error.message);
+      return json({ ok: true, groupes: data ?? [] });
+    }
+    if (req.method === "POST" && route === "moderer") {
+      if (!await autoriserOperation(req, "signalement:moderation:decider", false)) {
+        return json({ erreur: "non autorisé" }, 401);
+      }
+      const body = await req.json().catch(() => ({} as any));
+      const groupeId = String(body.groupe_id ?? "");
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupeId)
+      ) {
+        return json({ erreur: "signalement invalide" }, 400);
+      }
+      const decision = String(body.decision ?? "");
+      const motif = String(body.motif ?? "").trim().slice(0, 500);
+      const { data, error } = await sb.rpc("moderer_signalement", {
+        p_groupe: groupeId,
+        p_decision: decision,
+        p_motif: motif,
+      });
+      if (error) throw new Error(error.message);
+      return json(data ?? { ok: false }, data?.ok === false ? 400 : 200);
+    }
+
     // ---------- création, jeton requis ----------
     const jeton = req.headers.get("x-token") ?? "";
     if (jeton.length < 32 || jeton.length > 128) return json({ erreur: "jeton invalide" }, 401);
@@ -62,13 +101,13 @@ Deno.serve(async (req) => {
     if (!ab || !ab.actif) return json({ erreur: "jeton invalide" }, 401);
 
     const { data: canaux, error: erreurCanaux } = await sb.from("canaux")
-      .select("actif, verifie")
+      .select("type, actif, verifie")
       .eq("abonne_id", ab.id);
     if (erreurCanaux) throw new Error(erreurCanaux.message);
     if (!aUnCanalVerifie(canaux)) {
       return json({
         erreur:
-          "compte non vérifié : activez et vérifiez une notification Push, Telegram ou e-mail avant de contribuer",
+          "compte non vérifié : activez les notifications sur cet appareil avant de contribuer",
       }, 403);
     }
 
