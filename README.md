@@ -282,6 +282,7 @@ cd supabase/functions && deno task verif
 | [`docs/SECURITE.md`](docs/SECURITE.md) | modèle d'accès, anti-abus et prérequis avant ouverture |
 | [`docs/ETAPE_ACTUALITES_LOCALES.md`](docs/ETAPE_ACTUALITES_LOCALES.md) | plan de passage vers les actualités locales et réseaux sociaux |
 | [`docs/PLAN_AMELIORATION.md`](docs/PLAN_AMELIORATION.md) | feuille de route priorisée et critères de succès |
+| [`docs/CHARTE_GRAPHIQUE.md`](docs/CHARTE_GRAPHIQUE.md) | couleurs, typographies, composants et règles d'interface |
 | [`AGENTS.md`](AGENTS.md) | règles de maintenance et mise à jour systématique du contexte |
 
 ## Installation depuis zéro

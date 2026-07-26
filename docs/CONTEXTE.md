@@ -44,7 +44,42 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   un futur parcours « je vois le feu depuis ici », qui devra enregistrer la
   position de l'observateur. Tant que ce parcours n'existe pas, rien n'écrit
   cette colonne.
-- La PWA intègre une refonte UI/UX tactique (typographies Inter & Outfit, palette carbone `#0b0d10`, glassmorphism `backdrop-filter: blur(16px)`), avec des marqueurs cartographiques tactiques ovales (`.marqueur-feu-tactique`) affichant l'icône flamme vectorielle, le nom de la commune et le badge d'état (`Confirmé`, `Probable`, `Témoins`, `Indice`).
+- La PWA suit la **charte 1A tactique sombre**, copiée dans
+  [`docs/CHARTE_GRAPHIQUE.md`](CHARTE_GRAPHIQUE.md) : typographies Inter et
+  Outfit, palette carbone `#0b0d10`, marqueurs en pastille
+  (`.marqueur-feu-tactique`) avec flamme, nom de commune et badge d'état.
+  La feuille de style a été réécrite d'un bloc le 26 juillet au soir : la
+  refonte précédente avait changé les variables sans reprendre les valeurs
+  codées en dur, laissant une quinzaine de restes de l'ancienne palette chaude
+  (`#2e2a27`, `#252220`, `rgba(18,16,14,…)`, toast crème, bandeau hors ligne
+  brun) et deux `:root` concurrents. Quatre défauts structurels ont été
+  corrigés en même temps :
+  1. les règles de `.legende-interactive-barre` étaient enfermées dans la media
+     query `max-width:560px` : la barre de légende n'avait aucun style au-delà ;
+  2. huit classes utilisées par le HTML ou le JS n'avaient aucune règle
+     (`badge-compteur`, `cluster-bulle`, `liste-actu`, `meta`,
+     `popup-actualites-feu`, `popup-feu-glass`, `viseur-etiquette`,
+     `hors-ligne`) : compteurs, bulles de regroupement et info-bulles
+     s'affichaient sans habillage ;
+  3. le bouton de repli de la légende pilotait un état qu'aucune règle ne
+     traduisait, donc il ne faisait rien ; la légende est désormais réellement
+     repliable et ouverte par défaut ;
+  4. la légende et les marqueurs employaient des teintes différentes pour la
+     même sévérité. `COULEUR_NIVEAU` est la table unique, alignée sur la charte.
+- Le filtrage par la légende **agit réellement sur les cinq niveaux**. Il ne
+  couvrait que « corroboré » et « probable » : cliquer « indices isolés » ou
+  « témoins » remettait le filtre à `tous` tout en annonçant l'inverse à
+  l'utilisateur. Chaque ligne masque maintenant son niveau, l'état est exposé
+  par `aria-pressed` et l'opacité, et le message reflète l'état réel.
+- La fraîcheur de la carte est affichée en surimpression
+  (`majFraicheurCarte`). Le voyant passe en rouge dès que la vue provient du
+  cache : une carte muette qui a l'air à jour est le pire cas pour un service
+  d'alerte.
+- Le vent de la fiche incident affichait `wind_direction_10m` brut sous le
+  libellé « direction propagation », soit l'inverse du sens réel. La PWA reprend
+  la rose des vents du serveur (`secteurVent`) et annonce « vers le … ».
+- La console de modération suit la même charte : elle n'est pas un outil de
+  seconde classe, et un écart de palette suffit à faire douter de ce qu'on y lit.
 - **La publication de la PWA est désormais subordonnée aux tests.** Le workflow
   « Publier la PWA » ne se déclenchait que sur `web/**` et n'exécutait aucun
   test, tandis que les tests d'interface vivent dans `supabase/functions/_tests`
@@ -371,6 +406,7 @@ sources est maintenu dans `docs/PLAN_AMELIORATION.md`.
 | Changement | Fichiers à revoir |
 |---|---|
 | comportement utilisateur | `README.md`, `web/index.html`, tests |
+| couleur, typographie ou composant visuel | `docs/CHARTE_GRAPHIQUE.md`, `web/index.html`, `web/moderation.html`, tests d'interface |
 | grandeur affichée à l'utilisateur | vérifier qu'elle est **mesurée** et non déduite ; sinon ne pas l'afficher |
 | source de contexte activée ou publiée | `ETAPE_ACTUALITES_LOCALES.md`, `SECURITE.md`, ce fichier, politique de confidentialité |
 | schéma ou règle SQL | nouvelle migration, ce fichier, `EXPLOITATION.md` |

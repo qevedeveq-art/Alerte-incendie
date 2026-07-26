@@ -10,7 +10,9 @@ Avant toute modification, lire :
 1. `docs/CONTEXTE.md` — architecture, état de livraison, invariants et risques ;
 2. `docs/EXPLOITATION.md` — configuration et procédures de production ;
 3. `docs/SECURITE.md` — modèle d'accès et limites avant ouverture large ;
-4. `README.md` — comportement présenté aux utilisateurs.
+4. `README.md` — comportement présenté aux utilisateurs ;
+5. `docs/CHARTE_GRAPHIQUE.md` — couleurs, typographies et règles d'interface,
+   avant toute modification visuelle.
 
 ## Règles de modification
 
