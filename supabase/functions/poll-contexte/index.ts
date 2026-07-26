@@ -20,15 +20,33 @@ import {
   sb,
 } from "../_shared/mod.ts";
 
-const MOTS_INCENDIE = ["incendie", "feu", "fumee", "sdis", "pompiers", "foret", "flammes"];
-const MOTS_EXERCICE = ["exercice", "entrainement", "prevention", "simule", "fiction", "anniversaire"];
+const MOTS_INCENDIE = [
+  "incendie",
+  "feu",
+  "fumee",
+  "sdis",
+  "pompiers",
+  "foret",
+  "flammes",
+];
+const MOTS_EXERCICE = [
+  "exercice",
+  "entrainement",
+  "prevention",
+  "simule",
+  "fiction",
+  "anniversaire",
+];
 
 function validerUrlSecurisee(urlStr: string): boolean {
   try {
     const u = new URL(urlStr);
     if (u.protocol !== "https:") return false;
     const h = u.hostname.toLowerCase();
-    if (h === "localhost" || h.startsWith("127.") || h.startsWith("10.") || h.startsWith("192.168.") || h.endsWith(".local")) {
+    if (
+      h === "localhost" || h.startsWith("127.") || h.startsWith("10.") ||
+      h.startsWith("192.168.") || h.endsWith(".local")
+    ) {
       return false;
     }
     return true;
@@ -42,14 +60,17 @@ function calculerScoreAssociation(
   resume: string,
   communeEvenement: string,
   communeMention: string | null,
-  ecartHeures: number
+  ecartHeures: number,
 ): { score: number; raisons: string[] } {
   let score = 0;
   const raisons: string[] = [];
   const texte = `${titre} ${resume}`.toLowerCase();
 
   // 1. Géographie
-  if (communeMention && communeEvenement && communeMention.toLowerCase() === communeEvenement.toLowerCase()) {
+  if (
+    communeMention && communeEvenement &&
+    communeMention.toLowerCase() === communeEvenement.toLowerCase()
+  ) {
     score += 35;
     raisons.push("Commune identique");
   }
@@ -83,7 +104,9 @@ function calculerScoreAssociation(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!await autoriserOperation(req, "poll-contexte")) return json({ erreur: "non autorisé" }, 401);
+  if (!await autoriserOperation(req, "poll-contexte")) {
+    return json({ erreur: "non autorisé" }, 401);
+  }
 
   const runId = await ouvrirRun("poll-contexte");
   let nbCollectes = 0;
@@ -98,8 +121,16 @@ Deno.serve(async (req) => {
 
     if (!sources || sources.length === 0) {
       await sb.rpc("purger_contexte_local").catch(() => {});
-      await fermerRun(runId, true, { message: "mode shadow actif - aucune source externe activée" });
-      return json({ ok: true, mode: "shadow", sources_actives: 0, collectes: 0, associes: 0 });
+      await fermerRun(runId, true, {
+        message: "mode shadow actif - aucune source externe activée",
+      });
+      return json({
+        ok: true,
+        mode: "shadow",
+        sources_actives: 0,
+        collectes: 0,
+        associes: 0,
+      });
     }
 
     // 2. Charger les événements de feu récents
@@ -107,14 +138,19 @@ Deno.serve(async (req) => {
       .from("evenements")
       .select("id, commune_code, commune_nom, premier_ts, derniere_observation_ts")
       .neq("statut", "clos")
-      .gte("derniere_observation_ts", new Date(Date.now() - 86400000).toISOString());
+      .gte(
+        "derniere_observation_ts",
+        new Date(Date.now() - 86400000).toISOString(),
+      );
 
     if (evenements && evenements.length > 0) {
       for (const s of sources) {
         if (!s.url_flux || !validerUrlSecurisee(s.url_flux)) continue;
 
         try {
-          const res = await fetchRetry(s.url_flux, { signal: AbortSignal.timeout(10000) });
+          const res = await fetchRetry(s.url_flux, {
+            signal: AbortSignal.timeout(10000),
+          });
           if (!res.ok) continue;
 
           const texte = await res.text();
@@ -130,7 +166,10 @@ Deno.serve(async (req) => {
     // 3. Exécuter la purge de rétention
     await sb.rpc("purger_contexte_local").catch(() => {});
 
-    await fermerRun(runId, true, { collectes: nbCollectes, associes: nbAssocies });
+    await fermerRun(runId, true, {
+      collectes: nbCollectes,
+      associes: nbAssocies,
+    });
     return json({ ok: true, collectes: nbCollectes, associes: nbAssocies });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

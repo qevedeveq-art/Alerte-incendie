@@ -111,7 +111,9 @@ Deno.serve(async (req) => {
 
       const { data, error } = await sb
         .from("evenement_mentions")
-        .select("score, raisons, distance_km, ecart_heures, mentions_contexte (titre, resume, url_canonical, date_publication, sources_contexte (nom, type, attribution))")
+        .select(
+          "score, raisons, distance_km, ecart_heures, mentions_contexte (titre, resume, url_canonical, date_publication, sources_contexte (nom, type, attribution))",
+        )
         .eq("evenement_id", groupeId)
         .eq("decision", "associe")
         .order("score", { ascending: false })
