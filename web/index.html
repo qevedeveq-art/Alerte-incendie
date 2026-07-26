@@ -264,9 +264,8 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .viseur-croix:before,.viseur-croix:after{content:"";position:absolute;background:var(--orange)}
 .viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
 .viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
-.viseur-etiquette{background:rgba(19,22,25,.9);backdrop-filter:blur(8px);color:#fff;
-  padding:5px 11px;border-radius:8px;font-size:11px;border:1px solid var(--bord);white-space:nowrap}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.barre-temporelle{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--fond3);border-bottom:1px solid var(--bord)}
+.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px}
 .liste-feux{max-height:290px;overflow:auto;border-top:1px solid var(--bord)}
 .incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
   display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:10px 13px;
@@ -467,6 +466,11 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
           <button class="btn sm" type="button" id="btnActualiser">Actualiser</button>
           <button class="btn sm" type="button" id="btnInstaller" hidden>Installer</button>
           <span class="mode-economie" id="modeEconomie" hidden>Mode données réduites</span>
+        </div>
+        <div class="barre-temporelle" id="barreTemporelle" aria-label="Animation temporelle de la carte">
+          <button type="button" class="btn sm" id="btnLectureTimeline">▶ Animer 24h</button>
+          <input type="range" id="sliderTimeline" min="1" max="24" value="24" step="1" aria-label="Plage horaire de détection">
+          <span id="labelTimeline" style="font-size:12px;font-weight:650;min-width:85px">Dernières 24h</span>
         </div>
         <div class="filtres-sources panneau-filtres" id="filtresSources"
              aria-label="Filtres des sources de la carte">
@@ -1327,7 +1331,10 @@ function ouvrirIncident(f) {
         <div><b>${f.frp_max == null ? '—' : `${Number(f.frp_max).toFixed(1)} MW`}</b><small>puissance max.</small></div>
         <div><b>${f.resolution_m ? `${Number(f.resolution_m).toLocaleString('fr-FR')} m` : '—'}</b><small>meilleure résolution</small></div>
       </div>
-    </details>
+    <div class="incident-grille" id="blocMeteoVent" style="margin-top:10px;background:var(--fond3);padding:10px;border-radius:10px;border:1px solid var(--bord)">
+      <div><b id="valVentVitesse">Chargement…</b><small>vent au sol (10 m)</small></div>
+      <div><b id="valVentDirection">—</b><small>direction propagation</small></div>
+    </div>
     <h4 style="margin-top:14px">Informations locales associées</h4>
     <div id="blocContexteLocal"><p class="note" style="color:var(--txt3);font-size:12px">Recherche de communiqués ou d’articles locaux…</p></div>
     <p class="note">
@@ -1346,6 +1353,19 @@ function ouvrirIncident(f) {
     </p>`;
   history.replaceState(null, '', `#feu=${encodeURIComponent(f._cle || cleFeu(f))}`);
   $('#dialogIncident').showModal();
+
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${Number(f.lat).toFixed(4)}&longitude=${Number(f.lon).toFixed(4)}&current=wind_speed_10m,wind_direction_10m`)
+    .then((r) => r.json())
+    .then((d) => {
+      const c = d.current || {};
+      const vit = c.wind_speed_10m != null ? `${c.wind_speed_10m.toFixed(1)} km/h` : 'Indisponible';
+      const dir = c.wind_direction_10m != null ? `${c.wind_direction_10m}°` : '—';
+      const elV = document.getElementById('valVentVitesse');
+      const elD = document.getElementById('valVentDirection');
+      if (elV) elV.textContent = vit;
+      if (elD) elD.textContent = dir;
+    })
+    .catch(() => {});
 
   // Charge les informations locales associées (contexte factuel séparé)
   fetch(`${API_BASE}/contexte?groupe=${encodeURIComponent(f.id || f._cle || '')}`)
@@ -2038,8 +2058,50 @@ $('#btnAnnulerSignalement').onclick = () => {
 };
 
 $('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace('Error: ', ''), true));
-
 $('#btnSignaler').onclick = () => basculerModeSignalement();
+
+let timerTimeline = null;
+const sliderTL = $('#sliderTimeline');
+const btnTL = $('#btnLectureTimeline');
+const labelTL = $('#labelTimeline');
+
+if (sliderTL) {
+  sliderTL.oninput = () => {
+    heuresCarte = Number(sliderTL.value);
+    if (labelTL) labelTL.textContent = heuresCarte === 24 ? 'Dernières 24h' : `Dernières ${heuresCarte}h`;
+    chargerFeuxCarte();
+  };
+}
+
+if (btnTL) {
+  btnTL.onclick = () => {
+    if (timerTimeline) {
+      clearInterval(timerTimeline);
+      timerTimeline = null;
+      btnTL.textContent = '▶ Animer 24h';
+      return;
+    }
+    btnTL.textContent = '⏸ Pause';
+    let h = 1;
+    if (sliderTL) sliderTL.value = h;
+    heuresCarte = h;
+    if (labelTL) labelTL.textContent = `Dernières 1h`;
+    chargerFeuxCarte();
+    timerTimeline = setInterval(() => {
+      h += 2;
+      if (h > 24) {
+        h = 24;
+        clearInterval(timerTimeline);
+        timerTimeline = null;
+        if (btnTL) btnTL.textContent = '▶ Animer 24h';
+      }
+      if (sliderTL) sliderTL.value = h;
+      heuresCarte = h;
+      if (labelTL) labelTL.textContent = h === 24 ? 'Dernières 24h' : `Dernières ${h}h`;
+      chargerFeuxCarte();
+    }, 1500);
+  };
+}
 
 $('#btnTest').onclick = async () => {
   try {

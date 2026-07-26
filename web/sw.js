@@ -1,7 +1,7 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v7';
-const CACHE_TUILES = 'alerte-incendie-tuiles-v1';
-const MAX_TUILES = 150;
+const CACHE = 'alerte-incendie-v8';
+const CACHE_TUILES = 'alerte-incendie-tuiles-v2';
+const MAX_TUILES = 450;
 const STATIQUE = [
   './',
   './index.html',
@@ -36,12 +36,16 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-/* Reseau d'abord pour l'API (donnees temps reel), cache de secours pour le statique. */
+/* Réseau d'abord pour l'API (données temps réel), cache de secours pour le statique. */
 self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
   if (u.pathname.includes('/functions/v1/')) return;
-  if (u.hostname === 'data.geopf.fr' || u.hostname.endsWith('.basemaps.cartocdn.com')) {
+  if (
+    u.hostname === 'data.geopf.fr' ||
+    u.hostname.endsWith('.basemaps.cartocdn.com') ||
+    u.hostname.endsWith('tile.openstreetmap.fr')
+  ) {
     e.respondWith(
       caches.open(CACHE_TUILES).then(async (cache) => {
         const connue = await cache.match(e.request);
@@ -88,7 +92,10 @@ self.addEventListener('push', (e) => {
       icon: './icone-192.png',
       badge: './icone-192.png',
       data: d,
-      actions: [{ action: 'ouvrir', title: 'Ouvrir la carte' }],
+      actions: [
+        { action: 'voir', title: 'Voir sur la carte' },
+        { action: 'confirmer', title: 'Signaler fumée' },
+      ],
     }),
   );
 });

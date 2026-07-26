@@ -14,6 +14,10 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Schéma du dépôt : migrations **01 à 38**.
 - État de livraison vérifié : migrations **01 à 38** appliquées et 12 Edge
   Functions déployées.
+- La PWA intègre un slider temporel 24 h avec animation Play/Pause pour rejouer
+  la propagation des détections, la mise en cache hors-ligne des tuiles (IGN, OSM, CARTO)
+  dans `web/sw.js` (MAX_TUILES=450), l'affichage du vecteur vent au sol (Open-Meteo API)
+  et les notifications push actionnables (`voir`, `confirmer`).
 - La migration 38 (`sources_rss_regionales_et_nationales.sql`) peuple le catalogue `sources_contexte` avec 14 flux RSS nationaux et régionaux (Ministère de l'Intérieur, Météo-France, ONF, Copernicus EFFIS, Var-Matin, Sud-Ouest, Midi Libre, France Bleu, Le Progrès, Corse-Matin, etc.) en mode `shadow` (actif=true).
 - La migration 37 enrichit la fonction `feux_carte` avec la restitution explicite
   du champ `rayon_incertitude_m` (2000 m), permettant le tracé des emprises
