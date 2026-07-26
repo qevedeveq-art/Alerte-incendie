@@ -10,10 +10,13 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié : commit `4ebaf4f` sur `main`.
-- Schéma du dépôt : migrations **01 à 36**.
-- État de livraison vérifié : migrations **01 à 36** appliquées et 12 Edge
+- État fonctionnel publié : commit `6badd95` sur `main`.
+- Schéma du dépôt : migrations **01 à 37**.
+- État de livraison vérifié : migrations **01 à 37** appliquées et 12 Edge
   Functions déployées.
+- La migration 37 enrichit la fonction `feux_carte` avec la restitution explicite
+  du champ `rayon_incertitude_m` (2000 m), permettant le tracé des emprises
+  spatiales d'incertitude sur la carte Leaflet.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
   migration distincte `conformite_moderation_audit`.

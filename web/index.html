@@ -1334,6 +1334,18 @@ function ouvrirIncident(f) {
 
 function creerMarqueurFeu(f) {
   const aspect = apparenceFeu(f);
+  const r = Number(f.rayon_incertitude_m) || 2000;
+  const groupe = L.featureGroup();
+
+  const cer = L.circle([f.lat, f.lon], {
+    radius: r,
+    color: aspect.couleur,
+    weight: 1.2,
+    dashArray: '4,4',
+    fillColor: aspect.couleur,
+    fillOpacity: 0.08,
+  }).addTo(groupe);
+
   const marker = L.marker([f.lat, f.lon], {
     icon: L.divIcon({
       className: 'marqueur-feu',
@@ -1343,9 +1355,10 @@ function creerMarqueurFeu(f) {
     }),
     title: `${aspect.libelle}${f.commune ? ` · ${f.commune}` : ''}`,
     alt: aspect.libelle,
-  });
+  }).addTo(groupe);
+
   marker.on('click', () => ouvrirIncident(f));
-  return marker;
+  return groupe;
 }
 
 function dessinerFeuxCarte() {
