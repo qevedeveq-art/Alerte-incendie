@@ -348,11 +348,17 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
   .filtres-sources{display:none}
   .panneau-filtres.ouvert{display:grid}
   .liste-feux{max-height:230px}
-  .legende-carte{width:auto;max-width:210px;padding:8px}
-  .legende-carte .toggle-legende{display:flex;width:100%;min-height:34px;align-items:center;
-    justify-content:space-between;background:transparent;color:#fff;font-weight:700;padding:0}
-  .legende-carte .contenu-legende{display:none}
-  .legende-carte.ouverte .contenu-legende{display:block}
+  .legende-carte{width:auto;max-width:280px;padding:10px}
+  .legende-carte .toggle-legende{display:none!important}
+  .legende-carte .contenu-legende{display:block!important}
+.legende-interactive-barre{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--fond3);
+  border-bottom:1px solid var(--bord);overflow-x:auto;scrollbar-width:none}
+.legende-interactive-barre::-webkit-scrollbar{display:none}
+.legende-interactive-barre b{font-size:12px;color:var(--txt2);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.legende-interactive-barre .ligne-legende{display:flex;align-items:center;gap:6px;background:var(--fond2);
+  border:1px solid var(--bord);border-radius:20px;padding:4px 10px;cursor:pointer;white-space:nowrap;
+  font-size:12px;font-weight:600;transition:all .18s ease}
+.legende-interactive-barre .ligne-legende:hover{border-color:var(--orange);background:var(--fond)}
   .navigation-mobile{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);z-index:1000;
     left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));background:rgba(23,26,29,.96);
     border:1px solid var(--bord);border-radius:16px;box-shadow:var(--ombre);overflow:hidden}
@@ -475,6 +481,34 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
           <button type="button" class="btn sm" id="btnLectureTimeline">▶ Animer 24h</button>
           <input type="range" id="sliderTimeline" min="1" max="24" value="24" step="1" aria-label="Plage horaire de détection">
           <span id="labelTimeline" style="font-size:12px;font-weight:650;min-width:85px">Dernières 24h</span>
+        </div>
+        <div class="legende-interactive-barre" id="legendeInteractiveBarre" aria-label="Légende visuelle et filtres de la carte">
+          <b>Légende :</b>
+          <div class="ligne-legende" data-filtre-legende="corrobore" title="Filtrer feux corroborés">
+            <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
+            <span>Corroborés</span>
+            <span class="badge-compteur" id="cntCorroboreB">0</span>
+          </div>
+          <div class="ligne-legende" data-filtre-legende="probable" title="Filtrer signaux forts">
+            <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
+            <span>Signaux forts</span>
+            <span class="badge-compteur" id="cntProbableB">0</span>
+          </div>
+          <div class="ligne-legende" data-filtre-legende="indice" title="Filtrer indices isolés">
+            <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
+            <span>Indices isolés</span>
+            <span class="badge-compteur" id="cntIndiceB">0</span>
+          </div>
+          <div class="ligne-legende" data-filtre-legende="citoyen" title="Filtrer témoins vérifiés">
+            <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
+            <span>Témoins vérifiés</span>
+            <span class="badge-compteur" id="cntCitoyenB">0</span>
+          </div>
+          <div class="ligne-legende" data-filtre-legende="signalement" title="Filtrer témoins non vérifiés">
+            <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
+            <span>Non vérifiés</span>
+            <span class="badge-compteur" id="cntSignalementB">0</span>
+          </div>
         </div>
         <div class="filtres-sources panneau-filtres" id="filtresSources"
              aria-label="Filtres des sources de la carte">
@@ -1317,6 +1351,12 @@ function rendreResumeCarte() {
   const el3 = $('#cntIndice'); if (el3) el3.textContent = nInd;
   const el4 = $('#cntCitoyen'); if (el4) el4.textContent = nCit;
   const el5 = $('#cntSignalement'); if (el5) el5.textContent = nSig;
+
+  const b1 = $('#cntCorroboreB'); if (b1) b1.textContent = nCor;
+  const b2 = $('#cntProbableB'); if (b2) b2.textContent = nPro;
+  const b3 = $('#cntIndiceB'); if (b3) b3.textContent = nInd;
+  const b4 = $('#cntCitoyenB'); if (b4) b4.textContent = nCit;
+  const b5 = $('#cntSignalementB'); if (b5) b5.textContent = nSig;
 
   const maj = derniereMajCarte ? `Actualisé ${relatif(derniereMajCarte)}` : 'Actualisation en cours';
   const bouton = $('#btnActionResume');
