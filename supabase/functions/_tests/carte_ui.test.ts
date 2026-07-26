@@ -47,13 +47,50 @@ Deno.test("la légende française distingue les statuts de preuve", () => {
 Deno.test("les feux fiables sont des flammes et seul le non vérifié reste gris", () => {
   assert(pwa.includes("function svgFlamme("));
   assert(pwa.includes("function creerMarqueurFeu("));
-  assert(pwa.includes("const c = '#8a8a8a';"));
   assert(pwa.includes("familles >= 2 ? 'corrobore'"));
   assert(pwa.includes("score >= 60 || puissance >= 50 || observations >= 3"));
-  assertEquals(
-    pwa.includes("const c = s.confirme ? '#e9873a' : '#8a8a8a'"),
-    false,
-  );
+  // Le témoignage non vérifié garde la teinte grise de la charte.
+  assert(pwa.includes("const c = COULEUR_NIVEAU.signalement;"));
+  assert(pwa.includes("signalement: '#7c8a94'"));
+  // Un signalement confirmé ne doit jamais emprunter la couleur d'un feu.
+  assertEquals(pwa.includes("s.confirme ? '#e9873a'"), false);
+});
+
+Deno.test("une seule table de couleurs de sévérité, conforme à la charte", () => {
+  // La légende et les marqueurs portaient des hex différents pour la même
+  // information : deux vocabulaires visuels pour un seul sens.
+  assert(pwa.includes("const COULEUR_NIVEAU = {"));
+  for (
+    const [niveau, hex] of [
+      ["corrobore", "#ff3b30"],
+      ["probable", "#ff9500"],
+      ["indice", "#ffd60a"],
+      ["citoyen", "#af52de"],
+    ]
+  ) {
+    assert(pwa.includes(`${niveau}: '${hex}'`), `Couleur de charte absente : ${niveau} ${hex}`);
+  }
+  for (const orphelin of ["#ef3829", "#ff8c32", "#ffd43b", "#a78bfa", "#8a8a8a"]) {
+    assertEquals(pwa.includes(orphelin), false, `Couleur hors charte : ${orphelin}`);
+  }
+  // Un seul jeu de variables, et aucune trace de l'ancienne palette chaude.
+  assertEquals((pwa.match(/:root\{/g) || []).length, 1);
+  for (const chaud of ["#2e2a27", "#252220", "rgba(18,16,14", "#4b4541", "rgba(240,68,56"]) {
+    assertEquals(pwa.includes(chaud), false, `Reste de l'ancienne palette : ${chaud}`);
+  }
+});
+
+Deno.test("la légende masque réellement le niveau qu'elle annonce", () => {
+  // Cliquer « indices isolés » remettait le filtre à « tous » en annonçant
+  // l'inverse : seuls corroboré et probable agissaient.
+  assert(pwa.includes("const niveauxMasques = new Set()"));
+  assert(pwa.includes("!masques.has(aspect.niveau)"));
+  assert(pwa.includes("niveauxMasques.has('signalement')"));
+  assert(pwa.includes("function majEtatLegende("));
+  assertEquals(pwa.includes("Filtre réactif de légende activé"), false);
+  // Le repli de la légende est effectif, et ouvert par défaut.
+  assert(pwa.includes(".legende-carte.ouverte .contenu-legende{display:block"));
+  assert(pwa.includes("'legende-carte ouverte'"));
 });
 
 Deno.test("la carte explique les preuves et sépare les sources contextuelles", () => {
@@ -83,9 +120,34 @@ Deno.test("le signalement utilise un formulaire structuré", () => {
 Deno.test("l’interface est carte-first, responsive et navigable sur mobile", () => {
   assert(pwa.includes('id="sectionCarte"'));
   assert(pwa.includes('class="navigation-mobile"'));
-  assert(pwa.includes("#map{height:max(410px,56vh)}"));
   assert(pwa.includes(".anonyme #vueApp{order:1}"));
   assert(pwa.includes('id="btnVoirCarte"'));
+  // La carte est l'élément principal : elle occupe la colonne large et une
+  // hauteur généreuse, et reprend toute la largeur sous 900 px.
+  assert(pwa.includes("grid-template-columns:minmax(0,2.3fr) minmax(320px,.6fr)"));
+  assert(pwa.includes("#map{height:clamp(560px,72vh,760px)}"));
+  assert(pwa.includes("@media(max-width:900px)"));
+  assert(pwa.includes("#map{height:clamp(400px,56vh,560px)}"));
+  // Cadre et fraîcheur sont lisibles au-dessus de la carte.
+  assert(pwa.includes('class="bandeau-carte"'));
+  assert(pwa.includes('id="fraicheurCarte"'));
+  assert(pwa.includes("function majFraicheurCarte("));
+});
+
+Deno.test("la charte 1A est appliquée : typographies, fonds et formes", () => {
+  assert(pwa.includes("family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800"));
+  assert(pwa.includes("--fond:#0b0d10"));
+  assert(pwa.includes("--fond2:#141820"));
+  assert(pwa.includes("--fond3:#1c2024"));
+  assert(pwa.includes("--bord:#2d3339"));
+  assert(pwa.includes("--ombre:0 18px 50px rgba(0,0,0,.35)"));
+  // Marque : flamme deux tons de la charte.
+  assert(pwa.includes('fill="#ff3b30"'));
+  assert(pwa.includes('fill="#ff9500"'));
+  // La couleur du thème suit le fond de page, plus l'ancien rouge brique.
+  assert(pwa.includes('name="theme-color" content="#0b0d10"'));
+  // Respect du réglage système sur les animations.
+  assert(pwa.includes("@media(prefers-reduced-motion:reduce)"));
 });
 
 Deno.test("la carte regroupe, filtre et détaille les incidents", () => {

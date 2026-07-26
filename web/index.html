@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#b3261e">
+<meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Alerte Feu">
@@ -16,373 +16,505 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800&display=swap" rel="stylesheet">
 <style>
+/* =====================================================================
+   Alerte Incendie — charte 1A « tactique sombre »
+   ---------------------------------------------------------------------
+   Source de vérité : projet de design « Design incendie et alerte »
+   (CLAUDE.md du projet). Un seul jeu de variables, aucune couleur
+   héritée de l'ancienne palette chaude, et aucune règle enfermée par
+   erreur dans une media query.
+
+   Principes tenus ici :
+   - la carte est l'élément principal de la vue carte-first ;
+   - la sévérité se lit par la couleur, jamais par l'emphase visuelle ;
+   - ton sobre : pas de rouge sang agressif, pas d'icône dramatique.
+   ===================================================================== */
+
 :root{
+  /* fonds et bordures */
   --fond:#0b0d10; --fond2:#141820; --fond3:#1c2024; --bord:#2d3339;
+  --bord-clair:#39414a;
+  /* textes */
   --txt:#ffffff; --txt2:#cacad0; --txt3:#959ca4;
-  --rouge:#ff3b30; --orange:#ff9500; --jaune:#ffd60a; --violet:#af52de; --gris:#7c8a94; --vert:#3fa86b;
-  --r:14px;
-  --ombre:0 18px 55px rgba(0,0,0,.45);
+  /* sévérité */
+  --rouge:#ff3b30; --orange:#ff9500; --jaune:#ffd60a; --violet:#af52de;
+  --gris:#7c8a94; --vert:#3fa86b;
+  /* sévérité, teintes de badge */
+  --rouge-clair:#ff7b72; --orange-clair:#f0a05e; --gris-clair:#9fb0bb;
+  /* formes */
+  --r:18px; --r-sm:12px; --r-xs:10px;
+  --ombre:0 18px 50px rgba(0,0,0,.35);
+  --ombre-haute:0 24px 70px rgba(0,0,0,.55);
   --glass:rgba(11,13,16,.82);
+  --focus:#79c0ff;
 }
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{margin:0;height:100%}
 body{
   background:var(--fond);color:var(--txt);
-  font:15px/1.5 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font:16px/1.55 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   padding-bottom:env(safe-area-inset-bottom);
+  -webkit-font-smoothing:antialiased;
 }
 a{color:inherit}
 button{font:inherit;cursor:pointer;border:0}
+button,input,select{min-height:44px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.lien-evitement{position:fixed;left:12px;top:8px;z-index:3000;transform:translateY(-160%);
+  background:#fff;color:#0b0d10;padding:10px 14px;border-radius:var(--r-xs);font-weight:700}
+.lien-evitement:focus{transform:translateY(0)}
 
-/* ---------- structure ---------- */
+/* ---------- en-tête ---------- */
 header{
   position:sticky;top:0;z-index:900;background:var(--glass);
-  backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.05);
-  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
-  display:flex;align-items:center;gap:12px;
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--bord);
+  padding:calc(env(safe-area-inset-top) + 12px) max(16px,calc((100vw - 1440px)/2)) 12px;
+  display:flex;align-items:center;gap:12px;min-height:64px;
 }
-.logo{width:32px;height:32px;border-radius:9px;background:var(--fond3);
-  display:grid;place-items:center;flex:0 0 auto}
+.logo{width:34px;height:34px;border-radius:11px;background:var(--fond3);
+  border:1px solid var(--bord);display:grid;place-items:center;flex:0 0 auto}
 .logo svg{width:19px;height:19px}
-header h1{font-family:'Outfit',sans-serif;font-size:17px;margin:0;font-weight:650;letter-spacing:-.01em}
-header .sous{font-size:11.5px;color:var(--txt3);margin-top:1px}
-.pastille{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;
-  color:var(--txt2);background:var(--fond3);padding:6px 11px;border-radius:99px;
-  border:1px solid var(--bord)}
-.point{width:7px;height:7px;border-radius:99px;background:var(--gris)}
-.point.ok{background:var(--vert);box-shadow:0 0 0 3px rgba(63,168,107,.18)}
-.point.ko{background:var(--rouge);box-shadow:0 0 0 3px rgba(224,69,60,.18)}
+header h1{font-family:'Outfit',sans-serif;font-size:18px;margin:0;font-weight:700;letter-spacing:-.015em}
+header .sous{font-size:12px;color:var(--txt3);margin-top:1px}
+.pastille{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;
+  color:var(--txt2);background:var(--fond3);padding:8px 13px;border-radius:99px;
+  border:1px solid var(--bord);min-height:38px;backdrop-filter:blur(8px)}
+.point{width:7px;height:7px;border-radius:99px;background:var(--gris);flex:0 0 auto}
+.point.ok{background:var(--vert);animation:pulse-ok 2.4s infinite cubic-bezier(.16,1,.3,1)}
+.point.ko{background:var(--rouge);box-shadow:0 0 0 3px rgba(255,59,48,.18)}
+@keyframes pulse-ok{
+  0%{box-shadow:0 0 0 0 rgba(63,168,107,.55)}
+  70%{box-shadow:0 0 0 9px rgba(63,168,107,0)}
+  100%{box-shadow:0 0 0 0 rgba(63,168,107,0)}
+}
 
-main{max-width:760px;margin:0 auto;padding:16px 16px 40px}
+/* ---------- structure ---------- */
+main{max-width:1440px;margin:0 auto;padding:18px 20px 96px}
 section{margin-bottom:20px}
 section[id]{scroll-margin-top:82px}
 .anonyme [data-prive]{display:none!important}
-h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);
-  margin:0 0 10px 2px;font-weight:600}
-.carte{background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
-.carte + .carte{margin-top:10px}
-.pad{padding:15px}
-.rangee{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--bord)}
+h2{font-family:'Inter',sans-serif;font-size:12px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--txt3);margin:0 0 10px 2px;font-weight:700}
+.carte{background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r);
+  overflow:hidden;box-shadow:var(--ombre)}
+.carte + .carte{margin-top:12px}
+.pad{padding:16px}
+.rangee{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bord)}
 .rangee:last-child{border-bottom:0}
 .rangee .cr{flex:1;min-width:0}
 .rangee b{display:block;font-weight:600;font-size:14.5px}
 .rangee small{color:var(--txt2);font-size:12.5px;display:block;margin-top:2px}
 
-/* ---------- boutons ---------- */
+/* ---------- boutons et champs ---------- */
 .btn{background:var(--fond3);color:var(--txt);border:1px solid var(--bord);
-  padding:10px 15px;border-radius:10px;font-size:14px;font-weight:550;
-  display:inline-flex;align-items:center;gap:7px;transition:.12s}
-.btn:hover{background:#2e2a27}
-.btn:active{transform:scale(.98)}
+  padding:11px 16px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  transition:background .14s ease,border-color .14s ease,transform .14s ease}
+.btn:hover{background:#242a31;border-color:var(--bord-clair)}
+.btn:active{transform:scale(.985)}
 .btn.p{background:var(--rouge);border-color:var(--rouge);color:#fff}
-.btn.p:hover{background:#ef534a}
-.btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
-.btn.g{background:transparent;border-color:transparent;color:var(--txt2);padding:7px 9px}
-.btn.g:hover{color:var(--rouge);background:var(--fond3)}
+.btn.p:hover{background:#ff5348;border-color:#ff5348}
+.btn.sm{padding:8px 13px;font-size:13px;border-radius:var(--r-xs);min-height:38px}
+.btn.g{background:transparent;border-color:transparent;color:var(--txt2);padding:8px 10px}
+.btn.g:hover{color:var(--txt);background:var(--fond3)}
 .btn:disabled{opacity:.45;cursor:default}
-.btn.pleine{width:100%;justify-content:center}
+.btn:disabled:hover{background:var(--fond3);border-color:var(--bord)}
+.btn.pleine{width:100%}
+.btn-danger{color:var(--rouge-clair)!important}
 
 input,select{background:var(--fond3);border:1px solid var(--bord);color:var(--txt);
-  padding:11px 13px;border-radius:10px;font:inherit;width:100%}
-input:focus,select:focus{outline:0;border-color:#4d4642}
+  padding:12px 14px;border-radius:var(--r-sm);font:inherit;width:100%;
+  transition:border-color .14s ease}
+input::placeholder{color:var(--txt3)}
+input:focus,select:focus{outline:0;border-color:var(--bord-clair)}
 label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;
-  padding:0;border:1px solid var(--bord);border-radius:16px;background:var(--fond2);color:var(--txt);
-  box-shadow:0 20px 80px rgba(0,0,0,.72);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s ease}
-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
-.dialog-entete{padding:16px 18px;border-bottom:1px solid var(--bord)}
-.dialog-entete h3{margin:0;font-size:17px}
-.dialog-corps{padding:16px 18px}
-.alerte-secours{padding:10px 12px;border:1px solid rgba(224,69,60,.55);
-  border-radius:10px;background:rgba(224,69,60,.12);color:#ffd6d2;font-size:12px}
+
+/* ---------- boîtes de dialogue ---------- */
+dialog{width:min(620px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;
+  padding:0;border:1px solid var(--bord);border-radius:22px;background:var(--fond2);color:var(--txt);
+  box-shadow:var(--ombre-haute);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s ease}
+dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
+.dialog-entete{padding:18px 20px;border-bottom:1px solid var(--bord)}
+.dialog-entete h3{margin:0;font-family:'Outfit',sans-serif;font-size:18px;font-weight:700}
+.dialog-corps{padding:18px 20px}
+.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.tiroir-incident{width:min(640px,calc(100vw - 24px))}
+.alerte-secours{padding:12px 14px;border:1px solid rgba(255,59,48,.45);
+  border-radius:var(--r-sm);background:rgba(255,59,48,.12);color:#ffd6d2;font-size:12.5px;line-height:1.55}
+
+/* ---------- état public des sources ---------- */
 .etat-sources{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--bord)}
-.etat-source{padding:12px;background:var(--fond2)}
-.etat-source b{display:block;font-size:12px}.etat-source small{color:var(--txt3)}
-@media(max-width:560px){.etat-sources{grid-template-columns:1fr}}
+.etat-source{padding:14px 12px;background:var(--fond2);text-align:center}
+.etat-source .voyant{width:7px;height:7px;border-radius:99px;background:var(--gris);
+  display:block;margin:0 auto 8px}
+.etat-source.ok .voyant{background:var(--vert)}
+.etat-source.ko .voyant{background:var(--rouge)}
+.etat-source b{display:block;font-size:13px;font-weight:650}
+.etat-source small{display:block;color:var(--txt3);font-size:12px;margin-top:2px}
 
-/* ---------- carte Leaflet ---------- */
-#map{height:330px;background:var(--fond3)}
+/* ---------- carte : élément principal ---------- */
+#vueApp{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(320px,.6fr);
+  align-items:start;gap:18px}
+#sectionCarte{grid-column:1;grid-row:1/span 20;min-width:0;position:relative}
+.colonne-panneau{grid-column:2;min-width:0}
+.carte-carte{overflow:visible;position:relative}
+.carte-carte>#map{border-radius:0;overflow:hidden}
+#map{height:clamp(560px,72vh,760px)}
+.leaflet-container,#map{background:var(--fond2)}
+.leaflet-container{background:var(--fond2);font:inherit}
+
+/* Étiquettes flottantes au-dessus de la carte : cadre et fraîcheur. */
+.bandeau-carte{position:absolute;top:0;left:0;right:0;z-index:610;pointer-events:none;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:12px 14px;
+  background:linear-gradient(180deg,rgba(11,13,16,.72),rgba(11,13,16,0))}
+.bandeau-carte .cadre{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--txt3);font-weight:650}
+.bandeau-carte .fraicheur{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;
+  color:var(--txt2);white-space:nowrap}
+.carte-carte:after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;
+  pointer-events:none;z-index:600;
+  background:linear-gradient(0deg,rgba(11,13,16,.55),rgba(11,13,16,0))}
+
+.barre-carte{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;
+  border-bottom:1px solid var(--bord);background:var(--fond2)}
+.barre-carte>.btn{min-height:42px}
+.controle-segmente{display:flex;gap:3px;padding:3px;background:var(--fond3);
+  border:1px solid var(--bord);border-radius:var(--r-sm)}
+.controle-segmente button{min-height:34px;padding:6px 12px;background:transparent;color:var(--txt2);
+  border-radius:9px;font-size:13px;font-weight:600}
+.controle-segmente button:hover{color:var(--txt)}
+.controle-segmente button[aria-pressed="true"]{background:var(--fond);color:var(--txt);
+  box-shadow:inset 0 0 0 1px var(--bord-clair)}
+.recherche-carte{position:relative;display:grid;grid-template-columns:minmax(220px,1fr) auto;
+  gap:8px;padding:12px;background:var(--fond2);border-bottom:1px solid var(--bord)}
+.recherche-carte label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.recherche-carte .rech{min-width:0}
+.mode-economie{display:inline-flex;align-items:center;gap:6px;color:var(--txt3);font-size:11.5px}
+
+/* Résumé sous la carte : conclusion lisible et action unique. */
+.resume-carte{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;
+  padding:14px 16px;border-top:1px solid var(--bord);background:var(--fond2)}
+.resume-carte .signal{width:42px;height:42px;border-radius:var(--r-sm);background:var(--fond3);
+  border:1px solid var(--bord);display:grid;place-items:center;font-size:19px}
+.resume-carte b{display:block;font-size:15px;font-weight:650}
+.resume-carte small{display:block;color:var(--txt2);font-size:12.5px;margin-top:2px}
+.resume-carte[data-niveau="proche"]{background:linear-gradient(110deg,rgba(255,59,48,.16),var(--fond2) 62%)}
+.resume-carte[data-niveau="proche"] .signal{border-color:rgba(255,59,48,.45)}
+.resume-carte[data-niveau="calme"]{background:linear-gradient(110deg,rgba(63,168,107,.13),var(--fond2) 62%)}
+.resume-carte[data-niveau="calme"] .signal{border-color:rgba(63,168,107,.4)}
+
+/* Frise temporelle 24 h. */
+.barre-temporelle{display:flex;align-items:center;gap:12px;padding:10px 12px;
+  background:var(--fond2);border-bottom:1px solid var(--bord);transition:background .3s ease}
+.barre-temporelle.active{background:rgba(255,149,0,.12)}
+.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px}
+
+/* Filtres de familles de sources. */
 .filtres-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
-  padding:12px;border-top:1px solid var(--bord);background:rgba(18,16,14,.45)}
-.filtre-source{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;margin:0;
-  border:1px solid var(--bord);border-radius:10px;background:var(--fond3);cursor:pointer}
-.filtre-source input{width:auto;margin:2px 0 0;accent-color:var(--rouge)}
+  padding:12px;border-top:1px solid var(--bord);background:var(--fond2)}
+.filtre-source{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;margin:0;
+  border:1px solid var(--bord);border-radius:var(--r-sm);background:var(--fond3);cursor:pointer;
+  transition:border-color .14s ease}
+.filtre-source:hover{border-color:var(--bord-clair)}
+.filtre-source input{width:auto;min-height:0;margin:2px 0 0;accent-color:var(--rouge)}
 .filtre-source b{display:block;color:var(--txt);font-size:12.5px}
-.filtre-source small{display:block;color:var(--txt3);font-size:11px;line-height:1.35;margin-top:2px}
-.source-note{grid-column:1/-1;font-size:11.5px;line-height:1.5;color:var(--txt3);padding:3px 2px}
-.source-note a{font-weight:600}
-@media(max-width:560px){.filtres-sources{grid-template-columns:1fr}}
-.leaflet-container{background:#141820;font:inherit}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1c2024;color:var(--txt);
-  box-shadow:0 8px 30px rgba(0,0,0,.5)}
-.leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5;font-family:'Inter',sans-serif}
-.leaflet-bar a{background:#252220;color:var(--txt);border-color:#332e2b}
-.leaflet-bar a:hover{background:#332e2b}
-.leaflet-control-attribution{background:rgba(18,16,14,.75)!important;color:#6f6863!important}
-.leaflet-control-attribution a{color:#8a827c!important}
-.marqueur-feu{background:transparent;border:0}
-.marqueur-feu svg{display:block;overflow:visible;filter:drop-shadow(0 2px 3px rgba(0,0,0,.8))}
-.legende-carte{width:228px;padding:10px 11px;background:rgba(18,16,14,.94);
-  color:var(--txt);border:1px solid #4b4541;border-radius:10px;
-  box-shadow:0 4px 18px rgba(0,0,0,.45);font-size:11px;line-height:1.3}
-.legende-carte b{display:block;font-size:12px;margin-bottom:7px}
-.legende-carte .ligne{display:flex;align-items:center;gap:8px;margin:5px 0}
-.legende-carte .symbole{width:24px;display:grid;place-items:center;flex:0 0 24px}
-.legende-carte .symbole svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
-.legende-carte .point-non-verifie{width:12px;height:12px;border-radius:50%;
-  border:2px dashed #d0d0d0;background:rgba(138,138,138,.45)}
-.legende-carte .aide{display:block;color:#b9b2ad;border-top:1px solid #4b4541;
-  margin-top:7px;padding-top:7px}
-.legende-carte a{color:#fff;text-decoration:underline}
-@media(max-width:560px){
-  .legende-carte{width:190px;font-size:10px}
-  .leaflet-control-layers{font-size:11px}
-}
+.filtre-source small{display:block;color:var(--txt3);font-size:11.5px;line-height:1.4;margin-top:2px}
+.source-note{grid-column:1/-1;font-size:11.5px;line-height:1.55;color:var(--txt3);padding:3px 2px}
+.source-note a{font-weight:600;text-decoration:underline}
+.panneau-filtres{display:none}
+.panneau-filtres.ouvert{display:grid}
 
-/* ---------- badges & évènements ---------- */
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;
-  letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px}
-.badge.critique{background:rgba(224,69,60,.16);color:#ff7b72}
-.badge.alerte{background:rgba(233,135,58,.16);color:#f0a05e}
-.badge.info{background:rgba(124,138,148,.16);color:#9fb0bb}
+/* Chargement de la carte. */
+.chargement-carte{position:absolute;inset:0;z-index:620;display:grid;place-items:center;
+  background:linear-gradient(110deg,var(--fond2) 28%,#20262d 40%,var(--fond2) 52%);
+  background-size:220% 100%;animation:squelette 1.25s linear infinite;color:var(--txt2);font-size:13.5px}
+.chargement-carte[hidden]{display:none}
+@keyframes squelette{to{background-position-x:-220%}}
+
+/* Viseur de ciblage. */
+.viseur-tactique{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;
+  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:10px}
+.viseur-tactique[hidden]{display:none!important}
+.viseur-croix{width:48px;height:48px;border:2px dashed var(--orange);border-radius:50%;
+  box-shadow:0 0 18px rgba(255,149,0,.45);position:relative}
+.viseur-croix:before,.viseur-croix:after{content:"";position:absolute;background:var(--orange)}
+.viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
+.viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
+.viseur-etiquette{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--bord);
+  border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--txt2);
+  box-shadow:var(--ombre);white-space:nowrap}
+
+/* ---------- habillage Leaflet ---------- */
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--fond2);color:var(--txt);
+  border:1px solid var(--bord);box-shadow:var(--ombre-haute)}
+.leaflet-popup-content-wrapper{border-radius:var(--r-sm)}
+.leaflet-popup-content{margin:14px 16px;font-size:13px;line-height:1.55;font-family:'Inter',sans-serif}
+.leaflet-popup-close-button{color:var(--txt3)!important}
+.leaflet-bar{border:1px solid var(--bord)!important;border-radius:var(--r-xs)!important;overflow:hidden}
+.leaflet-bar a{background:var(--fond3);color:var(--txt);border-color:var(--bord)}
+.leaflet-bar a:hover{background:#242a31}
+.leaflet-control-layers{background:var(--fond2)!important;color:var(--txt)!important;
+  border:1px solid var(--bord)!important;border-radius:var(--r-xs)!important}
+.leaflet-control-attribution{background:rgba(11,13,16,.78)!important;color:var(--txt3)!important;
+  font-size:10.5px}
+.leaflet-control-attribution a{color:var(--txt2)!important}
+
+/* Contenu des info-bulles de feu. */
+.popup-actualites-feu{min-width:210px}
+.popup-actualites-feu h4{margin:0 0 6px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700}
+.popup-actualites-feu .meta{font-size:11.5px;color:var(--txt3);margin-bottom:6px}
+.popup-actualites-feu .liste-actu{border-top:1px solid var(--bord);margin-top:8px;padding-top:8px}
+.popup-actualites-feu .liste-actu[hidden]{display:none}
+.popup-actualites-feu a{color:#8ec7ff}
+
+/* ---------- marqueurs ---------- */
+.marqueur-feu{background:transparent;border:0;transition:transform .2s cubic-bezier(.16,1,.3,1)}
+.marqueur-feu svg{display:block;overflow:visible;filter:drop-shadow(0 2px 4px rgba(0,0,0,.75))}
+.marqueur-feu:hover{transform:scale(1.18)!important;z-index:1000!important}
+/* Seul le niveau le plus élevé pulse : une carte où tout clignote ne
+   hiérarchise plus rien. */
+.marqueur-feu.critique{animation:pulse-feu 2.4s infinite ease-in-out}
+@keyframes pulse-feu{
+  0%,100%{filter:drop-shadow(0 2px 4px rgba(0,0,0,.75)) drop-shadow(0 0 4px rgba(255,59,48,.55))}
+  50%{filter:drop-shadow(0 2px 4px rgba(0,0,0,.75)) drop-shadow(0 0 14px rgba(255,59,48,.85))}
+}
+.conteneur-marqueur-tactique{background:transparent;border:0}
+.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:7px;background:var(--glass);
+  backdrop-filter:blur(12px);border:1px solid var(--couleur-bord,var(--rouge));border-radius:99px;
+  padding:4px 10px 4px 7px;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  color:var(--txt);font-size:12px;font-family:'Outfit',sans-serif;font-weight:700;white-space:nowrap;
+  transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;cursor:pointer}
+.marqueur-feu-tactique:hover{transform:scale(1.08) translateY(-2px);
+  box-shadow:0 12px 30px rgba(0,0,0,.75);z-index:2000!important}
+/* Un seul niveau respire : la concordance de plusieurs familles. */
+.marqueur-feu-tactique.critique{animation:respire-pastille 2.6s infinite ease-in-out}
+@keyframes respire-pastille{
+  0%,100%{box-shadow:0 8px 24px rgba(0,0,0,.6),0 0 0 0 rgba(255,59,48,.45)}
+  60%{box-shadow:0 8px 24px rgba(0,0,0,.6),0 0 0 9px rgba(255,59,48,0)}
+}
+.marqueur-feu-tactique .badge-titre{font-size:12px;font-weight:700;color:var(--txt);
+  max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-family:'Inter',sans-serif;
+  font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.05em}
+.cluster-feu{background:transparent;border:0}
+.cluster-bulle{display:grid;place-items:center;min-width:34px;height:34px;padding:0 9px;
+  border-radius:99px;background:var(--glass);backdrop-filter:blur(10px);
+  border:1px solid var(--bord-clair);color:var(--txt);font-family:'Outfit',sans-serif;
+  font-weight:700;font-size:13px;box-shadow:0 8px 22px rgba(0,0,0,.55)}
+
+/* ---------- légendes ---------- */
+.legende-carte{width:250px;max-width:320px;padding:12px 14px;background:var(--glass);
+  backdrop-filter:blur(16px);color:var(--txt);border:1px solid var(--bord);
+  border-radius:var(--r-sm);box-shadow:var(--ombre);font-size:11.5px;line-height:1.4}
+.legende-carte b{display:block;font-family:'Outfit',sans-serif;font-size:11px;color:var(--txt);
+  margin-bottom:8px;letter-spacing:.1em;text-transform:uppercase}
+.legende-carte .ligne{display:flex;align-items:center;gap:9px;padding:5px 7px;border-radius:9px;
+  cursor:pointer;transition:background .18s ease;user-select:none}
+.legende-carte .ligne:hover{background:rgba(255,255,255,.07)}
+.legende-carte .ligne[aria-pressed="false"]{opacity:.45}
+.legende-carte .symbole{width:24px;display:grid;place-items:center;flex:0 0 24px}
+.legende-carte .symbole svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+.legende-carte .point-non-verifie{width:12px;height:12px;border-radius:50%;
+  border:2px dashed var(--txt2);background:rgba(124,138,148,.35)}
+.legende-carte .aide{display:block;color:var(--txt3);border-top:1px solid var(--bord);
+  margin-top:8px;padding-top:8px;line-height:1.5}
+.legende-carte a{color:var(--txt);text-decoration:underline}
+.legende-carte .toggle-legende{width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:8px;background:transparent;color:var(--txt);font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;min-height:0;padding:0}
+/* Le repli est réel : le bouton pilotait un état qu'aucune règle ne
+   traduisait, la légende restait ouverte quoi qu'on clique. */
+.legende-carte .contenu-legende{display:none}
+.legende-carte.ouverte .contenu-legende{display:block;margin-top:9px}
+.legende-carte .toggle-legende span:last-child{transition:transform .2s ease}
+.legende-carte.ouverte .toggle-legende span:last-child{transform:rotate(180deg)}
+/* Habillage explicite des info-bulles de la carte. */
+.leaflet-popup.popup-feu-glass .leaflet-popup-content-wrapper{background:var(--glass);
+  backdrop-filter:blur(16px);border-color:var(--bord-clair)}
+.leaflet-popup.popup-feu-glass .leaflet-popup-tip{background:var(--glass);border-color:var(--bord-clair)}
+/* Hors ligne : la fraîcheur passe en teinte d'avertissement, pour qu'un état
+   daté ne se lise jamais comme un état à jour. */
+body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
+.badge-compteur{margin-left:auto;min-width:22px;padding:1px 7px;border-radius:99px;
+  background:var(--fond3);border:1px solid var(--bord);color:var(--txt2);
+  font-size:11px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+
+/* Barre de légende interactive — hors media query : elle doit exister
+   sur tous les supports, ce qui n'était pas le cas. */
+.legende-interactive-barre{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--fond2);border-bottom:1px solid var(--bord);overflow-x:auto;scrollbar-width:none}
+.legende-interactive-barre::-webkit-scrollbar{display:none}
+.legende-interactive-barre b{font-size:11px;color:var(--txt3);white-space:nowrap;
+  letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.legende-interactive-barre .ligne-legende{display:flex;align-items:center;gap:7px;background:var(--fond3);
+  border:1px solid var(--bord);border-radius:99px;padding:5px 11px;cursor:pointer;white-space:nowrap;
+  font-size:12px;font-weight:600;color:var(--txt2);transition:border-color .16s ease,color .16s ease}
+.legende-interactive-barre .ligne-legende:hover{border-color:var(--bord-clair);color:var(--txt)}
+.legende-interactive-barre .ligne-legende[aria-pressed="false"]{opacity:.45}
+.legende-interactive-barre .badge-compteur{margin-left:2px}
+
+/* ---------- badges, évènements, listes ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:99px}
+.badge.critique{background:rgba(255,59,48,.16);color:var(--rouge-clair)}
+.badge.alerte{background:rgba(255,149,0,.16);color:var(--orange-clair)}
+.badge.info{background:rgba(124,138,148,.16);color:var(--gris-clair)}
 .badge.clos{background:var(--fond3);color:var(--txt3)}
 
-.evt{display:flex;gap:13px;padding:14px 15px;border-bottom:1px solid var(--bord);align-items:flex-start}
+.evt{display:flex;gap:13px;padding:15px 16px;border-bottom:1px solid var(--bord);align-items:flex-start}
 .evt:last-child{border-bottom:0}
-.evt .barre{width:3px;border-radius:9px;align-self:stretch;background:var(--gris);flex:0 0 auto}
+.evt .barre{width:3px;border-radius:99px;align-self:stretch;background:var(--gris);flex:0 0 auto}
 .evt.critique .barre{background:var(--rouge)}
 .evt.alerte .barre{background:var(--orange)}
-.evt .t{font-weight:600;font-size:14.5px}
+.evt .t{font-weight:650;font-size:14.5px}
 .evt .d{color:var(--txt2);font-size:12.5px;margin-top:3px;line-height:1.55}
 
-.vide{padding:34px 20px;text-align:center;color:var(--txt3);font-size:13.5px}
+.liste-feux{max-height:300px;overflow:auto;border-top:1px solid var(--bord)}
+.incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
+  display:grid;grid-template-columns:32px 1fr auto;gap:11px;align-items:center;padding:11px 14px;
+  border-bottom:1px solid var(--bord);transition:background .16s ease}
+.incident-ligne:last-child{border-bottom:0}
+.incident-ligne:hover{background:var(--fond3)}
+.incident-ligne small{display:block;color:var(--txt3);font-size:12px}
+.incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12.5px}
+
+.vide{padding:34px 20px;text-align:center;color:var(--txt3);font-size:13.5px;line-height:1.6}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--fond3);border:1px solid var(--bord);border-radius:99px;
   padding:4px 11px;font-size:12px;color:var(--txt2)}
-
-.note{font-size:12px;color:var(--txt3);line-height:1.6;padding:14px 15px;
+.note{font-size:12.5px;color:var(--txt3);line-height:1.6;padding:15px 16px;
   background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r)}
 .note b{color:var(--txt2)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--bord)}
+.stats > div{background:var(--fond2);padding:15px 12px;text-align:center}
+.stats b{display:block;font-family:'Outfit',sans-serif;font-size:21px;font-weight:700;letter-spacing:-.02em}
+.stats small{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 
-#toast{position:fixed;left:50%;transform:translateX(-50%) translateY(140%);
-  bottom:calc(env(safe-area-inset-bottom) + 22px);z-index:2000;max-width:calc(100vw - 32px);
-  background:#f2eeeb;color:#12100e;padding:12px 18px;border-radius:11px;font-size:14px;
-  font-weight:550;box-shadow:0 12px 40px rgba(0,0,0,.5);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
-#toast.on{transform:translateX(-50%) translateY(0)}
-#toast.err{background:var(--rouge);color:#fff}
-
+/* ---------- recherche ---------- */
 .rech{position:relative}
 .sugg{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:1000;
-  background:#252220;border:1px solid var(--bord);border-radius:11px;overflow:hidden;
-  box-shadow:0 14px 44px rgba(0,0,0,.55);max-height:270px;overflow-y:auto}
-.sugg div,.sugg button{display:block;width:100%;text-align:left;color:var(--txt);background:#252220;
-  padding:11px 14px;cursor:pointer;border:0;border-bottom:1px solid var(--bord);font-size:14px}
+  background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r-sm);overflow:hidden;
+  box-shadow:var(--ombre-haute);max-height:270px;overflow-y:auto}
+.sugg div,.sugg button{display:block;width:100%;text-align:left;color:var(--txt);background:transparent;
+  padding:12px 14px;cursor:pointer;border:0;border-bottom:1px solid var(--bord);font-size:14px}
 .sugg div:last-child,.sugg button:last-child{border-bottom:0}
 .sugg div:hover,.sugg button:hover,.sugg button:focus{background:var(--fond3)}
 .sugg small{color:var(--txt3);font-size:12px}
 
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--bord)}
-.stats > div{background:var(--fond2);padding:14px 12px;text-align:center}
-.stats b{display:block;font-size:20px;font-weight:650;letter-spacing:-.02em}
-.stats small{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+/* ---------- notifications hors ligne et messages ---------- */
+#toast{position:fixed;left:50%;transform:translateX(-50%) translateY(140%);
+  bottom:calc(env(safe-area-inset-bottom) + 22px);z-index:2000;max-width:calc(100vw - 32px);
+  background:var(--fond3);color:var(--txt);border:1px solid var(--bord-clair);
+  padding:13px 18px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
+  box-shadow:var(--ombre-haute);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#toast.on{transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--rouge);border-color:var(--rouge);color:#fff}
+.offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:rgba(255,149,0,.16);
+  border-bottom:1px solid rgba(255,149,0,.4);color:var(--orange-clair);
+  text-align:center;padding:9px 16px;font-size:13px;font-weight:650}
+.offline[hidden]{display:none}
 
-@media(max-width:560px){ .grille2{grid-template-columns:1fr} #map{height:270px} }
-
-/* ---------- interface carte-first tactique ---------- */
-:root{
-  --fond:#0b0d10;--fond2:#141820;--fond3:#1c2024;--bord:#2d3339;
-  --txt:#ffffff;--txt2:#cacad0;--txt3:#959ca4;
-  --rouge:#ff3b30;--orange:#ff9500;--jaune:#ffd60a;--violet:#af52de;--vert:#3fa86b;
-  --ombre:0 18px 55px rgba(0,0,0,.45);
-  --glass:rgba(11,13,16,.82);
-}
-body{font-size:16px;line-height:1.55;background:var(--fond)}
-button,input,select{min-height:44px}
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{
-  outline:3px solid #79c0ff;outline-offset:2px
-}
-.lien-evitement{position:fixed;left:12px;top:8px;z-index:3000;transform:translateY(-160%);
-  background:#fff;color:#111;padding:10px 14px;border-radius:9px;font-weight:700}
-.lien-evitement:focus{transform:translateY(0)}
-header{padding-inline:max(16px,calc((100vw - 1440px)/2));min-height:64px;backdrop-filter:blur(12px);background:var(--glass)}
-header .sous{font-size:12px;color:var(--txt3)}
-.pastille{min-height:38px;backdrop-filter:blur(8px)}
-main{max-width:1440px;padding:18px 20px 96px}
-h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
-.carte{box-shadow:0 12px 40px rgba(0,0,0,.35);border:1px solid var(--bord)}
-#vueApp{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(330px,.72fr);
-  align-items:start;gap:18px}
-#sectionCarte{grid-column:1;grid-row:1/span 20;min-width:0;position:relative}
-.colonne-panneau{grid-column:2;min-width:0}
-#map{height:clamp(520px,calc(100vh - 190px),760px)}
-.carte-carte{overflow:visible;position:relative}
-.carte-carte>#map{border-radius:var(--r) var(--r) 0 0;overflow:hidden}
-.barre-carte{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 12px;
-  border-bottom:1px solid var(--bord);background:var(--fond2)}
-.controle-segmente{display:flex;gap:3px;padding:3px;background:var(--fond3);border-radius:11px}
-.controle-segmente button{min-height:36px;padding:7px 11px;background:transparent;color:var(--txt2);
-  border-radius:8px;font-size:13px}
-.controle-segmente button[aria-pressed="true"]{background:#eef2f5;color:#111417;font-weight:700}
-.barre-carte>.btn{min-height:42px}
-.recherche-carte{position:relative;display:grid;grid-template-columns:minmax(220px,480px) auto;
-  gap:8px;padding:12px;background:var(--fond2);border-bottom:1px solid var(--bord)}
-.recherche-carte label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.recherche-carte .rech{min-width:0}
-.resume-carte{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
-  padding:12px 14px;background:linear-gradient(110deg,rgba(121,192,255,.08),transparent 55%);
-  border-bottom:1px solid var(--bord)}
-.resume-carte .signal{width:42px;height:42px;border-radius:12px;background:var(--fond3);
-  display:grid;place-items:center;font-size:20px}
-.resume-carte b{display:block;font-size:15px}.resume-carte small{display:block;color:var(--txt2)}
-.resume-carte[data-niveau="proche"]{background:linear-gradient(110deg,rgba(240,68,56,.18),transparent 60%)}
-.resume-carte[data-niveau="calme"]{background:linear-gradient(110deg,rgba(63,168,107,.15),transparent 60%)}
-.details-avances{margin-top:12px;border-top:1px solid var(--bord);padding-top:10px}
+/* ---------- fiche incident ---------- */
+.incident-entete{display:flex;gap:12px;align-items:flex-start}
+.incident-entete .icone{width:42px;display:grid;place-items:center}
+.incident-entete .cr{flex:1}
+.incident-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.incident-grille>div{padding:12px;border:1px solid var(--bord);border-radius:var(--r-sm);background:var(--fond3)}
+.incident-grille b{display:block;font-family:'Outfit',sans-serif;font-size:17px;font-weight:700}
+.incident-grille small{color:var(--txt3);font-size:11.5px}
+.chronologie{position:relative;padding-left:20px;margin:16px 0}
+.chronologie:before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--bord)}
+.chronologie div{position:relative;margin:10px 0;color:var(--txt2);font-size:13px}
+.chronologie div:before{content:"";position:absolute;left:-19px;top:7px;width:8px;height:8px;
+  border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px var(--fond2)}
+.details-avances{margin-top:14px;border-top:1px solid var(--bord);padding-top:12px}
 .details-avances summary{cursor:pointer;color:var(--txt2);font-size:13px;font-weight:650}
 .details-avances[open] summary{margin-bottom:10px}
-.mode-economie{display:inline-flex;align-items:center;gap:6px;color:var(--txt3);font-size:11px}
-.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
-.chargement-carte{position:absolute;inset:0;z-index:600;display:grid;place-items:center;
-  background:linear-gradient(110deg,#131619 28%,#22272c 40%,#131619 52%);
-  background-size:220% 100%;animation:squelette 1.25s linear infinite;color:var(--txt2)}
-.chargement-carte[hidden]{display:none}
-@keyframes squelette{to{background-position-x:-220%}}
-@keyframes pulse-feu{
-  0%{transform:scale(1);filter:drop-shadow(0 0 4px rgba(255,59,48,.6))}
-  50%{transform:scale(1.1);filter:drop-shadow(0 0 14px rgba(255,59,48,.9))}
-  100%{transform:scale(1);filter:drop-shadow(0 0 4px rgba(255,59,48,.6))}
-}
-@keyframes pulse-ok{
-  0%{box-shadow:0 0 0 0 rgba(63,168,107,.6)}
-  70%{box-shadow:0 0 0 10px rgba(63,168,107,0)}
-  100%{box-shadow:0 0 0 0 rgba(63,168,107,0)}
-}
-.point.ok{animation:pulse-ok 2s infinite cubic-bezier(.16,1,.3,1)}
-.marqueur-feu{animation:pulse-feu 2.2s infinite ease-in-out;transition:transform .2s cubic-bezier(.16,1,.3,1)}
-.marqueur-feu:hover{transform:scale(1.22)!important;z-index:1000!important}
-.viseur-tactique{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;
-  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:8px}
-.viseur-tactique[hidden]{display:none!important}
-.viseur-croix{width:48px;height:48px;border:2px dashed var(--orange);border-radius:50%;
-  box-shadow:0 0 18px rgba(255,146,43,.6);position:relative}
-.viseur-croix:before,.viseur-croix:after{content:"";position:absolute;background:var(--orange)}
-.viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
-.viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
-.barre-temporelle{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--fond3);border-bottom:1px solid var(--bord);transition:all .3s ease}
-.barre-temporelle.active{background:rgba(255,149,0,.15);box-shadow:inset 0 0 15px rgba(255,149,0,.1)}
-.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px;filter:drop-shadow(0 0 4px rgba(255,149,0,.4))}
-.liste-feux{max-height:290px;overflow:auto;border-top:1px solid var(--bord)}
-.incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
-  display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:10px 13px;
-  border-bottom:1px solid var(--bord);transition:all .18s cubic-bezier(.16,1,.3,1)}
-.incident-ligne:hover{background:var(--fond3);transform:translateX(3px)}
-.incident-ligne small{display:block;color:var(--txt3)}
-.incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12px}
-.cluster-feu{background:transparent;border:0}
-.legende-carte{background:rgba(11,13,16,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);
-  border-radius:14px;padding:12px 14px;color:var(--txt);box-shadow:0 12px 36px rgba(0,0,0,.65);max-width:320px}
-.legende-carte b{display:block;font-size:12px;color:#fff;margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase;font-family:'Outfit',sans-serif}
-.legende-carte .ligne{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;
-  transition:background .2s cubic-bezier(.16,1,.3,1);user-select:none}
-.legende-carte .ligne:hover{background:rgba(255,255,255,.12);transform:translateX(2px)}
-.conteneur-marqueur-tactique{background:transparent;border:0}
-.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:6px;background:var(--glass);
-  backdrop-filter:blur(12px);border:1.5px solid var(--couleur-bord,var(--rouge));border-radius:20px;
-  padding:4px 10px 4px 6px;box-shadow:0 6px 20px rgba(0,0,0,.85),0 0 14px var(--couleur-halo,rgba(255,59,48,.6));
-  color:#fff;font-size:12px;font-family:'Outfit',sans-serif;font-weight:700;white-space:nowrap;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;
-  cursor:pointer}
-.marqueur-feu-tactique:hover{transform:scale(1.15) translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.95),0 0 22px var(--couleur-halo,rgba(255,59,48,.9));z-index:2000!important}
-.marqueur-feu-tactique .badge-titre{font-size:12px;font-weight:700;color:#fff;max-width:140px;overflow:hidden;text-overflow:ellipsis}
-.marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-family:'Inter',sans-serif;font-weight:800;padding:2px 6px;border-radius:8px;letter-spacing:.04em}
-.panneau-filtres{display:none}
-.panneau-filtres.ouvert{display:grid}
-.offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:#8a4b08;color:#fff;
-  text-align:center;padding:8px 16px;font-size:13px;font-weight:650}
-.offline[hidden]{display:none}
-.navigation-mobile{display:none}
-.accueil-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
-.accueil-hero h2{font-size:25px;letter-spacing:-.025em;text-transform:none;color:var(--txt);margin-bottom:8px}
-.accueil-hero .promesse{font-size:16px;color:var(--txt2)}
+
+/* ---------- accueil et parcours ---------- */
+.accueil-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.accueil-hero h2{font-family:'Outfit',sans-serif;font-size:27px;font-weight:800;letter-spacing:-.03em;
+  text-transform:none;color:var(--txt);margin-bottom:10px}
+.accueil-hero .promesse{font-size:16px;color:var(--txt2);line-height:1.6}
 #blocInscription{display:none}
 .inscription-ouverte #blocInscription{display:block}
 [data-anonyme]{display:none!important}
 .anonyme [data-anonyme]{display:flex!important}
 .consentement{border-top:1px solid var(--bord);padding-top:14px}
-.etat-source b{font-size:13px}.etat-source small{font-size:12px;color:var(--txt3)}
-.badge{letter-spacing:.035em}
-.btn-danger{color:#ffb4ad!important}
-.tiroir-incident{width:min(620px,calc(100vw - 24px))}
-.incident-entete{display:flex;gap:12px;align-items:flex-start}
-.incident-entete .icone{width:42px;display:grid;place-items:center}
-.incident-entete .cr{flex:1}
-.incident-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
-.incident-grille>div{padding:11px;border:1px solid var(--bord);border-radius:10px;background:var(--fond3)}
-.incident-grille b{display:block;font-size:17px}.incident-grille small{color:var(--txt3)}
-.chronologie{position:relative;padding-left:20px;margin:16px 0}
-.chronologie:before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--bord)}
-.chronologie div{position:relative;margin:10px 0;color:var(--txt2)}
-.chronologie div:before{content:"";position:absolute;left:-19px;top:7px;width:8px;height:8px;
-  border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px var(--fond2)}
 .parcours-alerte{display:grid;gap:1px;background:var(--bord)}
-.etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;
-  padding:12px;background:var(--fond2)}
+.etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:11px;align-items:center;
+  padding:13px 14px;background:var(--fond2)}
 .etape-alerte .numero{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
-  background:var(--fond3);color:var(--txt2);font-weight:750}
-.etape-alerte.faite .numero{background:var(--vert);color:#fff}
-.etape-alerte b{display:block}.etape-alerte small{color:var(--txt3)}
+  background:var(--fond3);border:1px solid var(--bord);color:var(--txt2);font-weight:700;font-size:13px}
+.etape-alerte.faite .numero{background:var(--vert);border-color:var(--vert);color:#fff}
+.etape-alerte b{display:block;font-size:14px}
+.etape-alerte small{color:var(--txt3);font-size:12px}
 .anonyme main{display:flex;flex-direction:column}
 .anonyme #vueApp{order:1}.anonyme #vueAccueil{order:2}
 
+/* ---------- navigation mobile ---------- */
+.navigation-mobile{display:none}
+
+/* ---------- adaptation aux petits écrans ---------- */
 @media(max-width:900px){
-  main{padding:12px 14px 96px}
+  main{padding:14px 14px 96px}
   #vueApp{display:block}
-  #sectionCarte{position:static}
+  #sectionCarte{position:static;margin-bottom:20px}
   .colonne-panneau{display:block}
-  #map{height:max(430px,58vh)}
+  #map{height:clamp(420px,58vh,620px)}
 }
 @media(max-width:560px){
   body{font-size:15px}
   header{min-height:62px}
   header .sous{max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pastille{padding:7px 9px;font-size:0}.pastille span:last-child{font-size:11px}
-  #pastilleTxt{display:none}.pastille:after{content:attr(data-mobile-label);font-size:11px}
+  .pastille{padding:7px 10px;font-size:0}
+  .pastille span:last-child{font-size:11px}
+  #pastilleTxt{display:none}
+  .pastille:after{content:attr(data-mobile-label);font-size:11px}
   main{padding:10px 10px 92px}
   section{margin-bottom:16px}
-  #map{height:max(410px,56vh)}
+  #map{height:clamp(400px,56vh,560px)}
+  .grille2{grid-template-columns:1fr}
+  .etat-sources{grid-template-columns:1fr}
   .barre-carte{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
   .barre-carte::-webkit-scrollbar{display:none}
   .barre-carte .btn{white-space:nowrap}
   .recherche-carte{grid-template-columns:1fr;padding:10px}
   .recherche-carte>.btn{display:none}
-  .resume-carte{grid-template-columns:auto 1fr;padding:10px}
-  .resume-carte>.btn{grid-column:1/-1;width:100%;justify-content:center}
-  .filtres-sources{display:none}
+  .resume-carte{grid-template-columns:auto 1fr;padding:12px}
+  .resume-carte>.btn{grid-column:1/-1;width:100%}
+  .filtres-sources{display:none;grid-template-columns:1fr}
   .panneau-filtres.ouvert{display:grid}
-  .liste-feux{max-height:230px}
-  .legende-carte{width:auto;max-width:280px;padding:10px}
+  .liste-feux{max-height:240px}
+  .legende-carte{width:auto;max-width:250px;padding:10px 12px;font-size:10.5px}
   .legende-carte .toggle-legende{display:none!important}
   .legende-carte .contenu-legende{display:block!important}
-.legende-interactive-barre{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--fond3);
-  border-bottom:1px solid var(--bord);overflow-x:auto;scrollbar-width:none}
-.legende-interactive-barre::-webkit-scrollbar{display:none}
-.legende-interactive-barre b{font-size:12px;color:var(--txt2);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
-.legende-interactive-barre .ligne-legende{display:flex;align-items:center;gap:6px;background:var(--fond2);
-  border:1px solid var(--bord);border-radius:20px;padding:4px 10px;cursor:pointer;white-space:nowrap;
-  font-size:12px;font-weight:600;transition:all .18s ease}
-.legende-interactive-barre .ligne-legende:hover{border-color:var(--orange);background:var(--fond)}
+  .leaflet-control-layers{font-size:11px}
+  .bandeau-carte .cadre{display:none}
   .navigation-mobile{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);z-index:1000;
-    left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));background:rgba(23,26,29,.96);
-    border:1px solid var(--bord);border-radius:16px;box-shadow:var(--ombre);overflow:hidden}
+    left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));background:var(--glass);
+    backdrop-filter:blur(16px);border:1px solid var(--bord);border-radius:var(--r);
+    box-shadow:var(--ombre-haute);overflow:hidden}
   .navigation-mobile a,.navigation-mobile button{min-height:58px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:2px;background:transparent;color:var(--txt2);
-    font-size:11px;text-decoration:none}
-  .navigation-mobile .primaire{color:#fff;background:rgba(240,68,56,.18)}
+    align-items:center;justify-content:center;gap:3px;background:transparent;color:var(--txt2);
+    font-size:11px;font-weight:600;text-decoration:none}
+  .navigation-mobile a:hover,.navigation-mobile button:hover{color:var(--txt)}
+  .navigation-mobile .primaire{color:#fff;background:rgba(255,59,48,.18)}
   .anonyme .navigation-mobile{grid-template-columns:1fr 1fr}
   .accueil-actions{grid-template-columns:1fr}
-  .accueil-hero h2{font-size:22px}
+  .accueil-hero h2{font-size:23px}
   .incident-grille{grid-template-columns:1fr 1fr}
-  dialog{max-height:calc(100vh - 12px);width:calc(100vw - 12px)}
+  dialog{max-height:calc(100vh - 12px);width:calc(100vw - 12px);border-radius:18px}
+}
+/* Respect du réglage système : aucune animation décorative. */
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important}
 }
 </style>
 </head>
@@ -392,8 +524,8 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 <header>
   <div class="logo">
     <svg viewBox="0 0 24 24" fill="none">
-      <path d="M12 2c3 4 6 6 6 10a6 6 0 1 1-12 0c0-4 3-6 6-10z" fill="#e0453c"/>
-      <path d="M12 8c1.6 2.2 3 3.3 3 5.4a3 3 0 1 1-6 0C9 11.3 10.4 10.2 12 8z" fill="#e9873a"/>
+      <path d="M12 2c3 4 6 6 6 10a6 6 0 1 1-12 0c0-4 3-6 6-10z" fill="#ff3b30"/>
+      <path d="M12 8c1.6 2.2 3 3.3 3 5.4a3 3 0 1 1-6 0C9 11.3 10.4 10.2 12 8z" fill="#ff9500"/>
     </svg>
   </div>
   <div>
@@ -462,6 +594,11 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
           <button class="btn" type="button" id="btnAutourMoi">Me localiser</button>
         </div>
         <div id="map" aria-label="Carte interactive des feux récents"></div>
+        <div class="bandeau-carte" aria-hidden="true">
+          <span class="cadre">Carte — France métropolitaine et Corse</span>
+          <span class="fraicheur"><span class="point ok" id="pointFraicheur"></span>
+            <span id="fraicheurCarte">Chargement…</span></span>
+        </div>
         <div id="viseurSignalement" class="viseur-tactique" hidden>
           <div class="viseur-croix" aria-hidden="true"></div>
           <div class="viseur-etiquette">Ciblez le départ de feu au centre</div>
@@ -1081,37 +1218,39 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
 
   const legende = L.control({ position: 'bottomright' });
   legende.onAdd = () => {
-    const div = L.DomUtil.create('div', 'legende-carte');
+    // Ouverte par défaut : sur un service d'alerte, la clé de lecture de la
+    // carte ne doit pas demander un clic pour apparaître.
+    const div = L.DomUtil.create('div', 'legende-carte ouverte');
     div.setAttribute('role', 'note');
     div.setAttribute('aria-label', 'Légende des feux');
     div.innerHTML = `
-      <button type="button" class="toggle-legende" aria-expanded="false">
+      <button type="button" class="toggle-legende" aria-expanded="true">
         <span>Légende</span><span aria-hidden="true">⌃</span>
       </button>
       <div class="contenu-legende">
         <b>Légende &amp; Filtres réactifs</b>
         <div class="ligne" data-filtre-legende="corrobore" title="Cliquez pour filtrer les feux corroborés">
-          <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
+          <span class="symbole">${svgFlamme(COULEUR_NIVEAU.corrobore, 24, 'corrobore')}</span>
           <span>Feux corroborés (≥2 sources)</span>
           <span class="badge-compteur" id="cntCorrobore">0</span>
         </div>
         <div class="ligne" data-filtre-legende="probable" title="Cliquez pour filtrer les signaux forts">
-          <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
+          <span class="symbole">${svgFlamme(COULEUR_NIVEAU.probable, 20, 'probable')}</span>
           <span>Signal fort / répété</span>
           <span class="badge-compteur" id="cntProbable">0</span>
         </div>
         <div class="ligne" data-filtre-legende="indice" title="Cliquez pour filtrer les indices isolés">
-          <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
+          <span class="symbole">${svgFlamme(COULEUR_NIVEAU.indice, 18, 'indice')}</span>
           <span>Indice automatique isolé</span>
           <span class="badge-compteur" id="cntIndice">0</span>
         </div>
         <div class="ligne" data-filtre-legende="citoyen" title="Cliquez pour filtrer les déclarations vérifiées">
-          <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
+          <span class="symbole">${svgFlamme(COULEUR_NIVEAU.citoyen, 20, 'citoyen')}</span>
           <span>Témoins vérifiés par quorum</span>
           <span class="badge-compteur" id="cntCitoyen">0</span>
         </div>
         <div class="ligne" data-filtre-legende="signalement" title="Cliquez pour filtrer les témoins non vérifiés">
-          <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
+          <span class="symbole">${svgFlamme(COULEUR_NIVEAU.signalement, 18, 'indice')}</span>
           <span>Témoignage non vérifié</span>
           <span class="badge-compteur" id="cntSignalement">0</span>
         </div>
@@ -1138,31 +1277,32 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     elBarre.innerHTML = `
       <b>Légende :</b>
       <div class="ligne-legende" data-filtre-legende="corrobore" title="Filtrer feux corroborés">
-        <span class="symbole">${svgFlamme('#ef3829', 24, 'corrobore')}</span>
+        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.corrobore, 24, 'corrobore')}</span>
         <span>Corroborés</span>
         <span class="badge-compteur" id="cntCorroboreB">0</span>
       </div>
       <div class="ligne-legende" data-filtre-legende="probable" title="Filtrer signaux forts">
-        <span class="symbole">${svgFlamme('#ff8c32', 20, 'probable')}</span>
+        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.probable, 20, 'probable')}</span>
         <span>Signaux forts</span>
         <span class="badge-compteur" id="cntProbableB">0</span>
       </div>
       <div class="ligne-legende" data-filtre-legende="indice" title="Filtrer indices isolés">
-        <span class="symbole">${svgFlamme('#ffd43b', 18, 'indice')}</span>
+        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.indice, 18, 'indice')}</span>
         <span>Indices isolés</span>
         <span class="badge-compteur" id="cntIndiceB">0</span>
       </div>
       <div class="ligne-legende" data-filtre-legende="citoyen" title="Filtrer témoins vérifiés">
-        <span class="symbole">${svgFlamme('#a78bfa', 20, 'citoyen')}</span>
+        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.citoyen, 20, 'citoyen')}</span>
         <span>Témoins vérifiés</span>
         <span class="badge-compteur" id="cntCitoyenB">0</span>
       </div>
       <div class="ligne-legende" data-filtre-legende="signalement" title="Filtrer témoins non vérifiés">
-        <span class="symbole">${svgFlamme('#8a8a8a', 18, 'indice')}</span>
+        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.signalement, 18, 'indice')}</span>
         <span>Non vérifiés</span>
         <span class="badge-compteur" id="cntSignalementB">0</span>
       </div>`;
   }
+  majEtatLegende();
 
   coucheZones = L.layerGroup().addTo(carte);
   coucheDet = L.layerGroup().addTo(carte);
@@ -1213,6 +1353,7 @@ async function chargerFeuxCarte() {
     localStorage.setItem('alerte-incendie:feux-cache', JSON.stringify(feuxCarte.slice(0, 250)));
     const el = $('#etatCarteSources');
     if (el) el.textContent = `${feuxCarte.length} incident(s) ou indice(s) sur les dernières ${heuresCarte} h.`;
+    majFraicheurCarte(true);
   } catch (e) {
     if (e?.name === 'AbortError') return;
     try {
@@ -1225,10 +1366,31 @@ async function chargerFeuxCarte() {
     if (el) el.textContent = feuxCarte.length && derniereMajCarte
       ? `Données hors ligne enregistrées ${relatif(derniereMajCarte)}.`
       : 'Les indices nationaux sont momentanément indisponibles.';
+    majFraicheurCarte(false);
   } finally {
     if (controleCarte === controle && chargement) chargement.hidden = true;
   }
   rendreResumeCarte();
+}
+
+/* Fraîcheur affichée au-dessus de la carte. Le voyant reprend la sémantique
+ * du reste de l'application : vert quand la donnée vient du réseau, rouge
+ * quand on affiche un état daté. Une carte muette qui a l'air à jour est le
+ * pire cas pour un service d'alerte. */
+function majFraicheurCarte(enLigne) {
+  const txt = $('#fraicheurCarte');
+  const pt = $('#pointFraicheur');
+  if (!txt || !pt) return;
+  if (enLigne) {
+    txt.textContent = 'Actualisé à l’instant';
+    pt.className = 'point ok';
+  } else if (derniereMajCarte) {
+    txt.textContent = `Données de ${relatif(derniereMajCarte)}`;
+    pt.className = 'point ko';
+  } else {
+    txt.textContent = 'Indices indisponibles';
+    pt.className = 'point ko';
+  }
 }
 
 async function chargerSantePublique() {
@@ -1247,21 +1409,23 @@ function rendreSantePublique() {
   const p = santePublique.collecte_polaire || {};
   const g = santePublique.collecte_geostationnaire || {};
   const c = santePublique.planification || {};
+  // Une tuile par famille : voyant, nom court, état lisible. Le détail
+  // chiffré reste dans l'attribut title, pour ne pas noyer l'essentiel.
   const etatCourt = (x, facultatif = false) => facultatif && !x.configuree
-    ? ['Non configuré', 'Source facultative']
+    ? ['neutre', 'Non configuré', 'Source facultative']
     : x.ok
-    ? ['Opérationnel', x.age_minutes == null ? 'succès récent' : `succès il y a ${x.age_minutes} min`]
-    : ['En retard', x.age_minutes == null ? 'aucun succès connu' : `${x.age_minutes} min sans succès`];
+    ? ['ok', 'À jour', x.age_minutes == null ? 'succès récent' : `succès il y a ${x.age_minutes} min`]
+    : ['ko', 'En retard', x.age_minutes == null ? 'aucun succès connu' : `${x.age_minutes} min sans succès`];
   const lignes = [
-    ['Collecte polaire', ...etatCourt(p)],
-    ['Meteosat', ...etatCourt(g, true)],
-    ['Planification pg_cron', ...etatCourt(c)],
+    ['Polaire', ...etatCourt(p)],
+    ['Géostationnaire', ...etatCourt(g, true)],
+    ['Planification', ...etatCourt(c)],
   ];
-  el.innerHTML = lignes.map(([nom, statut, detail]) => `
-    <div class="etat-source">
-      <b><span class="point ${statut === 'Opérationnel' ? 'ok' : statut === 'Non configuré' ? '' : 'ko'}"></span>
-        ${html(nom)} · ${html(statut)}</b>
-      <small>${html(detail)}</small>
+  el.innerHTML = lignes.map(([nom, classe, statut, detail]) => `
+    <div class="etat-source ${classe}" title="${html(detail)}">
+      <span class="voyant" aria-hidden="true"></span>
+      <b>${html(nom)}</b>
+      <small>${html(statut)}</small>
     </div>`).join('');
   if (!jeton) {
     const ok = santePublique.ok === true;
@@ -1335,6 +1499,19 @@ function svgFlamme(couleur, taille, type = 'probable') {
   </svg>`;
 }
 
+/* Couleurs de sévérité — source unique.
+ *
+ * La légende et les marqueurs portaient des teintes différentes pour la même
+ * information : deux vocabulaires visuels pour un seul sens. Tout part
+ * maintenant d'ici, et de la charte du projet. */
+const COULEUR_NIVEAU = {
+  corrobore: '#ff3b30',
+  probable: '#ff9500',
+  indice: '#ffd60a',
+  citoyen: '#af52de',
+  signalement: '#7c8a94',
+};
+
 function apparenceFeu(f) {
   const citoyenVerifie = f.origine === 'citoyen' || f.niveau === 'temoins';
   const score = Number(f.score) || 0;
@@ -1352,32 +1529,60 @@ function apparenceFeu(f) {
   }
 
   if (citoyenVerifie) {
-    return { couleur: '#a78bfa', taille: [24, 32, 40][importance - 1],
+    return { couleur: COULEUR_NIVEAU.citoyen, taille: [24, 32, 40][importance - 1],
       libelle: 'Déclarations citoyennes vérifiées', importance, type: 'citoyen', niveau, statutCourt: 'Témoins' };
   }
   if (niveau === 'corrobore') {
-    return { couleur: '#ef3829', taille: [32, 42, 54][importance - 1],
+    return { couleur: COULEUR_NIVEAU.corrobore, taille: [32, 42, 54][importance - 1],
       libelle: 'Feu corroboré par plusieurs familles', importance, type: 'corrobore', niveau, statutCourt: 'Confirmé' };
   }
   if (niveau === 'probable') {
-    return { couleur: '#ff8c32', taille: [26, 34, 44][importance - 1],
+    return { couleur: COULEUR_NIVEAU.probable, taille: [26, 34, 44][importance - 1],
       libelle: 'Signal thermique fort ou répété', importance, type: 'probable', niveau, statutCourt: 'Probable' };
   }
-  return { couleur: '#ffd43b', taille: [22, 28, 36][importance - 1],
+  return { couleur: COULEUR_NIVEAU.indice, taille: [22, 28, 36][importance - 1],
     libelle: 'Indice automatique isolé', importance, type: 'indice', niveau, statutCourt: 'Indice' };
 }
+
+/* Niveaux masqués depuis la légende.
+ *
+ * La légende prétendait filtrer les cinq niveaux, mais seuls « corroboré » et
+ * « probable » agissaient : cliquer « indices isolés » remettait le filtre à
+ * « tous » en annonçant l'inverse. Chaque ligne masque désormais réellement
+ * son niveau, et l'état est visible (aria-pressed + opacité). */
+const niveauxMasques = new Set();
+const NIVEAU_LEGENDE = {
+  corrobore: 'corrobore',
+  probable: 'probable',
+  indice: 'a_confirmer',
+  citoyen: 'temoins',
+};
 
 function feuxFiltres() {
   const actives = new Set(
     [...document.querySelectorAll('[data-famille]:checked')].map((e) => e.dataset.famille),
   );
+  const masques = new Set([...niveauxMasques].map((c) => NIVEAU_LEGENDE[c]).filter(Boolean));
   return feuxCarte.filter((f) => {
     const aspect = apparenceFeu(f);
     const sourceActive = (f.familles || []).some((source) => actives.has(source));
     const confianceOk = confianceCarte === 'tous' ||
       confianceCarte === 'corrobore' && aspect.niveau === 'corrobore' ||
       confianceCarte === 'probable' && ['corrobore', 'probable', 'temoins'].includes(aspect.niveau);
-    return sourceActive && confianceOk;
+    return sourceActive && confianceOk && !masques.has(aspect.niveau);
+  });
+}
+
+/* Reflète l'état des filtres sur les deux légendes : la flottante et la
+ * barre. Un filtre invisible est un piège — l'utilisateur croit voir la
+ * situation complète. */
+function majEtatLegende() {
+  document.querySelectorAll('[data-filtre-legende]').forEach((el) => {
+    const actif = !niveauxMasques.has(el.dataset.filtreLegende);
+    el.setAttribute('aria-pressed', String(actif));
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.title = actif ? 'Cliquez pour masquer ce niveau' : 'Cliquez pour réafficher ce niveau';
   });
 }
 
@@ -1638,10 +1843,11 @@ function creerMarqueurFeu(f) {
 
   const nomLieu = html(f.commune || aspect.statutCourt);
   const badgeHtml = `
-    <div class="marqueur-feu-tactique" style="--couleur-bord:${aspect.couleur};--couleur-halo:${aspect.couleur}">
+    <div class="marqueur-feu-tactique${aspect.type === 'corrobore' ? ' critique' : ''}"
+         style="--couleur-bord:${aspect.couleur}">
       ${svgFlamme(aspect.couleur, 26, aspect.type)}
       <span class="badge-titre">${nomLieu}</span>
-      <span class="badge-statut" style="background:${aspect.couleur}33;color:${aspect.couleur}">${html(aspect.statutCourt)}</span>
+      <span class="badge-statut" style="background:${aspect.couleur}29;color:${aspect.couleur}">${html(aspect.statutCourt)}</span>
     </div>`;
 
   const marker = L.marker([f.lat, f.lon], {
@@ -1776,9 +1982,10 @@ function rendreListeFeux() {
 function dessinerSignalements() {
   if (!coucheSig) return;
   coucheSig.clearLayers();
+  if (niveauxMasques.has('signalement')) return;
   for (const s of signalements) {
     if (s.confirme) continue;
-    const c = '#8a8a8a';
+    const c = COULEUR_NIVEAU.signalement;
     L.marker([s.lat, s.lon], {
       icon: L.divIcon({
         className: 'marqueur-feu',
@@ -2491,16 +2698,16 @@ document.addEventListener('click', async (ev) => {
   try {
     if (fl) {
       const niv = fl.dataset.filtreLegende;
-      if (confianceCarte === niv) {
-        confianceCarte = 'tous';
-        toast('Filtre réinitialisé : tous les événements sont affichés.');
-      } else {
-        confianceCarte = ['corrobore', 'probable'].includes(niv) ? niv : 'tous';
-        toast(`Filtre réactif de légende activé : ${niv}`);
-      }
+      if (niveauxMasques.has(niv)) niveauxMasques.delete(niv);
+      else niveauxMasques.add(niv);
+      majEtatLegende();
       dessinerFeuxCarte();
+      dessinerSignalements();
       rendreListeFeux();
       rendreResumeCarte();
+      toast(niveauxMasques.size
+        ? `${niveauxMasques.size} niveau(x) masqué(s) sur la carte.`
+        : 'Tous les niveaux sont affichés.');
     } else if (bv) {
       const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === bv.dataset.voirIncident);
       if (f) ouvrirIncident(f);
