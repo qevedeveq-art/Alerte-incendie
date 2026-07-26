@@ -12,19 +12,24 @@
 <title>Alerte Incendie</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --fond:#12100e; --fond2:#1c1917; --fond3:#252220; --bord:#332e2b;
-  --txt:#f2eeeb; --txt2:#a09892; --txt3:#6f6863;
-  --rouge:#e0453c; --orange:#e9873a; --gris:#7c8a94; --vert:#3fa86b;
+  --fond:#0b0d10; --fond2:#141820; --fond3:#1c2024; --bord:#2d3339;
+  --txt:#ffffff; --txt2:#cacad0; --txt3:#959ca4;
+  --rouge:#ff3b30; --orange:#ff9500; --jaune:#ffd60a; --violet:#af52de; --gris:#7c8a94; --vert:#3fa86b;
   --r:14px;
+  --ombre:0 18px 55px rgba(0,0,0,.45);
+  --glass:rgba(11,13,16,.82);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{margin:0;height:100%}
 body{
   background:var(--fond);color:var(--txt);
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font:15px/1.5 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   padding-bottom:env(safe-area-inset-bottom);
 }
 a{color:inherit}
@@ -32,15 +37,15 @@ button{font:inherit;cursor:pointer;border:0}
 
 /* ---------- structure ---------- */
 header{
-  position:sticky;top:0;z-index:900;background:rgba(18,16,14,.92);
-  backdrop-filter:blur(14px);border-bottom:1px solid var(--bord);
+  position:sticky;top:0;z-index:900;background:var(--glass);
+  backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.05);
   padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
   display:flex;align-items:center;gap:12px;
 }
 .logo{width:32px;height:32px;border-radius:9px;background:var(--fond3);
   display:grid;place-items:center;flex:0 0 auto}
 .logo svg{width:19px;height:19px}
-header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:-.01em}
+header h1{font-family:'Outfit',sans-serif;font-size:17px;margin:0;font-weight:650;letter-spacing:-.01em}
 header .sous{font-size:11.5px;color:var(--txt3);margin-top:1px}
 .pastille{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;
   color:var(--txt2);background:var(--fond3);padding:6px 11px;border-radius:99px;
@@ -85,8 +90,8 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
 .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;
   padding:0;border:1px solid var(--bord);border-radius:16px;background:var(--fond2);color:var(--txt);
-  box-shadow:0 20px 80px rgba(0,0,0,.72)}
-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+  box-shadow:0 20px 80px rgba(0,0,0,.72);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s ease}
+dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
 .dialog-entete{padding:16px 18px;border-bottom:1px solid var(--bord)}
 .dialog-entete h3{margin:0;font-size:17px}
 .dialog-corps{padding:16px 18px}
@@ -109,10 +114,10 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
 .source-note{grid-column:1/-1;font-size:11.5px;line-height:1.5;color:var(--txt3);padding:3px 2px}
 .source-note a{font-weight:600}
 @media(max-width:560px){.filtres-sources{grid-template-columns:1fr}}
-.leaflet-container{background:#1c1917;font:inherit}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#252220;color:var(--txt);
+.leaflet-container{background:#141820;font:inherit}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1c2024;color:var(--txt);
   box-shadow:0 8px 30px rgba(0,0,0,.5)}
-.leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5}
+.leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5;font-family:'Inter',sans-serif}
 .leaflet-bar a{background:#252220;color:var(--txt);border-color:#332e2b}
 .leaflet-bar a:hover{background:#332e2b}
 .leaflet-control-attribution{background:rgba(18,16,14,.75)!important;color:#6f6863!important}
@@ -187,11 +192,11 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
 
 /* ---------- interface carte-first tactique ---------- */
 :root{
-  --fond:#0b0d0f;--fond2:#131619;--fond3:#1c2024;--bord:#2d3339;
+  --fond:#0b0d10;--fond2:#141820;--fond3:#1c2024;--bord:#2d3339;
   --txt:#ffffff;--txt2:#cacad0;--txt3:#959ca4;
-  --rouge:#f04438;--orange:#ff922b;--jaune:#ffd43b;--violet:#b197fc;--vert:#3fa86b;
+  --rouge:#ff3b30;--orange:#ff9500;--jaune:#ffd60a;--violet:#af52de;--vert:#3fa86b;
   --ombre:0 18px 55px rgba(0,0,0,.45);
-  --glass:rgba(19,22,25,.82);
+  --glass:rgba(11,13,16,.82);
 }
 body{font-size:16px;line-height:1.55;background:var(--fond)}
 button,input,select{min-height:44px}
@@ -244,18 +249,18 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .chargement-carte[hidden]{display:none}
 @keyframes squelette{to{background-position-x:-220%}}
 @keyframes pulse-feu{
-  0%{transform:scale(1);filter:drop-shadow(0 0 2px rgba(240,68,56,.5))}
-  50%{transform:scale(1.08);filter:drop-shadow(0 0 10px rgba(240,68,56,.85))}
-  100%{transform:scale(1);filter:drop-shadow(0 0 2px rgba(240,68,56,.5))}
+  0%{transform:scale(1);filter:drop-shadow(0 0 4px rgba(255,59,48,.6))}
+  50%{transform:scale(1.1);filter:drop-shadow(0 0 14px rgba(255,59,48,.9))}
+  100%{transform:scale(1);filter:drop-shadow(0 0 4px rgba(255,59,48,.6))}
 }
 @keyframes pulse-ok{
   0%{box-shadow:0 0 0 0 rgba(63,168,107,.6)}
-  70%{box-shadow:0 0 0 8px rgba(63,168,107,0)}
+  70%{box-shadow:0 0 0 10px rgba(63,168,107,0)}
   100%{box-shadow:0 0 0 0 rgba(63,168,107,0)}
 }
-.point.ok{animation:pulse-ok 2s infinite ease-out}
-.marqueur-feu{animation:pulse-feu 2.2s infinite ease-in-out;transition:transform .2s ease}
-.marqueur-feu:hover{transform:scale(1.18)!important;z-index:1000!important}
+.point.ok{animation:pulse-ok 2s infinite cubic-bezier(.16,1,.3,1)}
+.marqueur-feu{animation:pulse-feu 2.2s infinite ease-in-out;transition:transform .2s cubic-bezier(.16,1,.3,1)}
+.marqueur-feu:hover{transform:scale(1.22)!important;z-index:1000!important}
 .viseur-tactique{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;
   pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:8px}
 .viseur-tactique[hidden]{display:none!important}
@@ -264,8 +269,9 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .viseur-croix:before,.viseur-croix:after{content:"";position:absolute;background:var(--orange)}
 .viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
 .viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
-.barre-temporelle{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--fond3);border-bottom:1px solid var(--bord)}
-.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px}
+.barre-temporelle{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--fond3);border-bottom:1px solid var(--bord);transition:all .3s ease}
+.barre-temporelle.active{background:rgba(255,149,0,.15);box-shadow:inset 0 0 15px rgba(255,149,0,.1)}
+.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px;filter:drop-shadow(0 0 4px rgba(255,149,0,.4))}
 .liste-feux{max-height:290px;overflow:auto;border-top:1px solid var(--bord)}
 .incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
   display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:10px 13px;
@@ -274,21 +280,21 @@ h2{font-size:13px;color:#c5cbd1;letter-spacing:.07em}
 .incident-ligne small{display:block;color:var(--txt3)}
 .incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12px}
 .cluster-feu{background:transparent;border:0}
-.legende-carte{background:rgba(15,18,22,.94);backdrop-filter:blur(16px);border:1px solid var(--bord);
+.legende-carte{background:rgba(11,13,16,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);
   border-radius:14px;padding:12px 14px;color:var(--txt);box-shadow:0 12px 36px rgba(0,0,0,.65);max-width:320px}
-.legende-carte b{display:block;font-size:12px;color:#fff;margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase}
+.legende-carte b{display:block;font-size:12px;color:#fff;margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase;font-family:'Outfit',sans-serif}
 .legende-carte .ligne{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;
-  transition:background .18s ease;user-select:none}
-.legende-carte .ligne:hover{background:rgba(255,255,255,.08)}
+  transition:background .2s cubic-bezier(.16,1,.3,1);user-select:none}
+.legende-carte .ligne:hover{background:rgba(255,255,255,.12);transform:translateX(2px)}
 .conteneur-marqueur-tactique{background:transparent;border:0}
-.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:6px;background:rgba(14,17,22,.94);
-  backdrop-filter:blur(12px);border:1.5px solid var(--couleur-bord,#ef3829);border-radius:20px;
-  padding:4px 10px 4px 6px;box-shadow:0 6px 20px rgba(0,0,0,.85),0 0 14px var(--couleur-halo,rgba(239,56,41,.6));
-  color:#fff;font-size:12px;font-weight:700;white-space:nowrap;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;
+.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:6px;background:var(--glass);
+  backdrop-filter:blur(12px);border:1.5px solid var(--couleur-bord,var(--rouge));border-radius:20px;
+  padding:4px 10px 4px 6px;box-shadow:0 6px 20px rgba(0,0,0,.85),0 0 14px var(--couleur-halo,rgba(255,59,48,.6));
+  color:#fff;font-size:12px;font-family:'Outfit',sans-serif;font-weight:700;white-space:nowrap;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;
   cursor:pointer}
-.marqueur-feu-tactique:hover{transform:scale(1.12) translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.95),0 0 22px var(--couleur-halo,rgba(239,56,41,.9));z-index:2000!important}
+.marqueur-feu-tactique:hover{transform:scale(1.15) translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.95),0 0 22px var(--couleur-halo,rgba(255,59,48,.9));z-index:2000!important}
 .marqueur-feu-tactique .badge-titre{font-size:12px;font-weight:700;color:#fff;max-width:140px;overflow:hidden;text-overflow:ellipsis}
-.marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-weight:800;padding:2px 6px;border-radius:8px;letter-spacing:.04em}
+.marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-family:'Inter',sans-serif;font-weight:800;padding:2px 6px;border-radius:8px;letter-spacing:.04em}
 .panneau-filtres{display:none}
 .panneau-filtres.ouvert{display:grid}
 .offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:#8a4b08;color:#fff;
