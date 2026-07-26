@@ -185,6 +185,15 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
     <section>
       <h2>Zones surveillées</h2>
       <div class="carte"><div id="map"></div>
+        <div class="pad" style="border-top:1px solid var(--bord)">
+          <button class="btn pleine" id="btnSignaler">Signaler un départ de feu</button>
+          <p style="margin:10px 0 0;font-size:12px;color:var(--txt3);line-height:1.55">
+            Un signalement est confirmé dès que deux personnes distinctes pointent le même
+            endroit à moins de 50 m. Les abonnés du secteur sont alors prévenus, avec la
+            mention explicite qu’il s’agit d’un signalement non vérifié.
+            <b>Cela ne prévient pas les secours : appelez le 18 ou le 112.</b>
+          </p>
+        </div>
         <div class="stats" id="stats"></div>
       </div>
       <div class="carte" id="listeZones"></div>
@@ -294,10 +303,12 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
    Ce client ne détient qu’un jeton d’abonné, conservé en localStorage.
    ===================================================================== */
 const API = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api';
+const API_SIG = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/signalement';
 const CLE_JETON = 'alerte-incendie:jeton';
 
 let jeton = localStorage.getItem(CLE_JETON);
 let etat = null, carte = null, coucheZones = null, coucheDet = null, coucheEvts = null;
+let coucheSig = null, signalements = [], modeSignalement = false;
 
 /* ---------- utilitaires ---------- */
 const $ = (s) => document.querySelector(s);
@@ -341,6 +352,79 @@ function initCarte(centre) {
   coucheZones = L.layerGroup().addTo(carte);
   coucheDet = L.layerGroup().addTo(carte);
   coucheEvts = L.layerGroup().addTo(carte);
+  coucheSig = L.layerGroup().addTo(carte);
+
+  carte.on('click', (e) => {
+    if (!modeSignalement) return;
+    signaler(e.latlng.lat, e.latlng.lng);
+  });
+}
+
+/* ---------- signalements citoyens ---------- */
+async function chargerSignalements() {
+  try {
+    const r = await fetch(`${API_SIG}/carte?heures=24`);
+    const j = await r.json();
+    signalements = j.signalements || [];
+  } catch { signalements = []; }
+}
+
+function dessinerSignalements() {
+  if (!coucheSig) return;
+  coucheSig.clearLayers();
+  for (const s of signalements) {
+    /* gris tant que non confirmé, orange dès que deux personnes concordent */
+    const c = s.confirme ? '#e9873a' : '#8a8a8a';
+    L.circleMarker([s.lat, s.lon], {
+      radius: s.confirme ? 9 : 6,
+      color: c, weight: 2, fillColor: c,
+      fillOpacity: s.confirme ? .35 : .15,
+      dashArray: s.confirme ? null : '3,3',
+    }).addTo(coucheSig).bindPopup(
+      `<b style="color:${c}">${s.confirme ? 'Signalement confirmé' : 'Signalement non confirmé'}</b><br>
+       ${s.nb_personnes} personne(s) — ${s.natures.join(', ')}<br>
+       ${s.commune || 'commune inconnue'}<br>
+       <span style="color:#a09892">${heure(s.dernier_at)} · ${relatif(s.dernier_at)}</span>
+       ${s.confirme ? '' : '<br><span style="color:#a09892;font-size:12px">Il faut une deuxième personne pour confirmer.</span>'}`);
+  }
+}
+
+async function signaler(lat, lon) {
+  const nature = prompt(
+    'Que voyez-vous ?\n\n' +
+    '1 = fumée\n2 = flammes\n3 = odeur de brûlé\n4 = autre\n\n' +
+    'Position : ' + lat.toFixed(4) + ', ' + lon.toFixed(4), '1');
+  if (nature === null) return;
+  const natures = { '1': 'fumee', '2': 'flammes', '3': 'odeur', '4': 'autre' };
+  const commentaire = prompt('Précision utile ? (facultatif, 280 caractères)', '') || null;
+
+  try {
+    const r = await fetch(API_SIG, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-token': jeton },
+      body: JSON.stringify({ lat, lon, nature: natures[nature.trim()] || 'fumee', commentaire }),
+    });
+    const j = await r.json();
+    if (j.erreur) return toast(j.erreur, true);
+
+    basculerModeSignalement(false);
+    await chargerSignalements();
+    dessinerSignalements();
+    alert(
+      (j.message || 'Signalement enregistré.') + '\n\n' +
+      'Important : ce signalement ne prévient pas les secours. ' +
+      'Si vous voyez un départ de feu, appelez le 18 ou le 112.');
+  } catch (e) { toast(String(e), true); }
+}
+
+function basculerModeSignalement(actif) {
+  modeSignalement = actif !== undefined ? actif : !modeSignalement;
+  const b = $('#btnSignaler');
+  const m = document.getElementById('map');
+  b.textContent = modeSignalement ? 'Annuler le signalement' : 'Signaler un départ de feu';
+  b.classList.toggle('p', modeSignalement);
+  if (m) m.style.cursor = modeSignalement ? 'crosshair' : '';
+  if (modeSignalement) toast('Touchez la carte à l’endroit du départ de feu.');
 }
 
 function dessinerCarte() {
@@ -381,6 +465,8 @@ function dessinerCarte() {
        ${e.nb_detections} point(s) chaud(s)${e.frp_max ? `, max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
        <span style="color:#a09892">${heure(e.debut_ts)} · ${relatif(e.debut_ts)}</span>`);
   }
+
+  dessinerSignalements();
 
   if (bornes.length) carte.fitBounds(bornes.reduce((a, b) => a.extend(b)), { padding: [24, 24] });
 }
@@ -445,6 +531,8 @@ function rendre() {
         <div class="cr">
           <div class="t">${e.commune || 'Localisation indéterminée'}
             <span class="badge ${e.statut === 'clos' ? 'clos' : e.severite}">${e.statut === 'clos' ? 'clos' : e.severite}</span>
+            ${e.origine === 'citoyen' ? '<span class="badge info">signalement non vérifié</span>' : ''}
+            ${e.origine === 'mixte' ? '<span class="badge critique">témoins + satellite</span>' : ''}
           </div>
           <div class="d">
             ${e.dans_commune ? `Sur la commune surveillée` : `À ${(e.distance_m / 1000).toFixed(1)} km du centre de ${e.zone}`}
@@ -468,7 +556,8 @@ function rendre() {
 
 async function recharger() {
   try {
-    etat = await appel('etat');
+    const [e1] = await Promise.all([appel('etat'), chargerSignalements()]);
+    etat = e1;
     rendre();
   } catch (e) {
     if (String(e).includes('jeton')) { localStorage.removeItem(CLE_JETON); location.reload(); }
@@ -530,6 +619,8 @@ $('#btnCommencer').onclick = async () => {
 };
 
 $('#btnPush').onclick = () => activerPush().catch((e) => toast(String(e).replace('Error: ', ''), true));
+
+$('#btnSignaler').onclick = () => basculerModeSignalement();
 
 /* L'e-mail exige un double opt-in : sans le code reçu, aucune alerte ne part.
    C'est ce qui empêche d'utiliser le service pour spammer un tiers. */

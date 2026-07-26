@@ -127,3 +127,48 @@ plusieurs comptes pour harceler une même personne.
    fournisseur transactionnel, plutôt qu'un Gmail personnel qui plafonne à
    ~500 envois par jour.
 5. **Journal d'audit** des accès administrateur et rotation de `admin_key`.
+
+## Signalements citoyens — surface d'abus spécifique
+
+Ouvrir le signalement à tous crée un risque différent du spam : **quelques faux
+positifs suffisent à ce que les gens cessent de croire aux vraies alertes.** Sur
+un service de sécurité, la perte de confiance est plus grave qu'une nuisance.
+
+### Ce qui est en place
+
+| Garde-fou | Effet |
+|---|---|
+| Jeton d'abonné requis | rend les quotas et la détection d'auto-confirmation possibles ; reste gratuit et instantané |
+| Index unique `(abonne_id, groupe_id)` | un abonné ne compte qu'une fois par départ de feu |
+| 2 personnes **et** 2 réseaux, ou 3 personnes | bloque l'auto-confirmation à deux appareils sur le même réseau |
+| 3 signalements/h par personne, 6/h par réseau | dissuade la fabrication de comptes en série |
+| Périmètre géographique | rejette les positions hors France et outre-mer |
+| Sévérité plafonnée à `alerte` | un signalement, même confirmé, ne réveille pas pendant les heures silencieuses |
+| Étiquetage explicite | tout message dit « signalement de témoins, non vérifié » |
+| IP hachée avec un sel | jamais stockée en clair — minimisation RGPD |
+
+### Ce qui reste ouvert
+
+- **Comptes en série.** Le jeton est gratuit et instantané par choix : c'est ce
+  qui rend le signalement utilisable au moment où ça compte. Un attaquant
+  déterminé peut créer trois comptes depuis trois réseaux. Les quotas ralentissent
+  sans empêcher.
+- **Pas de modération.** Aucun mécanisme ne permet à un tiers de rejeter un
+  signalement manifestement faux. À prévoir si l'usage s'élargit : un bouton
+  « ce signalement est erroné » avec le même seuil de confirmation.
+- **Pas d'historique de fiabilité.** Un compte qui a déjà produit des
+  signalements infirmés par le satellite devrait peser moins. Piste naturelle
+  d'amélioration.
+
+### Recommandation avant une ouverture large
+
+Surveiller le rapport entre signalements confirmés et signalements ensuite
+corroborés par un satellite. Une divergence durable indiquerait soit un abus,
+soit un seuil mal réglé. La requête :
+
+```sql
+select count(*) filter (where e.origine = 'mixte')  as corrobores,
+       count(*) filter (where e.origine = 'citoyen') as jamais_corrobores
+from public.evenements e
+where e.debut_ts > now() - interval '30 days';
+```

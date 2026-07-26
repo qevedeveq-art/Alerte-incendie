@@ -17,3 +17,6 @@ verify_jwt = false          # protégée par x-admin-key, appelée par pg_cron
 
 [functions.probe-lsasaf]
 verify_jwt = false          # protégée par x-admin-key, usage diagnostique
+
+[functions.signalement]
+verify_jwt = false          # écriture protégée par jeton d'abonné, carte publique
