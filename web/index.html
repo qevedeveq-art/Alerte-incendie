@@ -1278,6 +1278,8 @@ function ouvrirIncident(f) {
         <div><b>${f.resolution_m ? `${Number(f.resolution_m).toLocaleString('fr-FR')} m` : '—'}</b><small>meilleure résolution</small></div>
       </div>
     </details>
+    <h4 style="margin-top:14px">Informations locales associées</h4>
+    <div id="blocContexteLocal"><p class="note" style="color:var(--txt3);font-size:12px">Recherche de communiqués ou d’articles locaux…</p></div>
     <p class="note">
       Le marqueur représente le centre d’un regroupement d’observations à 2 km.
       Il ne décrit ni le périmètre, ni la direction du feu, ni la surface brûlée.
@@ -1294,6 +1296,32 @@ function ouvrirIncident(f) {
     </p>`;
   history.replaceState(null, '', `#feu=${encodeURIComponent(f._cle || cleFeu(f))}`);
   $('#dialogIncident').showModal();
+
+  // Charge les informations locales associées (contexte factuel séparé)
+  fetch(`${API_BASE}/contexte?groupe=${encodeURIComponent(f.id || f._cle || '')}`)
+    .then((r) => r.json())
+    .then((data) => {
+      const el = $('#blocContexteLocal');
+      if (!el) return;
+      if (!data.mentions || data.mentions.length === 0) {
+        el.innerHTML = '<p class="note" style="color:var(--txt3);font-size:12px">Aucune information locale spécifique actuellement liée à cet incident.</p>';
+        return;
+      }
+      el.innerHTML = data.mentions.map((m) => `
+        <div style="background:var(--fond3);padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--bord)">
+          <div style="font-size:11px;color:var(--txt3);display:flex;justify-content:space-between">
+            <span>${html(m.source_nom)} (${html(m.source_type)})</span>
+            <span>${m.date_publication ? relatif(m.date_publication) : ''}</span>
+          </div>
+          <a href="${html(m.url)}" target="_blank" rel="noopener" style="font-weight:650;font-size:13px;display:block;margin:4px 0">${html(m.titre)}</a>
+          <small style="color:var(--txt3);font-size:11px">Lien contextuel · score ${m.score}/100</small>
+        </div>
+      `).join('');
+    })
+    .catch(() => {
+      const el = $('#blocContexteLocal');
+      if (el) el.innerHTML = '<p class="note" style="color:var(--txt3);font-size:12px">Informations locales temporairement indisponibles.</p>';
+    });
 }
 
 function creerMarqueurFeu(f) {

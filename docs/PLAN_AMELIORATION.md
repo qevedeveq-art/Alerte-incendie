@@ -72,13 +72,10 @@ Restent dépendants d'un tiers ou d'une campagne d'évaluation :
 - obtenir les accords FeuxDeForet.fr, SDIS ou préfectures ;
 - qualifier l'outre-mer, la charge nationale, le RGAA et le cadre juridique.
 
-Prochain lot retenu :
+Lot livré :
 
-- associer aux événements existants des communiqués officiels, actualités
-  locales et, dans un second temps, publications sociales publiques ;
-- maintenir ce contenu dans un domaine séparé qui ne modifie jamais la
-  détection, la sévérité ou les alertes ;
-- commencer par une collecte fantôme et une validation des droits d'usage.
+- **Contexte local sourcé** : Implémentation de la **migration 36** (`sources_contexte`, `mentions_contexte`, `evenement_mentions`, `contexte_moderation_audit`), de la fonction `purger_contexte_local()`, du collecteur shadow `poll-contexte`, de la route `/api/contexte` et de la rubrique PWA dans la fiche incident.
+- Le contenu contextuel reste strictement séparé et ne modifie jamais la détection, la sévérité ou les alertes.
 
 Le plan d'exécution complet, les sources, le barème d'association et les portes
 de production sont dans

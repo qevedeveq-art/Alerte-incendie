@@ -10,9 +10,9 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié : commit `ebceaf6` sur `main` et `origin/main`.
-- Schéma du dépôt : migrations **01 à 35**.
-- État de production vérifié : migrations **01 à 35** appliquées et Edge
+- État fonctionnel publié : commit `4ebaf4f` sur `main`.
+- Schéma du dépôt : migrations **01 à 36**.
+- État de livraison vérifié : migrations **01 à 36** appliquées et 12 Edge
   Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
@@ -55,19 +55,14 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   migration 35 retire temporairement e-mail et Telegram, efface leurs
   destinations et secrets, clôt leurs envois en attente et impose
   `canaux.type = 'webpush'`. L'interface et les Edge Functions ne proposent
-  désormais que les notifications sur appareil. Validation locale : 35
-  migrations rejouées sur une base neuve, schéma `public` sans erreur de lint,
-  contrainte présente, aucun ancien canal/secret et 40 tests Deno réussis.
-- Le run PWA `30213328072` et le run Supabase `30213328073` du commit
-  `ebceaf6` ont réussi. Ce dernier a rejoué les 35 migrations, appliqué les
-  migrations 34–35 en production puis déployé toutes les Edge Functions.
-  Contrôle externe : PWA HTTP 200 avec parcours appareil uniquement, aucun
-  bouton e-mail/Telegram, `/api/sante-publique` HTTP 200 avec `ok=true` et
-  l'ancien webhook Telegram répond sans créer de canal (`actif=false`).
-- Étape suivante documentée : enrichissement des fiches par informations
-  locales dans `ETAPE_ACTUALITES_LOCALES.md`. **Rien n'est encore activé** :
-  aucune actualité ou publication sociale n'est collectée, stockée ou exposée
-  et aucune migration 36 n'existe dans l'état livré.
+  désormais que les notifications sur appareil.
+- Étape **Informations locales associées** implémentée : la **migration 36** ajoute
+  les tables `sources_contexte`, `mentions_contexte`, `evenement_mentions`,
+  `contexte_moderation_audit` et la fonction de purge `purger_contexte_local()`.
+  L'Edge Function `poll-contexte` assure la collecte shadow sans impacter
+  les détections, et `/api/contexte` fournit une route publique limitée (60 req/min/IP).
+  La fiche incident PWA affiche la rubrique « Informations locales associées »
+  avec rendu HTML échappé sans traqueurs tiers.
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.

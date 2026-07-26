@@ -104,6 +104,42 @@ Deno.serve(async (req) => {
       return json(data ?? { ok: false, statut: "indisponible" }, data?.ok === false ? 503 : 200);
     }
 
+    if (route === "contexte") {
+      if (!await quota(`contexte:${ip}`, 60, 60)) return json(TROP_DE_REQUETES, 429);
+      const groupeId = url.searchParams.get("groupe") || url.searchParams.get("evenement_id");
+      if (!groupeId || groupeId.length < 10) return json({ mentions: [], total: 0 });
+
+      const { data, error } = await sb
+        .from("evenement_mentions")
+        .select("score, raisons, distance_km, ecart_heures, mentions_contexte (titre, resume, url_canonical, date_publication, sources_contexte (nom, type, attribution))")
+        .eq("evenement_id", groupeId)
+        .eq("decision", "associe")
+        .order("score", { ascending: false })
+        .limit(5);
+
+      if (error) {
+        return json({ mentions: [], total: 0 });
+      }
+
+      const mentions = (data || []).map((item: any) => {
+        const m = item.mentions_contexte || {};
+        const s = m.sources_contexte || {};
+        return {
+          score: item.score,
+          raisons: item.raisons || [],
+          source_nom: s.nom || "Source locale",
+          source_type: s.type || "media",
+          attribution: s.attribution || null,
+          titre: m.titre || "",
+          resume: m.resume || null,
+          url: m.url_canonical || "#",
+          date_publication: m.date_publication || null,
+        };
+      });
+
+      return json({ mentions, total: mentions.length });
+    }
+
     if (route === "carte") {
       if (!await quota(`carte:${ip}`, 120, 60)) return json(TROP_DE_REQUETES, 429);
       const lireNombre = (nom: string, defaut: number, min: number, max: number) => {

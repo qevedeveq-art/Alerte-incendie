@@ -13,7 +13,8 @@ appliquent leurs propres contrôles.
 | `signalement` | lecture publique limitée par IP ; écriture par `x-token`, appareil Web Push actif et quotas personne/réseau |
 | `signalement/moderation` | `x-admin-key`, audit de chaque lecture/décision, données agrégées sans identité |
 | `api/sante-publique` | lecture publique limitée ; fraîcheur agrégée sans secret, jeton ni donnée d'abonné |
-| collecteurs, sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
+| `api/contexte` | lecture publique limitée (60 req/min/IP) ; restitue les mentions publiables sans PII ni texte social brut |
+| collecteurs (`poll-*`), sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role ; validation d'URL anti-SSRF (`poll-contexte`) |
 | `load-communes` | `x-admin-key`, ou service role pour le chargement à la demande depuis `api` |
 | Tables `public.*` | RLS active, zéro policy, `revoke all` sur `anon`/`authenticated` |
 | Fonctions `public.*` | `revoke all from public, anon, authenticated` — `service_role` uniquement |
