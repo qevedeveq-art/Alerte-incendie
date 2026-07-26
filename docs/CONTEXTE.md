@@ -10,10 +10,9 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié : commit `b9d1ee8` sur `main` et `origin/main`
-  (suivi d'un commit de mémoire de livraison).
+- État fonctionnel publié : commit `ebceaf6` sur `main` et `origin/main`.
 - Schéma du dépôt : migrations **01 à 35**.
-- État de production vérifié : migrations **01 à 33** appliquées et Edge
+- État de production vérifié : migrations **01 à 35** appliquées et Edge
   Functions déployées.
 - La migration 28 intitulée `retire_interrupteur_homme_mort` a été retirée :
   elle ne doit pas réapparaître. Le numéro 28 est désormais porté par la
@@ -34,7 +33,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Le rejeu local est désormais borné à 15 minutes dans GitHub Actions et le job
   de déploiement signale explicitement lequel des trois secrets manque.
 - Validation locale du 26 juillet 2026 avec Docker Desktop et Supabase CLI
-  2.109.1 : les **34 migrations** se rejouent intégralement sur une base neuve.
+  2.109.1 : les **35 migrations** se rejouent intégralement sur une base neuve.
   Le conteneur Postgres est sain, les 12 tâches `pg_cron` sont présentes, toutes
   les tables publiques ont RLS active sans aucune policy publique, et les deux
   contacts RGPD valent `qevedeveq@gmail.com`.
@@ -47,7 +46,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   avec `ok=true`, collecte polaire, Meteosat et `pg_cron` opérationnels. La
   carte de production renvoie 110 groupes : 1 corroboré multi-familles, 59
   probables forts ou répétés et 50 indices isolés.
-- Évolution locale non encore publiée : refonte carte-first responsive,
+- Livraison `ebceaf6` : refonte carte-first responsive,
   clustering neutre, filtres 1/6/24 h et confiance, liste synchronisée, fiche
   incident partageable, recherche publique commune/code postal, résumé local,
   parcours d'alerte recommandé automatisé, formulaires accessibles,
@@ -59,6 +58,12 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   désormais que les notifications sur appareil. Validation locale : 35
   migrations rejouées sur une base neuve, schéma `public` sans erreur de lint,
   contrainte présente, aucun ancien canal/secret et 40 tests Deno réussis.
+- Le run PWA `30213328072` et le run Supabase `30213328073` du commit
+  `ebceaf6` ont réussi. Ce dernier a rejoué les 35 migrations, appliqué les
+  migrations 34–35 en production puis déployé toutes les Edge Functions.
+  Contrôle externe : PWA HTTP 200 avec parcours appareil uniquement, aucun
+  bouton e-mail/Telegram, `/api/sante-publique` HTTP 200 avec `ok=true` et
+  l'ancien webhook Telegram répond sans créer de canal (`actif=false`).
 
 Après chaque déploiement réussi, mettre cette section à jour avec la dernière
 migration effectivement présente en production.

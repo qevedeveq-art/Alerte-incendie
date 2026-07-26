@@ -6,8 +6,8 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
 
 ## État réel
 
-- Les migrations 01 à 33, les 11 Edge Functions et la PWA sont en production.
-  Le déploiement du commit `b9d1ee8` est vérifié par GitHub Actions et par des
+- Les migrations 01 à 35, les 11 Edge Functions et la PWA sont en production.
+  Le déploiement du commit `ebceaf6` est vérifié par GitHub Actions et par des
   contrôles externes HTTP.
 - La carte publique corrèle quatre familles indépendantes : polaire,
   géostationnaire, citoyenne et aérienne.
@@ -21,12 +21,12 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
   les cinq minutes. Elle reste dépendante de GitHub et de ses notifications.
 - L'outre-mer homogène, la charge nationale et l'identité légale complète de
   l'exploitant ne sont pas encore validés.
-- Évolution locale suivant le commit de production `b9d1ee8` : interface
+- Livraison du commit de production `ebceaf6` : interface
   carte-first, clustering, filtres temps/confiance, liste et fiche incident,
   parcours d'alerte guidé, navigation mobile, installation/hors-ligne,
   recherche commune/code postal, résumé automatique, réglage recommandé,
   formulaires sans invites système, accessibilité renforcée et console de
-  modération auditée. Les migrations 34 et 35 restent à publier ; la seconde
+  modération auditée. Les migrations 34 et 35 sont publiées ; la seconde
   simplifie les alertes aux notifications sur appareil uniquement.
 
 ### Avancement du plan prioritaire
