@@ -39,8 +39,11 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   d'accueil. E-mail et Telegram ayant été retirés, il n'existe aucun canal de
   rattrapage : un compte iPhone pouvait se croire protégé indéfiniment.
 - État de livraison vérifié en production : migrations **01 à 38** appliquées et
-  12 Edge Functions déployées. **La migration 39 est dans le dépôt mais pas
-  encore appliquée** : mettre cette ligne à jour après le prochain `db push`.
+  12 Edge Functions déployées. **Les migrations 39 et 40 sont dans le dépôt mais
+  pas encore appliquées**, et la PWA en production est antérieure à la refonte :
+  mettre cette ligne à jour après le prochain `db push`. Tant que ce n'est pas
+  fait, toute mesure prise sur le site public décrit un autre logiciel que le
+  dépôt.
 - **Audit du 26 juillet 2026, en soirée** (`docs/COMPTE_RENDU_26072026.md`) : la vague
   fonctionnelle du 26 juillet avait livré des calculs côté client sans le
   support serveur qui les rend exploitables. Trois façades ont été corrigées par
@@ -295,7 +298,8 @@ du collecteur.
 
 ## Planification déclarative
 
-Les migrations 26, 32 et 36 sont la source de vérité des tâches `pg_cron`.
+Les migrations 26, 32, 36 et 40 sont la source de vérité des tâches `pg_cron`.
+Quatorze tâches au total.
 
 | Tâche | Cadence | Fonction |
 |---|---:|---|
@@ -312,6 +316,7 @@ Les migrations 26, 32 et 36 sont la source de vérité des tâches `pg_cron`.
 | `probe-mtg` | 1er du mois à 04:30 | veille MTG |
 | `probe-sentinel3` | 1er du mois à 04:45 | veille catalogue Sentinel-3 |
 | `poll-contexte` | toutes les 30 min | contexte local, sans effet sur les preuves |
+| `rafraichir-carte` | toutes les 2 min | pré-calcul des fenêtres de carte nationale |
 
 Quand l'ADS-B est actif, `poll-adsb` purge aussi les observations aériennes de
 plus de 24 heures.

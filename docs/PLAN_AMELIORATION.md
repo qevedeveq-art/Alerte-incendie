@@ -6,8 +6,8 @@ citoyens. Ce document distingue l'existant livré des évolutions proposées.
 
 ## État réel
 
-- Le dépôt porte 39 migrations et 12 Edge Functions ; la production en a 38 et
-  12. La migration 39 attend son `db push`.
+- Le dépôt porte 40 migrations et 12 Edge Functions ; la production en a 38.
+  Les migrations 39 et 40 attendent leur `db push`.
 - Le contexte local est collecté et évalué, mais **aucune source n'est
   publiée** : la file de modération se remplit, l'application n'affiche rien.
   Voir `ETAPE_ACTUALITES_LOCALES.md` pour les conditions d'ouverture.
