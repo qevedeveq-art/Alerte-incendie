@@ -11,7 +11,33 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `48ad8d2` sur `main`.
-- Schéma du dépôt : migrations **01 à 39**.
+- Schéma du dépôt : migrations **01 à 40**.
+- La migration 40 ajoute `carte_cache` : six fenêtres de carte pré-calculées,
+  rafraîchies toutes les deux minutes par `pg_cron`. `/api/carte` exécutait
+  jusqu'ici un `st_clusterdbscan` complet **à chaque appel**, alors que chaque
+  client ouvert appelle la route toutes les deux minutes. Le coût était donc
+  proportionnel à la fréquentation, au moment précis où elle explose. Il est
+  désormais constant. Le cache est ignoré au-delà de six minutes d'âge, et son
+  âge est restitué à l'appelant : un cron arrêté ne fige pas la carte.
+- Une suite **pgTAP** (`supabase/tests/`) vérifie le moteur et les invariants
+  de sécurité après le rejeu des migrations : 51 assertions sur la sévérité,
+  le quorum citoyen, le barème de contexte, la RLS, les droits et le
+  `search_path` des fonctions `SECURITY DEFINER`. Le rejeu des migrations ne
+  contrôlait que la syntaxe.
+- **Leaflet et les polices sont servis par le dépôt** (`web/vendor/`). Les
+  empreintes SHA-256 des copies correspondent aux attributs d'intégrité qui
+  figuraient dans la page. Plus aucune dépendance CDN : une panne d'unpkg ne
+  rend plus la carte inaffichable pour un nouveau visiteur, et aucune adresse
+  IP ne part vers Google Fonts. Sous-ensemble latin seul, 324 ko.
+- `dispatch` dispose d'un **budget de temps** de 50 s : au-delà, il rend la
+  main et les alertes restantes repartent au passage suivant, sans tentative
+  consommée. Une exécution coupée en plein milieu d'une vague ne laissait
+  aucune trace exploitable.
+- La PWA **avertit quand elle ne peut rien délivrer**. Sans appareil vérifié,
+  un encart l'annonce sans détour ; sur iOS non installé, il explique que
+  Safari réserve les notifications aux applications ajoutées à l'écran
+  d'accueil. E-mail et Telegram ayant été retirés, il n'existe aucun canal de
+  rattrapage : un compte iPhone pouvait se croire protégé indéfiniment.
 - État de livraison vérifié en production : migrations **01 à 38** appliquées et
   12 Edge Functions déployées. **La migration 39 est dans le dépôt mais pas
   encore appliquée** : mettre cette ligne à jour après le prochain `db push`.
