@@ -1,7 +1,12 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v8';
+const CACHE = 'alerte-incendie-v9';
 const CACHE_TUILES = 'alerte-incendie-tuiles-v2';
 const MAX_TUILES = 450;
+
+/* Tout ce dont l'application a besoin pour s'afficher est servi par le dépôt.
+ * Leaflet et les polices venaient de CDN tiers : une panne d'unpkg rendait la
+ * carte inaffichable pour un visiteur qui n'était jamais venu, et le cache ne
+ * pouvait rien y faire puisqu'il était vide. */
 const STATIQUE = [
   './',
   './index.html',
@@ -9,19 +14,15 @@ const STATIQUE = [
   './manifest.webmanifest',
   './icone-192.png',
   './icone-512.png',
-];
-const DEPENDANCES = [
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  './vendor/leaflet/leaflet.css',
+  './vendor/leaflet/leaflet.js',
+  './vendor/polices/polices.css',
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(async (c) => {
-        await c.addAll(STATIQUE);
-        await Promise.allSettled(DEPENDANCES.map((url) => c.add(url)));
-      })
+      .then((c) => c.addAll(STATIQUE))
       .then(() => self.skipWaiting()),
   );
 });
