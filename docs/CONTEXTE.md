@@ -11,7 +11,25 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `48ad8d2` sur `main`.
-- Schéma du dépôt : migrations **01 à 40**.
+- Schéma du dépôt : migrations **01 à 41**.
+- La migration 41 corrige un défaut visible dès la mise en production : tous
+  les groupes de `/api/carte` avaient `commune: null`. `feux_carte_v29` ne
+  consultait jamais la table `communes` — pour un amas satellite, le nom venait
+  uniquement d'un groupe citoyen confirmé à proximité. La commune est désormais
+  résolue par point-dans-polygone. Deuxième cause : seul le département 31
+  était chargé ; la tâche `charger-communes` couvre le pays par lots de trois
+  toutes les dix minutes, et s'arrête d'elle-même une fois complète — son état
+  est la table `communes`, il n'y a pas de drapeau à gérer.
+- **Un contexte non sécurisé est expliqué, plus subi.** Ouvrir `index.html`
+  depuis le disque faisait échouer l'activation des notifications sur
+  « Script URL's scheme is not 'http' or 'https' », message du navigateur
+  incompréhensible pour l'utilisateur. `contexteSecurise()` teste le contexte
+  avant toute tentative, affiche `#noteContexte` et renvoie vers la version en
+  ligne. Service worker, notifications, installation et cache hors ligne
+  exigent tous https ou localhost.
+- La référence du projet Supabase vit dans `web/config.js`, plus dans le code
+  des trois pages. Ce fichier ne contient aucun secret : l'URL d'un projet est
+  publique par nature puisque le navigateur l'appelle.
 - La migration 40 ajoute `carte_cache` : six fenêtres de carte pré-calculées,
   rafraîchies toutes les deux minutes par `pg_cron`. `/api/carte` exécutait
   jusqu'ici un `st_clusterdbscan` complet **à chaque appel**, alors que chaque
@@ -327,6 +345,7 @@ Quatorze tâches au total.
 | `probe-sentinel3` | 1er du mois à 04:45 | veille catalogue Sentinel-3 |
 | `poll-contexte` | toutes les 30 min | contexte local, sans effet sur les preuves |
 | `rafraichir-carte` | toutes les 2 min | pré-calcul des fenêtres de carte nationale |
+| `charger-communes` | toutes les 10 min | découpage communal national, par lots, jusqu'à complétude |
 
 Quand l'ADS-B est actif, `poll-adsb` purge aussi les observations aériennes de
 plus de 24 heures.
