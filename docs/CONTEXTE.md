@@ -38,12 +38,22 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Safari réserve les notifications aux applications ajoutées à l'écran
   d'accueil. E-mail et Telegram ayant été retirés, il n'existe aucun canal de
   rattrapage : un compte iPhone pouvait se croire protégé indéfiniment.
-- État de livraison vérifié en production : migrations **01 à 38** appliquées et
-  12 Edge Functions déployées. **Les migrations 39 et 40 sont dans le dépôt mais
-  pas encore appliquées**, et la PWA en production est antérieure à la refonte :
-  mettre cette ligne à jour après le prochain `db push`. Tant que ce n'est pas
-  fait, toute mesure prise sur le site public décrit un autre logiciel que le
-  dépôt.
+- **État de livraison vérifié le 27 juillet 2026 à 08:14 UTC : migrations 01 à 40
+  appliquées, 12 Edge Functions déployées, PWA republiée.** Le dépôt et la
+  production sont alignés.
+
+  Contrôles externes effectués après déploiement :
+  - `/api/carte` renvoie `"origine":"cache"` avec `age_secondes` de 33 : la
+    migration 40 est active et la tâche `rafraichir-carte` tourne ;
+  - `/api/sante-publique` répond `ok=true` — collecte polaire à 3 minutes,
+    géostationnaire à 13 minutes, `pg_cron` à 13 minutes, 967 détections sur
+    24 h et 5 capteurs actifs ;
+  - la PWA répond HTTP 200 avec `theme-color:#0b0d10`, le bandeau de cadre,
+    la barre de commandes fusionnée et la frise temporelle intégrée.
+
+  Les tests pgTAP se sont donc exécutés pour la première fois : le job
+  `deployer` dépend de `verifier`, qui les contient. Leur exécution est
+  vérifiable dans l'onglet Actions.
 - **Audit du 26 juillet 2026, en soirée** (`docs/COMPTE_RENDU_26072026.md`) : la vague
   fonctionnelle du 26 juillet avait livré des calculs côté client sans le
   support serveur qui les rend exploitables. Trois façades ont été corrigées par

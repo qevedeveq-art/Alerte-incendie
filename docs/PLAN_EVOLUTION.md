@@ -31,16 +31,28 @@ Rappel utile avant la liste des manques, parce qu'elle est longue :
 
 ## P0 — à traiter avant toute nouvelle fonctionnalité
 
-### 1. Le dépôt et la production ont divergé
+### 1. ~~Le dépôt et la production ont divergé~~ — résolu le 27 juillet
 
-10 commits ne sont pas poussés, dont la migration 39. La production tourne sur
-38 migrations et une PWA d'avant la refonte. Tant que ce n'est pas résolu,
-toute mesure faite sur le site public décrit un autre logiciel que le dépôt.
+16 commits poussés, migrations 39 et 40 appliquées, Edge Functions redéployées,
+PWA republiée. Vérifié par contrôle externe : `/api/carte` sert désormais depuis
+le cache, `/api/sante-publique` répond `ok=true`.
 
-**Action :** pousser, vérifier les deux workflows, puis mettre à jour la
-section « État de livraison connu » de `CONTEXTE.md`.
-**Effort :** quelques minutes. **Risque de ne pas le faire :** élevé, tout le
-reste s'appuie dessus.
+**Découvert au passage — deux limites visibles en production :**
+
+- **Aucun nom de commune sur la carte nationale.** Les groupes renvoyés par
+  `/api/carte` ont tous `commune: null` : seul le département 31 est chargé
+  dans `communes`. Les pastilles affichent donc « Confirmé » ou « Probable »
+  au lieu d'un lieu, ce qui est la première information qu'un lecteur cherche.
+  Correctif : `load-communes` avec `{"france": true}`, une seule fois.
+- **`evenement_id` est nul hors zone surveillée.** Les évènements ne naissent
+  que dans une zone abonnée ; en dehors, la carte n'a rien à rattacher. La
+  rubrique de contexte local ne pourra donc jamais s'afficher pour un feu situé
+  hors des zones, même une fois une source publiée. À trancher : créer des
+  évènements nationaux, ou assumer que le contexte est une fonction de zone.
+
+Constat de terrain au moment du contrôle : un foyer corroboré dans le Var
+(43,52 N / 6,04 E), 874 MW, 25 observations sur deux familles indépendantes.
+Le système fonctionne.
 
 ### 2. La carte nationale recalcule un DBSCAN à chaque requête
 
