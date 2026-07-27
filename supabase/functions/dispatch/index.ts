@@ -36,6 +36,18 @@ const MAX_ECHECS = 5;
 const MAX_TENTATIVES = 5;
 const CONCURRENCE = 8;
 
+/** Budget de temps d'une exécution.
+ *
+ *  La file est traitée par vagues de 8 envois concurrents. Pour un évènement
+ *  touchant un millier d'appareils, cela fait 125 vagues séquentielles : si
+ *  l'exécution est interrompue par le délai maximal de la plateforme, elle
+ *  l'est au milieu d'une vague, sans trace et sans reprise ordonnée.
+ *
+ *  Passé ce budget, on rend la main proprement : les alertes non traitées
+ *  restent « en_attente » et repartent au passage suivant, deux minutes plus
+ *  tard. Mieux vaut deux exécutions complètes qu'une exécution coupée. */
+const BUDGET_MS = 50_000;
+
 // ---------------------------------------------------------------------
 //  Serveur Web Push, mis en cache mais invalide si la configuration
 //  change : sans cela, une rotation des cles VAPID exigeait un
@@ -191,12 +203,24 @@ Deno.serve(async (req) => {
       }
     };
 
+    const debut = Date.now();
+    let reportees = 0;
     for (let i = 0; i < alertes.length; i += CONCURRENCE) {
+      if (Date.now() - debut > BUDGET_MS) {
+        // Reste de la file laissé en l'état : « en_attente », sans tentative
+        // consommée. Le passage suivant le reprendra dans deux minutes.
+        reportees = alertes.length - i;
+        break;
+      }
       await Promise.all(alertes.slice(i, i + CONCURRENCE).map(traiter));
     }
 
-    await fermerRun(runId, true, stats);
-    return json({ ok: true, stats });
+    const bilan = { ...stats, reportees, duree_ms: Date.now() - debut };
+    if (reportees > 0) {
+      console.warn(`dispatch : ${reportees} alerte(s) reportées au prochain passage`);
+    }
+    await fermerRun(runId, true, bilan);
+    return json({ ok: true, stats: bilan });
   } catch (e) {
     await fermerRun(runId, false, stats, String(e));
     return json({ ok: false, erreur: String(e), stats }, 500);

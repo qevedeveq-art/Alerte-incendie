@@ -226,7 +226,10 @@ Deno.test("l’espacement suit une échelle, et le markup ne la contourne pas", 
 });
 
 Deno.test("la charte 1A est appliquée : typographies, fonds et formes", () => {
-  assert(pwa.includes("family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800"));
+  // Les deux familles sont servies par le dépôt, plus par Google Fonts.
+  assert(pwa.includes('href="./vendor/polices/polices.css"'));
+  assert(pwa.includes("'Inter'"));
+  assert(pwa.includes("'Outfit'"));
   assert(pwa.includes("--fond:#0b0d10"));
   assert(pwa.includes("--fond2:#141820"));
   assert(pwa.includes("--fond3:#1c2024"));
@@ -264,9 +267,70 @@ Deno.test("le mode hors ligne et l’installation PWA sont explicites", () => {
   assert(pwa.includes("alerte-incendie:feux-cache"));
   assert(pwa.includes("beforeinstallprompt"));
   assert(pwa.includes('id="btnInstaller"'));
-  assert(serviceWorker.includes("const DEPENDANCES"));
-  assert(serviceWorker.includes("basemaps.cartocdn.com"));
-  assert(serviceWorker.includes("Promise.allSettled"));
+  assert(serviceWorker.includes("basemaps.cartocdn.com"), "cache des tuiles de repli");
+  // Tout ce qu'il faut pour afficher l'application est pré-caché dès
+  // l'installation, puisque tout est servi par le dépôt.
+  for (
+    const ressource of [
+      "./vendor/leaflet/leaflet.js",
+      "./vendor/leaflet/leaflet.css",
+      "./vendor/polices/polices.css",
+    ]
+  ) {
+    assert(serviceWorker.includes(ressource), `ressource non pré-cachée : ${ressource}`);
+  }
+});
+
+Deno.test("l’application ne dépend d’aucun CDN tiers pour s’afficher", () => {
+  // Une panne d'unpkg rendait la carte inaffichable pour un visiteur qui
+  // n'était jamais venu : le cache ne pouvait pas le sauver, il était vide.
+  // Google Fonts envoyait en outre son adresse IP hors UE dès la première
+  // visite, sans consentement.
+  for (const fichier of [pwa, moderation, serviceWorker]) {
+    for (const cdn of ["unpkg.com", "fonts.googleapis.com", "fonts.gstatic.com", "cdnjs"]) {
+      const lignes = fichier.split("\n").filter((l) =>
+        l.includes(cdn) && !l.trimStart().startsWith("*") && !l.trimStart().startsWith("//") &&
+        !l.trimStart().startsWith("<!--") && !l.includes("Ils venaient")
+      );
+      assertEquals(lignes, [], `dépendance CDN restante (${cdn}) : ${lignes.join(" | ")}`);
+    }
+  }
+  assert(pwa.includes('href="./vendor/leaflet/leaflet.css"'));
+  assert(pwa.includes('src="./vendor/leaflet/leaflet.js"'));
+  assert(pwa.includes('href="./vendor/polices/polices.css"'));
+  assert(moderation.includes('href="./vendor/polices/polices.css"'));
+});
+
+Deno.test("le service ne promet pas une alerte qu’il ne peut pas délivrer", () => {
+  // Sans appareil vérifié, l'abonné ne reçoit rien : e-mail et Telegram ont
+  // été retirés, et sur iOS les notifications exigent l'installation.
+  assert(pwa.includes('id="avertissementCouverture"'));
+  assert(pwa.includes("Vous ne recevrez aucune alerte"));
+  assert(pwa.includes("const estIOS ="));
+  assert(pwa.includes("const estInstallee ="));
+  assert(pwa.includes("aucune alerte ne vous parviendra"));
+  // Le clic sur « Activer » explique la cause réelle au lieu d'accuser le
+  // navigateur.
+  assert(pwa.includes("installez d’abord l’application sur l’écran d’accueil"));
+});
+
+Deno.test("dispatch rend la main avant d’être coupé en plein envoi", () => {
+  assert(dispatch.includes("const BUDGET_MS"));
+  assert(dispatch.includes("Date.now() - debut > BUDGET_MS"));
+  assert(dispatch.includes("reportees"));
+  // Une alerte reportée ne doit pas consommer de tentative.
+  const boucle = dispatch.slice(dispatch.indexOf("const debut = Date.now()"));
+  const corps = boucle.slice(0, boucle.indexOf("await fermerRun"));
+  assertEquals(corps.includes("tentatives"), false);
+});
+
+Deno.test("la carte est servie depuis un cache, sans mentir sur son âge", () => {
+  assert(api.includes('sb.rpc("feux_carte_servie"'));
+  assert(api.includes("age_secondes"));
+  assert(api.includes("calcule_at"));
+  // Le client affiche la date de calcul du serveur, pas celle de son fetch.
+  assert(pwa.includes("derniereMajCarte = j.calcule_at"));
+  assert(pwa.includes("Calculé ${relatif(derniereMajCarte)}"));
 });
 
 Deno.test("la recherche publique localise une commune sans créer de compte", () => {
