@@ -175,7 +175,8 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
   .colonne-panneau::-webkit-scrollbar-thumb{background:var(--bord);border-radius:99px}
 }
 .carte-carte{overflow:visible;position:relative}
-.carte-carte>#map{border-radius:0;overflow:hidden}
+/* Référentiel des surcouches : la carte seule, pas la fiche entière. */
+.zone-carte{position:relative;overflow:hidden}
 #map{height:clamp(560px,72vh,760px)}
 .leaflet-container,#map{background:var(--fond2)}
 .leaflet-container{background:var(--fond2);font:inherit}
@@ -187,11 +188,15 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
   background:linear-gradient(180deg,rgba(11,13,16,.72),rgba(11,13,16,0))}
 .bandeau-carte .cadre{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--txt3);font-weight:650}
+/* Les commandes Leaflet démarrent sous le bandeau, comme dans la maquette :
+   sinon le zoom se superpose à l'indicateur de fraîcheur. */
+.zone-carte .leaflet-top{top:40px}
+.zone-carte .leaflet-bottom .leaflet-control-attribution{margin-bottom:0}
 .bandeau-carte .fraicheur{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;
   color:var(--txt2);white-space:nowrap}
-.carte-carte:after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;
+.zone-carte:after{content:"";position:absolute;left:0;right:0;bottom:0;height:88px;
   pointer-events:none;z-index:600;
-  background:linear-gradient(0deg,rgba(11,13,16,.55),rgba(11,13,16,0))}
+  background:linear-gradient(0deg,rgba(11,13,16,.5),rgba(11,13,16,0))}
 
 /* Une seule barre de commandes sous la carte.
    Elle en comptait trois empilées — commandes, frise temporelle, légende —
@@ -253,7 +258,7 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 .panneau-filtres.ouvert{display:grid}
 
 /* Chargement de la carte. */
-.chargement-carte{position:absolute;inset:0;z-index:620;display:grid;place-items:center;
+.chargement-carte{position:absolute;inset:0;z-index:900;display:grid;place-items:center;
   background:linear-gradient(110deg,var(--fond2) 28%,#20262d 40%,var(--fond2) 52%);
   background-size:220% 100%;animation:squelette 1.25s linear infinite;color:var(--txt2);font-size:13.5px}
 .chargement-carte[hidden]{display:none}
@@ -637,17 +642,23 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
           </div>
           <button class="btn" type="button" id="btnAutourMoi">Me localiser</button>
         </div>
-        <div id="map" aria-label="Carte interactive des feux récents"></div>
-        <div class="bandeau-carte" aria-hidden="true">
-          <span class="cadre">Carte — France métropolitaine et Corse</span>
-          <span class="fraicheur"><span class="point ok" id="pointFraicheur"></span>
-            <span id="fraicheurCarte">Chargement…</span></span>
+        <!-- Les surcouches se positionnent sur la carte, pas sur toute la
+             fiche : sans ce conteneur, le cadre s'affichait au-dessus de la
+             barre de recherche, le viseur se centrait sur la fiche entière et
+             le voile de chargement masquait aussi les commandes. -->
+        <div class="zone-carte">
+          <div id="map" aria-label="Carte interactive des feux récents"></div>
+          <div class="bandeau-carte" aria-hidden="true">
+            <span class="cadre">Carte — France métropolitaine et Corse</span>
+            <span class="fraicheur"><span class="point ok" id="pointFraicheur"></span>
+              <span id="fraicheurCarte">Chargement…</span></span>
+          </div>
+          <div id="viseurSignalement" class="viseur-tactique" hidden>
+            <div class="viseur-croix" aria-hidden="true"></div>
+            <div class="viseur-etiquette">Ciblez le départ de feu au centre</div>
+          </div>
+          <div class="chargement-carte" id="chargementCarte" role="status">Chargement des détections…</div>
         </div>
-        <div id="viseurSignalement" class="viseur-tactique" hidden>
-          <div class="viseur-croix" aria-hidden="true"></div>
-          <div class="viseur-etiquette">Ciblez le départ de feu au centre</div>
-        </div>
-        <div class="chargement-carte" id="chargementCarte" role="status">Chargement des détections…</div>
         <div class="resume-carte" id="resumeCarte" role="status" aria-live="polite">
           <span class="signal" aria-hidden="true">⌁</span>
           <span><b>Analyse de la situation en cours…</b>
@@ -1211,7 +1222,12 @@ const nomsSources = {
 /* ---------- carte ---------- */
 function initCarte(centre = [46.6, 2.5], zoom = 5) {
   if (carte) return;
-  carte = L.map('map', { zoomControl: true, attributionControl: true }).setView(centre, zoom);
+  // Commandes à droite : le libellé de cadre occupe le coin haut gauche, et
+  // la légende le coin bas gauche. Les laisser à gauche par défaut les faisait
+  // se recouvrir.
+  carte = L.map('map', { zoomControl: false, attributionControl: true }).setView(centre, zoom);
+  L.control.zoom({ position: 'topright', zoomInTitle: 'Zoomer', zoomOutTitle: 'Dézoomer' })
+    .addTo(carte);
   const satellite = L.tileLayer(
     'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
     '&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg' +
@@ -1261,9 +1277,11 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
     'Plan sombre': planSombre,
   }, {
     'Noms des localités (IGN)': nomsFrancaisIGN,
-  }, { position: 'topleft', collapsed: true }).addTo(carte);
+  }, { position: 'topright', collapsed: true }).addTo(carte);
 
-  const legende = L.control({ position: 'bottomright' });
+  // Légende en bas à gauche : le coin bas droit porte l'attribution
+  // obligatoire des fournisseurs de tuiles, qu'elle recouvrait.
+  const legende = L.control({ position: 'bottomleft' });
   legende.onAdd = () => {
     // Ouverte par défaut : sur un service d'alerte, la clé de lecture de la
     // carte ne doit pas demander un clic pour apparaître.
@@ -2105,7 +2123,9 @@ function dessinerCarte() {
   const bornes = [];
   for (const z of etat.zones) {
     const l = L.geoJSON(z.geojson, {
-      style: { color: '#e0453c', weight: 1.6, opacity: .75, fillColor: '#e0453c', fillOpacity: .07 },
+      // Périmètre surveillé : même rouge que la charte, tracé fin et
+      // faiblement rempli pour ne pas se confondre avec un foyer.
+      style: { color: COULEUR_NIVEAU.corrobore, weight: 1.6, opacity: .7, fillColor: COULEUR_NIVEAU.corrobore, fillOpacity: .06 },
     }).addTo(coucheZones);
     l.bindPopup(`<b>${html(z.nom)}</b><br>${Number(z.surface_km2) || 0} km² surveillés<br>
       <span class="txt-faible">${z.limitrophes.length} commune(s) limitrophe(s)${z.buffer_m ? ` + ${z.buffer_m / 1000} km de marge` : ''}</span>`);
@@ -2114,6 +2134,10 @@ function dessinerCarte() {
 
   dessinerFeuxCarte();
   dessinerSignalements();
+  // Les compteurs de la légende vivent dans un contrôle Leaflet créé par
+  // initCarte : sans ce rappel, ils restent à zéro jusqu'à la première
+  // interaction avec la carte.
+  rendreResumeCarte();
 
   if (bornes.length) carte.fitBounds(bornes.reduce((a, b) => a.extend(b)), { padding: [24, 24] });
 }
@@ -2858,6 +2882,7 @@ document.addEventListener('change', (e) => {
     initCarte();
     dessinerFeuxCarte();
     dessinerSignalements();
+    rendreResumeCarte();
   } else {
     $('#vueApp').hidden = false;
     await recharger();

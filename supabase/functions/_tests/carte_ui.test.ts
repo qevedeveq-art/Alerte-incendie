@@ -134,6 +134,60 @@ Deno.test("l’interface est carte-first, responsive et navigable sur mobile", (
   assert(pwa.includes("function majFraicheurCarte("));
 });
 
+Deno.test("les surcouches se positionnent sur la carte, pas sur toute la fiche", () => {
+  // .carte-carte contient la recherche, la carte, les commandes, les filtres
+  // et la liste. Ancrer les surcouches dessus plaçait le cadre au-dessus de la
+  // barre de recherche, centrait le viseur sur la fiche entière et faisait
+  // masquer les commandes par le voile de chargement.
+  const zone = pwa.slice(pwa.indexOf('<div class="zone-carte">'));
+  const fin = zone.indexOf('</div>\n        <div class="resume-carte"');
+  const bloc = zone.slice(0, fin > 0 ? fin : 2000);
+  for (
+    const enfant of [
+      'id="map"',
+      'class="bandeau-carte"',
+      'id="viseurSignalement"',
+      'id="chargementCarte"',
+    ]
+  ) {
+    assert(bloc.includes(enfant), `Surcouche hors de la zone carte : ${enfant}`);
+  }
+  assert(pwa.includes(".zone-carte{position:relative"));
+  assert(pwa.includes(".zone-carte:after{"), "le dégradé bas doit suivre la carte");
+  assertEquals(pwa.includes(".carte-carte:after{"), false);
+});
+
+Deno.test("les commandes de la carte ne se recouvrent pas", () => {
+  // Zoom et sélecteur de fond étaient en haut à gauche, sous le libellé de
+  // cadre ; la légende occupait le coin bas droit, sur l'attribution.
+  assert(pwa.includes("zoomControl: false"));
+  assert(pwa.includes("L.control.zoom({ position: 'topright'"));
+  assert(pwa.includes("}, { position: 'topright', collapsed: true })"));
+  assert(pwa.includes("L.control({ position: 'bottomleft' })"));
+  assert(pwa.includes(".zone-carte .leaflet-top{top:40px}"));
+  // Le voile de chargement doit passer au-dessus des contrôles Leaflet (800).
+  const m = /\.chargement-carte\{[^}]*z-index:(\d+)/.exec(pwa);
+  assert(m && Number(m[1]) > 800, "le voile de chargement doit couvrir les contrôles");
+  // Les surcouches décoratives ne doivent pas intercepter les clics.
+  for (const sel of [".bandeau-carte", ".zone-carte:after", ".viseur-tactique"]) {
+    const r = new RegExp(`\\${sel}\\{[^}]*\\}`).exec(pwa.replace(/\s+/g, " "));
+    assert(r && r[0].includes("pointer-events:none"), `${sel} doit laisser passer les clics`);
+  }
+});
+
+Deno.test("les compteurs de légende sont alimentés dès le premier rendu", () => {
+  // Les compteurs vivent dans un contrôle Leaflet créé par initCarte : sans
+  // rappel explicite après l'initialisation, ils restaient à zéro jusqu'à la
+  // première interaction avec la carte.
+  const anonyme = pwa.slice(pwa.indexOf("document.body.classList.add('anonyme')"));
+  const blocAnonyme = anonyme.slice(0, anonyme.indexOf("} else {"));
+  assert(blocAnonyme.includes("initCarte();"));
+  assert(blocAnonyme.includes("rendreResumeCarte();"), "rendu initial des compteurs manquant");
+  const dessine = pwa.slice(pwa.indexOf("function dessinerCarte()"));
+  const blocDessine = dessine.slice(0, dessine.indexOf("\n}"));
+  assert(blocDessine.includes("rendreResumeCarte();"));
+});
+
 Deno.test("l’espace autour de la carte n’est pas gaspillé", () => {
   // La légende existait deux fois : flottante sur la carte, et répétée à
   // l'identique dans une bande en dessous, compteurs compris.

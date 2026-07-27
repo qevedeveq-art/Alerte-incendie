@@ -89,6 +89,24 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   Au-delà de 1200 px, le panneau latéral suit le défilement. Deux tests
   gardent ces invariants : aucune valeur d'espacement hors échelle, aucun
   style en ligne statique.
+- **Visibilité et fonctionnement de la carte, revus le 27 juillet.** Les trois
+  surcouches — cadre et fraîcheur, viseur de ciblage, voile de chargement —
+  étaient ancrées sur `.carte-carte`, qui contient aussi la recherche, les
+  commandes, les filtres et la liste. Conséquences : le cadre s'affichait
+  au-dessus de la barre de recherche, le viseur se centrait sur la fiche
+  entière au lieu du centre de la carte, et le voile masquait les commandes.
+  Un conteneur `.zone-carte` sert désormais de référentiel, et le dégradé bas
+  suit la carte. Trois autres corrections :
+  1. zoom et sélecteur de fond passent en haut à droite, la légende en bas à
+     gauche : ils se superposaient au libellé de cadre et à l'attribution ;
+  2. le voile de chargement passe au-dessus des contrôles Leaflet (z-index
+     900 contre 800), sans quoi ils transparaissaient pendant le chargement ;
+  3. les compteurs de légende restaient à zéro jusqu'à la première interaction
+     avec la carte : ils vivent dans un contrôle créé par `initCarte`, appelé
+     après le premier rendu du résumé. Les deux parcours rappellent
+     `rendreResumeCarte()` après initialisation.
+  Le contour des zones surveillées utilisait encore `#e0453c`, hérité de
+  l'ancienne palette.
 - **La publication de la PWA est désormais subordonnée aux tests.** Le workflow
   « Publier la PWA » ne se déclenchait que sur `web/**` et n'exécutait aucun
   test, tandis que les tests d'interface vivent dans `supabase/functions/_tests`
