@@ -57,6 +57,15 @@ jobs:
         timeout-minutes: 15
         run: supabase db start
 
+      # Le rejeu des migrations ne verifie que la syntaxe. Les regles qui
+      # decident si un abonne est reveille la nuit — severite, quorum,
+      # familles de preuves — se testent, elles, sur leur comportement.
+      # S'y ajoutent les invariants de securite : RLS partout, aucune
+      # policy, aucun droit pour anon ou authenticated.
+      - name: Tests pgTAP du moteur et des invariants
+        timeout-minutes: 10
+        run: supabase test db
+
   deployer:
     name: Déployer
     needs: verifier
