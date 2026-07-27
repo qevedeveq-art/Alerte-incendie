@@ -214,7 +214,10 @@ Deno.serve(async (req) => {
       const limite = Math.round(lireNombre("limite", 300, 1, 500));
       if (ouest >= est || sud >= nord) return json({ erreur: "emprise de carte invalide" }, 400);
 
-      const { data, error } = await sb.rpc("feux_carte", {
+      // Servie depuis le cache national quand il est frais, recalculée en
+      // direct sinon. L'âge est restitué : un cache qui vieillit doit se
+      // voir, pas se deviner.
+      const { data, error } = await sb.rpc("feux_carte_servie", {
         p_heures: heures,
         p_ouest: ouest,
         p_sud: sud,
@@ -224,8 +227,11 @@ Deno.serve(async (req) => {
       });
       if (error) throw new Error(`carte: ${error.message}`);
       return json({
-        feux: Array.isArray(data) ? data : [],
+        feux: Array.isArray(data?.feux) ? data.feux : [],
         heures,
+        calcule_at: data?.calcule_at ?? null,
+        age_secondes: Number(data?.age_secondes ?? 0),
+        origine: data?.origine ?? "direct",
         methode: {
           distance_correlation_m: 2000,
           fenetre_citoyenne_h: 12,

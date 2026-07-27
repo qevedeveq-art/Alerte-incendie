@@ -10,11 +10,12 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icone-192.png">
 <title>Alerte Incendie</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800&display=swap" rel="stylesheet">
+<!-- Leaflet et les polices sont servis par le dépôt.
+     Ils venaient d'unpkg.com et de fonts.googleapis.com : une panne du CDN
+     rendait la carte inaffichable pour un nouveau visiteur, et Google Fonts
+     envoyait son adresse IP hors UE dès la première visite. -->
+<link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="./vendor/polices/polices.css">
 <style>
 /* =====================================================================
    Alerte Incendie — charte 1A « tactique sombre »
@@ -495,6 +496,12 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
 [data-anonyme]{display:none!important}
 .anonyme [data-anonyme]{display:flex!important}
 .consentement{border-top:1px solid var(--bord);padding-top:16px}
+/* Avertissement de couverture : ni décoratif, ni alarmiste. Il dit un fait. */
+.avertissement-couverture{border-color:rgba(255,149,0,.45);
+  background:linear-gradient(110deg,rgba(255,149,0,.12),var(--fond2) 60%)}
+.avertissement-couverture b{display:block;font-family:'Outfit',sans-serif;font-size:15px;
+  font-weight:700;color:var(--orange-clair)}
+.avertissement-couverture .note{background:transparent;border:0;padding:0}
 .parcours-alerte{display:grid;gap:1px;background:var(--bord)}
 .etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;
   padding:12px 16px;background:var(--fond2)}
@@ -782,6 +789,13 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
 
     <section id="sectionAlertes" data-prive>
       <h2>Notifications sur vos appareils</h2>
+      <!-- Verdict sans détour : tant qu'aucun appareil n'est vérifié, le
+           service ne préviendra personne. Le dire vaut mieux que le laisser
+           découvrir le jour d'un feu. -->
+      <div class="carte pad avertissement-couverture" id="avertissementCouverture" hidden>
+        <b id="titreCouverture">Vous ne recevrez aucune alerte</b>
+        <p class="note mt-2 m-0" id="detailCouverture"></p>
+      </div>
       <div class="carte parcours-alerte" id="parcoursAlerte"></div>
       <div class="carte" id="listeCanaux"></div>
       <div class="carte pad">
@@ -793,9 +807,11 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
         <button class="btn pleine mt-3" id="btnTest">Envoyer une alerte de test</button>
       </div>
       <p class="note mt-3" id="noteIos" hidden>
-        <b>Sur iPhone / iPad.</b> Les notifications exigent d’installer l’application :
-        bouton Partager, puis « Sur l’écran d’accueil ». Ouvrez-la ensuite depuis l’icône
-        et réessayez.
+        <b>Sur iPhone et iPad, une étape est obligatoire.</b> Safari ne permet les
+        notifications que si l’application est installée : bouton Partager, puis
+        « Sur l’écran d’accueil ». Ouvrez-la ensuite depuis l’icône et revenez ici.
+        Sans cette étape, <b>aucune alerte ne vous parviendra</b> — le service n’a
+        pas d’autre canal.
       </p>
     </section>
 
@@ -1019,8 +1035,7 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
   </form>
 </dialog>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="./vendor/leaflet/leaflet.js"></script>
 <script>
 /* =====================================================================
    Alerte Incendie — client PWA
@@ -1387,7 +1402,10 @@ async function chargerFeuxCarte() {
   try {
     const j = await appel(`carte?heures=${heuresCarte}&limite=500`, { signal: controle.signal });
     feuxCarte = Array.isArray(j.feux) ? j.feux.map((f) => ({ ...f, _cle: cleFeu(f) })) : [];
-    derniereMajCarte = new Date().toISOString();
+    // Date de CALCUL de la carte, pas date de téléchargement : le serveur
+    // sert un résultat mis en cache jusqu'à quelques minutes. Afficher
+    // « à l'instant » pour une donnée de cinq minutes serait faux.
+    derniereMajCarte = j.calcule_at || new Date().toISOString();
     localStorage.setItem('alerte-incendie:derniere-maj-carte', derniereMajCarte);
     localStorage.setItem('alerte-incendie:feux-cache', JSON.stringify(feuxCarte.slice(0, 250)));
     const el = $('#etatCarteSources');
@@ -1421,7 +1439,12 @@ function majFraicheurCarte(enLigne) {
   const pt = $('#pointFraicheur');
   if (!txt || !pt) return;
   if (enLigne) {
-    txt.textContent = 'Actualisé à l’instant';
+    // Le serveur peut servir une carte calculée il y a quelques minutes :
+    // on affiche l'âge réel, jamais un « à l'instant » de complaisance.
+    const age = derniereMajCarte
+      ? (Date.now() - new Date(derniereMajCarte).getTime()) / 60000
+      : 0;
+    txt.textContent = age < 1.5 ? 'Actualisé à l’instant' : `Calculé ${relatif(derniereMajCarte)}`;
     pt.className = 'point ok';
   } else if (derniereMajCarte) {
     txt.textContent = `Données de ${relatif(derniereMajCarte)}`;
@@ -2166,6 +2189,32 @@ function rendre() {
   const zoneFaite = etat.zones.length > 0;
   const canalFait = appareils.some((c) => c.actif && c.verifie);
   const testFait = appareils.some((c) => c.actif && c.verifie && c.last_ok_at);
+
+  // Couverture réelle de l'abonné. Un compte sans appareil vérifié ne reçoit
+  // rien : il n'existe plus ni e-mail, ni Telegram pour rattraper.
+  const avert = $('#avertissementCouverture');
+  if (avert) {
+    const titre = $('#titreCouverture');
+    const detail = $('#detailCouverture');
+    if (!canalFait) {
+      titre.textContent = 'Vous ne recevrez aucune alerte';
+      detail.textContent = estIOS && !estInstallee()
+        ? 'Aucun appareil n’est encore vérifié. Sur iPhone et iPad, installez ' +
+          'd’abord l’application sur l’écran d’accueil : Safari ne délivre les ' +
+          'notifications qu’à une application installée.'
+        : 'Aucun appareil n’est encore vérifié. Activez les notifications ' +
+          'ci-dessous, puis envoyez une alerte de test pour confirmer la réception.';
+      avert.hidden = false;
+    } else if (!zoneFaite) {
+      titre.textContent = 'Aucune zone surveillée';
+      detail.textContent = 'Votre appareil est prêt, mais aucun lieu n’est suivi : ' +
+        'ajoutez une commune pour être averti.';
+      avert.hidden = false;
+    } else {
+      avert.hidden = true;
+    }
+  }
+  if (estIOS && !estInstallee()) $('#noteIos').hidden = false;
   $('#parcoursAlerte').innerHTML = [
     [zoneFaite, '1', 'Zone surveillée', zoneFaite ? `${etat.zones.length} zone(s) active(s)` : 'Choisissez une commune', 'zone'],
     [canalFait, '2', 'Appareil prêt', canalFait ? 'Prêt à recevoir les alertes' : 'Activez les notifications ici', 'canal'],
@@ -2269,10 +2318,24 @@ function b64ToU8(b64) {
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 }
 
+/* iOS ne fournit PushManager que si la PWA est installée. Un utilisateur qui
+ * crée un compte dans Safari et clique « Activer » doit comprendre que c'est
+ * l'installation qui manque, pas son navigateur. */
+const estIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const estInstallee = () =>
+  window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
 async function activerPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     $('#noteIos').hidden = false;
-    return toast('Ce navigateur ne gère pas les notifications push.', true);
+    $('#noteIos').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return toast(
+      estIOS
+        ? 'Sur iPhone, installez d’abord l’application sur l’écran d’accueil.'
+        : 'Ce navigateur ne gère pas les notifications push.',
+      true,
+    );
   }
   const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
   await navigator.serviceWorker.ready;
