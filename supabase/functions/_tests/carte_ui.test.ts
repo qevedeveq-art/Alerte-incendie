@@ -134,6 +134,43 @@ Deno.test("l’interface est carte-first, responsive et navigable sur mobile", (
   assert(pwa.includes("function majFraicheurCarte("));
 });
 
+Deno.test("l’espace autour de la carte n’est pas gaspillé", () => {
+  // La légende existait deux fois : flottante sur la carte, et répétée à
+  // l'identique dans une bande en dessous, compteurs compris.
+  assertEquals(pwa.includes("legende-interactive-barre"), false);
+  assertEquals(pwa.includes("cntCorroboreB"), false);
+  // Commandes, période et frise temporelle tiennent dans une seule barre.
+  assert(pwa.includes('class="barre-carte-fin"'));
+  assert(pwa.includes('<div class="barre-temporelle" id="barreTemporelle"'));
+  const debut = pwa.indexOf('class="carte carte-carte"');
+  const bloc = pwa.slice(debut, pwa.indexOf("</section>", debut));
+  const bandes = ["recherche-carte", "barre-carte", "filtres-sources", "resume-carte"];
+  for (const b of bandes) assert(bloc.includes(b), `Bande absente : ${b}`);
+  // Une seule barre de commandes, pas trois empilées.
+  assertEquals((bloc.match(/class="barre-carte"/g) || []).length, 1);
+});
+
+Deno.test("l’espacement suit une échelle, et le markup ne la contourne pas", () => {
+  assert(pwa.includes("--e1:4px; --e2:8px; --e3:12px; --e4:16px"));
+  const style = pwa.slice(pwa.indexOf("<style>"), pwa.indexOf("</style>"));
+  // Aucune valeur d'espacement hors échelle de 4 px (1px et 2px restent
+  // admis pour les filets et les micro-décalages).
+  const horsEchelle = new Set<string>();
+  for (const m of style.matchAll(/(?:padding|margin|gap)[a-z-]*:\s*([^;}]+)/g)) {
+    for (const t of m[1].split(/\s+/)) {
+      const px = /^(\d+)px$/.exec(t);
+      if (px && Number(px[1]) % 4 !== 0 && Number(px[1]) > 2) horsEchelle.add(t);
+    }
+  }
+  assertEquals([...horsEchelle].sort(), [], "valeurs d'espacement hors échelle");
+  // Le markup ne doit plus poser de marges à la main : seuls les styles
+  // réellement dynamiques subsistent.
+  const markup = pwa.slice(pwa.indexOf("</style>"));
+  const enLigne = markup.match(/style="[^"]*"/g) || [];
+  const statiques = enLigne.filter((s) => !s.includes("${"));
+  assertEquals(statiques, [], `styles en ligne statiques restants : ${statiques.join(" | ")}`);
+});
+
 Deno.test("la charte 1A est appliquée : typographies, fonds et formes", () => {
   assert(pwa.includes("family=Inter:wght@400;550;600;700&family=Outfit:wght@500;650;700;800"));
   assert(pwa.includes("--fond:#0b0d10"));

@@ -39,6 +39,33 @@ tenir deux discours sur la même preuve.
 - Corps et interface : **Inter** (400–700)
 - Import : `Inter:wght@400;550;600;700` + `Outfit:wght@500;650;700;800`
 
+## Espacement
+
+Échelle de 4 px, exposée en variables : `--e1:4px`, `--e2:8px`, `--e3:12px`,
+`--e4:16px`, `--e5:20px`, `--e6:24px`, `--e7:32px`.
+
+Le fichier comptait 22 valeurs distinctes entre 2 et 20 px : deux blocs voisins
+respiraient différemment sans raison, et reprendre le rythme obligeait à
+fouiller le HTML. Seuls les filets de 1 px et de rares décalages de 2 px
+échappent à l'échelle ; un test le vérifie.
+
+Le markup ne pose plus de marges à la main. Les utilitaires disponibles sont
+`.mt-0` à `.mt-6`, `.m-0`, `.txt-faible`, `.txt-min`, `.txt-petit`,
+`.rangee-libre` (avec `.serree` et `.haut`), `.encart`, `.separe`, `.centre`,
+`.pleine-largeur`. Seuls les styles réellement dynamiques — une couleur de
+sévérité calculée — restent en ligne.
+
+## Densité autour de la carte
+
+La carte est l'élément principal : tout ce qui l'entoure lui prend de la
+hauteur. Une seule barre de commandes réunit la période, le niveau de
+confiance, la frise temporelle et les actions. La légende n'existe qu'une
+fois, flottante sur la carte — elle était auparavant dupliquée à l'identique
+dans une bande en dessous, compteurs compris.
+
+Au-delà de 1200 px, le panneau latéral suit le défilement : l'état des sources
+et le bouton d'alerte restent atteignables sans remonter.
+
 ## Composants
 
 - Cartes : rayon 16–22 px, `1px solid #2d3339`, ombre `0 18px 50px rgba(0,0,0,.35)`

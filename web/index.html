@@ -41,6 +41,10 @@
   --gris:#7c8a94; --vert:#3fa86b;
   /* sévérité, teintes de badge */
   --rouge-clair:#ff7b72; --orange-clair:#f0a05e; --gris-clair:#9fb0bb;
+  /* espacement — échelle de 4 px.
+     Le fichier utilisait 22 valeurs distinctes entre 2 et 20 px, sans
+     rythme : deux blocs voisins respiraient différemment sans raison. */
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:20px; --e6:24px; --e7:32px;
   /* formes */
   --r:18px; --r-sm:12px; --r-xs:10px;
   --ombre:0 18px 50px rgba(0,0,0,.35);
@@ -64,7 +68,7 @@ button,input,select{min-height:44px}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
 summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .lien-evitement{position:fixed;left:12px;top:8px;z-index:3000;transform:translateY(-160%);
-  background:#fff;color:#0b0d10;padding:10px 14px;border-radius:var(--r-xs);font-weight:700}
+  background:#fff;color:#0b0d10;padding:12px 16px;border-radius:var(--r-xs);font-weight:700}
 .lien-evitement:focus{transform:translateY(0)}
 
 /* ---------- en-tête ---------- */
@@ -80,7 +84,7 @@ header{
 header h1{font-family:'Outfit',sans-serif;font-size:18px;margin:0;font-weight:700;letter-spacing:-.015em}
 header .sous{font-size:12px;color:var(--txt3);margin-top:1px}
 .pastille{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;
-  color:var(--txt2);background:var(--fond3);padding:8px 13px;border-radius:99px;
+  color:var(--txt2);background:var(--fond3);padding:8px 12px;border-radius:99px;
   border:1px solid var(--bord);min-height:38px;backdrop-filter:blur(8px)}
 .point{width:7px;height:7px;border-radius:99px;background:var(--gris);flex:0 0 auto}
 .point.ok{background:var(--vert);animation:pulse-ok 2.4s infinite cubic-bezier(.16,1,.3,1)}
@@ -92,33 +96,33 @@ header .sous{font-size:12px;color:var(--txt3);margin-top:1px}
 }
 
 /* ---------- structure ---------- */
-main{max-width:1440px;margin:0 auto;padding:18px 20px 96px}
+main{max-width:1440px;margin:0 auto;padding:20px 20px 96px}
 section{margin-bottom:20px}
-section[id]{scroll-margin-top:82px}
+section[id]{scroll-margin-top:84px}
 .anonyme [data-prive]{display:none!important}
 h2{font-family:'Inter',sans-serif;font-size:12px;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--txt3);margin:0 0 10px 2px;font-weight:700}
+  color:var(--txt3);margin:0 0 12px 4px;font-weight:700}
 .carte{background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r);
   overflow:hidden;box-shadow:var(--ombre)}
 .carte + .carte{margin-top:12px}
 .pad{padding:16px}
-.rangee{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bord)}
+.rangee{display:flex;align-items:center;gap:12px;padding:16px 16px;border-bottom:1px solid var(--bord)}
 .rangee:last-child{border-bottom:0}
 .rangee .cr{flex:1;min-width:0}
 .rangee b{display:block;font-weight:600;font-size:14.5px}
-.rangee small{color:var(--txt2);font-size:12.5px;display:block;margin-top:2px}
+.rangee small{color:var(--txt2);font-size:12.5px;display:block;margin-top:4px}
 
 /* ---------- boutons et champs ---------- */
 .btn{background:var(--fond3);color:var(--txt);border:1px solid var(--bord);
-  padding:11px 16px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:12px 16px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
   transition:background .14s ease,border-color .14s ease,transform .14s ease}
 .btn:hover{background:#242a31;border-color:var(--bord-clair)}
 .btn:active{transform:scale(.985)}
 .btn.p{background:var(--rouge);border-color:var(--rouge);color:#fff}
 .btn.p:hover{background:#ff5348;border-color:#ff5348}
-.btn.sm{padding:8px 13px;font-size:13px;border-radius:var(--r-xs);min-height:38px}
-.btn.g{background:transparent;border-color:transparent;color:var(--txt2);padding:8px 10px}
+.btn.sm{padding:8px 12px;font-size:13px;border-radius:var(--r-xs);min-height:38px}
+.btn.g{background:transparent;border-color:transparent;color:var(--txt2);padding:8px 12px}
 .btn.g:hover{color:var(--txt);background:var(--fond3)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:disabled:hover{background:var(--fond3);border-color:var(--bord)}
@@ -126,11 +130,11 @@ h2{font-family:'Inter',sans-serif;font-size:12px;letter-spacing:.09em;text-trans
 .btn-danger{color:var(--rouge-clair)!important}
 
 input,select{background:var(--fond3);border:1px solid var(--bord);color:var(--txt);
-  padding:12px 14px;border-radius:var(--r-sm);font:inherit;width:100%;
+  padding:12px 16px;border-radius:var(--r-sm);font:inherit;width:100%;
   transition:border-color .14s ease}
 input::placeholder{color:var(--txt3)}
 input:focus,select:focus{outline:0;border-color:var(--bord-clair)}
-label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 6px 2px}
+label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 8px 4px}
 .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
 /* ---------- boîtes de dialogue ---------- */
@@ -138,29 +142,38 @@ dialog{width:min(620px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflo
   padding:0;border:1px solid var(--bord);border-radius:22px;background:var(--fond2);color:var(--txt);
   box-shadow:var(--ombre-haute);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s ease}
 dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
-.dialog-entete{padding:18px 20px;border-bottom:1px solid var(--bord)}
+.dialog-entete{padding:20px 20px;border-bottom:1px solid var(--bord)}
 .dialog-entete h3{margin:0;font-family:'Outfit',sans-serif;font-size:18px;font-weight:700}
-.dialog-corps{padding:18px 20px}
+.dialog-corps{padding:20px 20px}
 .dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .tiroir-incident{width:min(640px,calc(100vw - 24px))}
-.alerte-secours{padding:12px 14px;border:1px solid rgba(255,59,48,.45);
+.alerte-secours{padding:12px 16px;border:1px solid rgba(255,59,48,.45);
   border-radius:var(--r-sm);background:rgba(255,59,48,.12);color:#ffd6d2;font-size:12.5px;line-height:1.55}
 
 /* ---------- état public des sources ---------- */
 .etat-sources{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--bord)}
-.etat-source{padding:14px 12px;background:var(--fond2);text-align:center}
+.etat-source{padding:16px 12px;background:var(--fond2);text-align:center}
 .etat-source .voyant{width:7px;height:7px;border-radius:99px;background:var(--gris);
   display:block;margin:0 auto 8px}
 .etat-source.ok .voyant{background:var(--vert)}
 .etat-source.ko .voyant{background:var(--rouge)}
 .etat-source b{display:block;font-size:13px;font-weight:650}
-.etat-source small{display:block;color:var(--txt3);font-size:12px;margin-top:2px}
+.etat-source small{display:block;color:var(--txt3);font-size:12px;margin-top:4px}
 
 /* ---------- carte : élément principal ---------- */
 #vueApp{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(320px,.6fr);
-  align-items:start;gap:18px}
+  align-items:start;gap:20px}
 #sectionCarte{grid-column:1;grid-row:1/span 20;min-width:0;position:relative}
 .colonne-panneau{grid-column:2;min-width:0}
+/* Au-delà de 1200 px, le panneau suit le défilement : la carte est longue, et
+   l'état des sources comme le bouton d'alerte doivent rester atteignables
+   sans remonter. En dessous, la hauteur disponible ne le permet pas. */
+@media(min-width:1200px){
+  .colonne-panneau{position:sticky;top:84px;max-height:calc(100vh - 100px);
+    overflow-y:auto;scrollbar-width:thin;padding-right:var(--e1)}
+  .colonne-panneau::-webkit-scrollbar{width:6px}
+  .colonne-panneau::-webkit-scrollbar-thumb{background:var(--bord);border-radius:99px}
+}
 .carte-carte{overflow:visible;position:relative}
 .carte-carte>#map{border-radius:0;overflow:hidden}
 #map{height:clamp(560px,72vh,760px)}
@@ -170,22 +183,27 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 /* Étiquettes flottantes au-dessus de la carte : cadre et fraîcheur. */
 .bandeau-carte{position:absolute;top:0;left:0;right:0;z-index:610;pointer-events:none;
   display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
-  padding:12px 14px;
+  padding:12px 16px;
   background:linear-gradient(180deg,rgba(11,13,16,.72),rgba(11,13,16,0))}
 .bandeau-carte .cadre{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--txt3);font-weight:650}
-.bandeau-carte .fraicheur{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;
+.bandeau-carte .fraicheur{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;
   color:var(--txt2);white-space:nowrap}
 .carte-carte:after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;
   pointer-events:none;z-index:600;
   background:linear-gradient(0deg,rgba(11,13,16,.55),rgba(11,13,16,0))}
 
-.barre-carte{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;
+/* Une seule barre de commandes sous la carte.
+   Elle en comptait trois empilées — commandes, frise temporelle, légende —
+   plus une légende flottante identique à la troisième. Autant de hauteur
+   prise à l'élément principal. */
+.barre-carte{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;padding:var(--e3);
   border-bottom:1px solid var(--bord);background:var(--fond2)}
-.barre-carte>.btn{min-height:42px}
-.controle-segmente{display:flex;gap:3px;padding:3px;background:var(--fond3);
+.barre-carte>.btn{min-height:38px}
+.barre-carte-fin{display:flex;gap:var(--e1);align-items:center;margin-left:auto;flex-wrap:wrap}
+.controle-segmente{display:flex;gap:4px;padding:4px;background:var(--fond3);
   border:1px solid var(--bord);border-radius:var(--r-sm)}
-.controle-segmente button{min-height:34px;padding:6px 12px;background:transparent;color:var(--txt2);
+.controle-segmente button{min-height:34px;padding:8px 12px;background:transparent;color:var(--txt2);
   border-radius:9px;font-size:13px;font-weight:600}
 .controle-segmente button:hover{color:var(--txt)}
 .controle-segmente button[aria-pressed="true"]{background:var(--fond);color:var(--txt);
@@ -194,37 +212,42 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
   gap:8px;padding:12px;background:var(--fond2);border-bottom:1px solid var(--bord)}
 .recherche-carte label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .recherche-carte .rech{min-width:0}
-.mode-economie{display:inline-flex;align-items:center;gap:6px;color:var(--txt3);font-size:11.5px}
+.mode-economie{display:inline-flex;align-items:center;gap:8px;color:var(--txt3);font-size:11.5px}
 
 /* Résumé sous la carte : conclusion lisible et action unique. */
-.resume-carte{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;
-  padding:14px 16px;border-top:1px solid var(--bord);background:var(--fond2)}
+.resume-carte{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;
+  padding:16px 16px;border-top:1px solid var(--bord);background:var(--fond2)}
 .resume-carte .signal{width:42px;height:42px;border-radius:var(--r-sm);background:var(--fond3);
   border:1px solid var(--bord);display:grid;place-items:center;font-size:19px}
 .resume-carte b{display:block;font-size:15px;font-weight:650}
-.resume-carte small{display:block;color:var(--txt2);font-size:12.5px;margin-top:2px}
+.resume-carte small{display:block;color:var(--txt2);font-size:12.5px;margin-top:4px}
 .resume-carte[data-niveau="proche"]{background:linear-gradient(110deg,rgba(255,59,48,.16),var(--fond2) 62%)}
 .resume-carte[data-niveau="proche"] .signal{border-color:rgba(255,59,48,.45)}
 .resume-carte[data-niveau="calme"]{background:linear-gradient(110deg,rgba(63,168,107,.13),var(--fond2) 62%)}
 .resume-carte[data-niveau="calme"] .signal{border-color:rgba(63,168,107,.4)}
 
-/* Frise temporelle 24 h. */
-.barre-temporelle{display:flex;align-items:center;gap:12px;padding:10px 12px;
-  background:var(--fond2);border-bottom:1px solid var(--bord);transition:background .3s ease}
-.barre-temporelle.active{background:rgba(255,149,0,.12)}
-.barre-temporelle input[type="range"]{flex:1;accent-color:var(--orange);cursor:pointer;min-height:24px}
+/* Frise temporelle 24 h, intégrée à la barre de commandes. */
+.barre-temporelle{display:flex;align-items:center;gap:var(--e2);padding:var(--e1) var(--e2);
+  background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r-sm);
+  min-width:210px;transition:background .3s ease,border-color .3s ease}
+.barre-temporelle.active{background:rgba(255,149,0,.12);border-color:rgba(255,149,0,.45)}
+.barre-temporelle .btn{min-height:30px;padding:0 var(--e2);background:transparent;border:0}
+.barre-temporelle input[type="range"]{flex:1;min-width:80px;accent-color:var(--orange);
+  cursor:pointer;min-height:22px}
+.barre-temporelle #labelTimeline{font-size:12px;font-weight:650;color:var(--txt2);
+  min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
 
 /* Filtres de familles de sources. */
 .filtres-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
   padding:12px;border-top:1px solid var(--bord);background:var(--fond2)}
-.filtre-source{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;margin:0;
+.filtre-source{display:flex;gap:12px;align-items:flex-start;padding:12px 12px;margin:0;
   border:1px solid var(--bord);border-radius:var(--r-sm);background:var(--fond3);cursor:pointer;
   transition:border-color .14s ease}
 .filtre-source:hover{border-color:var(--bord-clair)}
-.filtre-source input{width:auto;min-height:0;margin:2px 0 0;accent-color:var(--rouge)}
+.filtre-source input{width:auto;min-height:0;margin:4px 0 0;accent-color:var(--rouge)}
 .filtre-source b{display:block;color:var(--txt);font-size:12.5px}
-.filtre-source small{display:block;color:var(--txt3);font-size:11.5px;line-height:1.4;margin-top:2px}
-.source-note{grid-column:1/-1;font-size:11.5px;line-height:1.55;color:var(--txt3);padding:3px 2px}
+.filtre-source small{display:block;color:var(--txt3);font-size:11.5px;line-height:1.4;margin-top:4px}
+.source-note{grid-column:1/-1;font-size:11.5px;line-height:1.55;color:var(--txt3);padding:4px 4px}
 .source-note a{font-weight:600;text-decoration:underline}
 .panneau-filtres{display:none}
 .panneau-filtres.ouvert{display:grid}
@@ -238,7 +261,7 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 
 /* Viseur de ciblage. */
 .viseur-tactique{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;
-  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:10px}
+  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:12px}
 .viseur-tactique[hidden]{display:none!important}
 .viseur-croix{width:48px;height:48px;border:2px dashed var(--orange);border-radius:50%;
   box-shadow:0 0 18px rgba(255,149,0,.45);position:relative}
@@ -246,14 +269,14 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 .viseur-croix:before{top:50%;left:-8px;right:-8px;height:2px;transform:translateY(-50%)}
 .viseur-croix:after{left:50%;top:-8px;bottom:-8px;width:2px;transform:translateX(-50%)}
 .viseur-etiquette{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--bord);
-  border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--txt2);
+  border-radius:99px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--txt2);
   box-shadow:var(--ombre);white-space:nowrap}
 
 /* ---------- habillage Leaflet ---------- */
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--fond2);color:var(--txt);
   border:1px solid var(--bord);box-shadow:var(--ombre-haute)}
 .leaflet-popup-content-wrapper{border-radius:var(--r-sm)}
-.leaflet-popup-content{margin:14px 16px;font-size:13px;line-height:1.55;font-family:'Inter',sans-serif}
+.leaflet-popup-content{margin:16px 16px;font-size:13px;line-height:1.55;font-family:'Inter',sans-serif}
 .leaflet-popup-close-button{color:var(--txt3)!important}
 .leaflet-bar{border:1px solid var(--bord)!important;border-radius:var(--r-xs)!important;overflow:hidden}
 .leaflet-bar a{background:var(--fond3);color:var(--txt);border-color:var(--bord)}
@@ -266,11 +289,19 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 
 /* Contenu des info-bulles de feu. */
 .popup-actualites-feu{min-width:210px}
-.popup-actualites-feu h4{margin:0 0 6px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700}
-.popup-actualites-feu .meta{font-size:11.5px;color:var(--txt3);margin-bottom:6px}
-.popup-actualites-feu .liste-actu{border-top:1px solid var(--bord);margin-top:8px;padding-top:8px}
+.popup-actualites-feu h4{margin:0 0 var(--e2);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700}
+.popup-actualites-feu .entete-popup{margin-bottom:var(--e2)}
+.popup-actualites-feu .entete-popup b{display:block;font-size:14px;font-weight:650;color:var(--txt)}
+.popup-actualites-feu .meta{font-size:11.5px;color:var(--txt3);margin-bottom:var(--e2)}
+.popup-actualites-feu .liste-actu{border-top:1px solid var(--bord);margin-top:var(--e2);padding-top:var(--e2)}
 .popup-actualites-feu .liste-actu[hidden]{display:none}
-.popup-actualites-feu a{color:#8ec7ff}
+.popup-actualites-feu a,.lien-contexte{color:#8ec7ff;font-weight:600}
+
+/* Mentions de contexte de la fiche incident. */
+.mention-contexte{margin-bottom:var(--e2)}
+.entete-mention{display:flex;justify-content:space-between;gap:var(--e2);
+  font-size:11.5px;color:var(--txt3)}
+.titre-mention{display:block;margin:var(--e1) 0;font-size:13px;font-weight:650}
 
 /* ---------- marqueurs ---------- */
 .marqueur-feu{background:transparent;border:0;transition:transform .2s cubic-bezier(.16,1,.3,1)}
@@ -284,9 +315,9 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
   50%{filter:drop-shadow(0 2px 4px rgba(0,0,0,.75)) drop-shadow(0 0 14px rgba(255,59,48,.85))}
 }
 .conteneur-marqueur-tactique{background:transparent;border:0}
-.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:7px;background:var(--glass);
+.marqueur-feu-tactique{display:inline-flex;align-items:center;gap:8px;background:var(--glass);
   backdrop-filter:blur(12px);border:1px solid var(--couleur-bord,var(--rouge));border-radius:99px;
-  padding:4px 10px 4px 7px;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  padding:4px 12px 4px 8px;box-shadow:0 8px 24px rgba(0,0,0,.6);
   color:var(--txt);font-size:12px;font-family:'Outfit',sans-serif;font-weight:700;white-space:nowrap;
   transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease;cursor:pointer}
 .marqueur-feu-tactique:hover{transform:scale(1.08) translateY(-2px);
@@ -300,20 +331,20 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 .marqueur-feu-tactique .badge-titre{font-size:12px;font-weight:700;color:var(--txt);
   max-width:150px;overflow:hidden;text-overflow:ellipsis}
 .marqueur-feu-tactique .badge-statut{font-size:10px;text-transform:uppercase;font-family:'Inter',sans-serif;
-  font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.05em}
+  font-weight:700;padding:4px 8px;border-radius:99px;letter-spacing:.05em}
 .cluster-feu{background:transparent;border:0}
-.cluster-bulle{display:grid;place-items:center;min-width:34px;height:34px;padding:0 9px;
+.cluster-bulle{display:grid;place-items:center;min-width:34px;height:34px;padding:0 8px;
   border-radius:99px;background:var(--glass);backdrop-filter:blur(10px);
   border:1px solid var(--bord-clair);color:var(--txt);font-family:'Outfit',sans-serif;
   font-weight:700;font-size:13px;box-shadow:0 8px 22px rgba(0,0,0,.55)}
 
 /* ---------- légendes ---------- */
-.legende-carte{width:250px;max-width:320px;padding:12px 14px;background:var(--glass);
+.legende-carte{width:250px;max-width:320px;padding:12px 16px;background:var(--glass);
   backdrop-filter:blur(16px);color:var(--txt);border:1px solid var(--bord);
   border-radius:var(--r-sm);box-shadow:var(--ombre);font-size:11.5px;line-height:1.4}
 .legende-carte b{display:block;font-family:'Outfit',sans-serif;font-size:11px;color:var(--txt);
   margin-bottom:8px;letter-spacing:.1em;text-transform:uppercase}
-.legende-carte .ligne{display:flex;align-items:center;gap:9px;padding:5px 7px;border-radius:9px;
+.legende-carte .ligne{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:9px;
   cursor:pointer;transition:background .18s ease;user-select:none}
 .legende-carte .ligne:hover{background:rgba(255,255,255,.07)}
 .legende-carte .ligne[aria-pressed="false"]{opacity:.45}
@@ -330,7 +361,7 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 /* Le repli est réel : le bouton pilotait un état qu'aucune règle ne
    traduisait, la légende restait ouverte quoi qu'on clique. */
 .legende-carte .contenu-legende{display:none}
-.legende-carte.ouverte .contenu-legende{display:block;margin-top:9px}
+.legende-carte.ouverte .contenu-legende{display:block;margin-top:8px}
 .legende-carte .toggle-legende span:last-child{transition:transform .2s ease}
 .legende-carte.ouverte .toggle-legende span:last-child{transform:rotate(180deg)}
 /* Habillage explicite des info-bulles de la carte. */
@@ -340,58 +371,71 @@ dialog::backdrop{background:rgba(6,8,10,.74);backdrop-filter:blur(8px)}
 /* Hors ligne : la fraîcheur passe en teinte d'avertissement, pour qu'un état
    daté ne se lise jamais comme un état à jour. */
 body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
-.badge-compteur{margin-left:auto;min-width:22px;padding:1px 7px;border-radius:99px;
+.badge-compteur{margin-left:auto;min-width:22px;padding:1px 8px;border-radius:99px;
   background:var(--fond3);border:1px solid var(--bord);color:var(--txt2);
   font-size:11px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 
-/* Barre de légende interactive — hors media query : elle doit exister
-   sur tous les supports, ce qui n'était pas le cas. */
-.legende-interactive-barre{display:flex;align-items:center;gap:10px;padding:10px 12px;
-  background:var(--fond2);border-bottom:1px solid var(--bord);overflow-x:auto;scrollbar-width:none}
-.legende-interactive-barre::-webkit-scrollbar{display:none}
-.legende-interactive-barre b{font-size:11px;color:var(--txt3);white-space:nowrap;
-  letter-spacing:.1em;text-transform:uppercase;font-weight:700}
-.legende-interactive-barre .ligne-legende{display:flex;align-items:center;gap:7px;background:var(--fond3);
-  border:1px solid var(--bord);border-radius:99px;padding:5px 11px;cursor:pointer;white-space:nowrap;
-  font-size:12px;font-weight:600;color:var(--txt2);transition:border-color .16s ease,color .16s ease}
-.legende-interactive-barre .ligne-legende:hover{border-color:var(--bord-clair);color:var(--txt)}
-.legende-interactive-barre .ligne-legende[aria-pressed="false"]{opacity:.45}
-.legende-interactive-barre .badge-compteur{margin-left:2px}
+/* ---------- utilitaires d'espacement ----------
+   Le markup portait 63 attributs style, dont 23 marges verticales posées à la
+   main. Résultat : deux blocs voisins respiraient différemment sans raison, et
+   toute reprise du rythme demandait de fouiller le HTML. */
+.mt-0{margin-top:0}
+.mt-1{margin-top:var(--e1)}
+.mt-2{margin-top:var(--e2)}
+.mt-3{margin-top:var(--e3)}
+.mt-4{margin-top:var(--e4)}
+.mt-6{margin-top:var(--e6)}
+.m-0{margin:0}
+.txt-faible{color:var(--txt3)}
+.txt-min{font-size:11.5px;line-height:1.55}
+.txt-petit{font-size:12.5px;line-height:1.6}
+.rangee-libre{display:flex;gap:var(--e2);align-items:center;flex-wrap:wrap}
+.rangee-libre.serree{gap:var(--e1)}
+.rangee-libre.haut{align-items:flex-start}
+.encart{background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r-sm);
+  padding:var(--e3)}
+.pleine-largeur{flex:1;min-width:150px}
+.centre{text-align:center}
+.separe{border-top:1px solid var(--bord)}
+.txt-ok{color:var(--vert)}
+.titre-actu{font-size:11px;color:var(--txt2)}
+/* Cases à cocher : elles héritaient sinon de la largeur pleine des champs. */
+input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);accent-color:var(--rouge)}
 
 /* ---------- badges, évènements, listes ---------- */
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
-  letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:99px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:99px}
 .badge.critique{background:rgba(255,59,48,.16);color:var(--rouge-clair)}
 .badge.alerte{background:rgba(255,149,0,.16);color:var(--orange-clair)}
 .badge.info{background:rgba(124,138,148,.16);color:var(--gris-clair)}
 .badge.clos{background:var(--fond3);color:var(--txt3)}
 
-.evt{display:flex;gap:13px;padding:15px 16px;border-bottom:1px solid var(--bord);align-items:flex-start}
+.evt{display:flex;gap:12px;padding:16px 16px;border-bottom:1px solid var(--bord);align-items:flex-start}
 .evt:last-child{border-bottom:0}
 .evt .barre{width:3px;border-radius:99px;align-self:stretch;background:var(--gris);flex:0 0 auto}
 .evt.critique .barre{background:var(--rouge)}
 .evt.alerte .barre{background:var(--orange)}
 .evt .t{font-weight:650;font-size:14.5px}
-.evt .d{color:var(--txt2);font-size:12.5px;margin-top:3px;line-height:1.55}
+.evt .d{color:var(--txt2);font-size:12.5px;margin-top:4px;line-height:1.55}
 
 .liste-feux{max-height:300px;overflow:auto;border-top:1px solid var(--bord)}
 .incident-ligne{width:100%;min-height:62px;text-align:left;background:var(--fond2);color:var(--txt);
-  display:grid;grid-template-columns:32px 1fr auto;gap:11px;align-items:center;padding:11px 14px;
+  display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:12px 16px;
   border-bottom:1px solid var(--bord);transition:background .16s ease}
 .incident-ligne:last-child{border-bottom:0}
 .incident-ligne:hover{background:var(--fond3)}
 .incident-ligne small{display:block;color:var(--txt3);font-size:12px}
 .incident-ligne .distance{font-variant-numeric:tabular-nums;color:var(--txt2);font-size:12.5px}
 
-.vide{padding:34px 20px;text-align:center;color:var(--txt3);font-size:13.5px;line-height:1.6}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vide{padding:32px 20px;text-align:center;color:var(--txt3);font-size:13.5px;line-height:1.6}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chip{background:var(--fond3);border:1px solid var(--bord);border-radius:99px;
-  padding:4px 11px;font-size:12px;color:var(--txt2)}
-.note{font-size:12.5px;color:var(--txt3);line-height:1.6;padding:15px 16px;
+  padding:4px 12px;font-size:12px;color:var(--txt2)}
+.note{font-size:12.5px;color:var(--txt3);line-height:1.6;padding:16px 16px;
   background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r)}
 .note b{color:var(--txt2)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--bord)}
-.stats > div{background:var(--fond2);padding:15px 12px;text-align:center}
+.stats > div{background:var(--fond2);padding:16px 12px;text-align:center}
 .stats b{display:block;font-family:'Outfit',sans-serif;font-size:21px;font-weight:700;letter-spacing:-.02em}
 .stats small{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 
@@ -401,7 +445,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
   background:var(--fond2);border:1px solid var(--bord);border-radius:var(--r-sm);overflow:hidden;
   box-shadow:var(--ombre-haute);max-height:270px;overflow-y:auto}
 .sugg div,.sugg button{display:block;width:100%;text-align:left;color:var(--txt);background:transparent;
-  padding:12px 14px;cursor:pointer;border:0;border-bottom:1px solid var(--bord);font-size:14px}
+  padding:12px 16px;cursor:pointer;border:0;border-bottom:1px solid var(--bord);font-size:14px}
 .sugg div:last-child,.sugg button:last-child{border-bottom:0}
 .sugg div:hover,.sugg button:hover,.sugg button:focus{background:var(--fond3)}
 .sugg small{color:var(--txt3);font-size:12px}
@@ -410,45 +454,45 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
 #toast{position:fixed;left:50%;transform:translateX(-50%) translateY(140%);
   bottom:calc(env(safe-area-inset-bottom) + 22px);z-index:2000;max-width:calc(100vw - 32px);
   background:var(--fond3);color:var(--txt);border:1px solid var(--bord-clair);
-  padding:13px 18px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
+  padding:12px 20px;border-radius:var(--r-sm);font-size:14px;font-weight:600;
   box-shadow:var(--ombre-haute);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
 #toast.on{transform:translateX(-50%) translateY(0)}
 #toast.err{background:var(--rouge);border-color:var(--rouge);color:#fff}
 .offline{position:fixed;top:64px;left:0;right:0;z-index:890;background:rgba(255,149,0,.16);
   border-bottom:1px solid rgba(255,149,0,.4);color:var(--orange-clair);
-  text-align:center;padding:9px 16px;font-size:13px;font-weight:650}
+  text-align:center;padding:8px 16px;font-size:13px;font-weight:650}
 .offline[hidden]{display:none}
 
 /* ---------- fiche incident ---------- */
 .incident-entete{display:flex;gap:12px;align-items:flex-start}
 .incident-entete .icone{width:42px;display:grid;place-items:center}
 .incident-entete .cr{flex:1}
-.incident-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.incident-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
 .incident-grille>div{padding:12px;border:1px solid var(--bord);border-radius:var(--r-sm);background:var(--fond3)}
 .incident-grille b{display:block;font-family:'Outfit',sans-serif;font-size:17px;font-weight:700}
 .incident-grille small{color:var(--txt3);font-size:11.5px}
 .chronologie{position:relative;padding-left:20px;margin:16px 0}
 .chronologie:before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--bord)}
-.chronologie div{position:relative;margin:10px 0;color:var(--txt2);font-size:13px}
+.chronologie div{position:relative;margin:12px 0;color:var(--txt2);font-size:13px}
 .chronologie div:before{content:"";position:absolute;left:-19px;top:7px;width:8px;height:8px;
   border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px var(--fond2)}
-.details-avances{margin-top:14px;border-top:1px solid var(--bord);padding-top:12px}
+.details-avances{margin-top:16px;border-top:1px solid var(--bord);padding-top:12px}
 .details-avances summary{cursor:pointer;color:var(--txt2);font-size:13px;font-weight:650}
-.details-avances[open] summary{margin-bottom:10px}
+.details-avances[open] summary{margin-bottom:12px}
 
 /* ---------- accueil et parcours ---------- */
-.accueil-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.accueil-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
 .accueil-hero h2{font-family:'Outfit',sans-serif;font-size:27px;font-weight:800;letter-spacing:-.03em;
-  text-transform:none;color:var(--txt);margin-bottom:10px}
+  text-transform:none;color:var(--txt);margin-bottom:12px}
 .accueil-hero .promesse{font-size:16px;color:var(--txt2);line-height:1.6}
 #blocInscription{display:none}
 .inscription-ouverte #blocInscription{display:block}
 [data-anonyme]{display:none!important}
 .anonyme [data-anonyme]{display:flex!important}
-.consentement{border-top:1px solid var(--bord);padding-top:14px}
+.consentement{border-top:1px solid var(--bord);padding-top:16px}
 .parcours-alerte{display:grid;gap:1px;background:var(--bord)}
-.etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:11px;align-items:center;
-  padding:13px 14px;background:var(--fond2)}
+.etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;
+  padding:12px 16px;background:var(--fond2)}
 .etape-alerte .numero{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   background:var(--fond3);border:1px solid var(--bord);color:var(--txt2);font-weight:700;font-size:13px}
 .etape-alerte.faite .numero{background:var(--vert);border-color:var(--vert);color:#fff}
@@ -462,7 +506,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
 
 /* ---------- adaptation aux petits écrans ---------- */
 @media(max-width:900px){
-  main{padding:14px 14px 96px}
+  main{padding:16px 16px 96px}
   #vueApp{display:block}
   #sectionCarte{position:static;margin-bottom:20px}
   .colonne-panneau{display:block}
@@ -472,11 +516,11 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
   body{font-size:15px}
   header{min-height:62px}
   header .sous{max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pastille{padding:7px 10px;font-size:0}
+  .pastille{padding:8px 12px;font-size:0}
   .pastille span:last-child{font-size:11px}
   #pastilleTxt{display:none}
   .pastille:after{content:attr(data-mobile-label);font-size:11px}
-  main{padding:10px 10px 92px}
+  main{padding:12px 12px 92px}
   section{margin-bottom:16px}
   #map{height:clamp(400px,56vh,560px)}
   .grille2{grid-template-columns:1fr}
@@ -484,14 +528,14 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
   .barre-carte{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
   .barre-carte::-webkit-scrollbar{display:none}
   .barre-carte .btn{white-space:nowrap}
-  .recherche-carte{grid-template-columns:1fr;padding:10px}
+  .recherche-carte{grid-template-columns:1fr;padding:12px}
   .recherche-carte>.btn{display:none}
   .resume-carte{grid-template-columns:auto 1fr;padding:12px}
   .resume-carte>.btn{grid-column:1/-1;width:100%}
   .filtres-sources{display:none;grid-template-columns:1fr}
   .panneau-filtres.ouvert{display:grid}
   .liste-feux{max-height:240px}
-  .legende-carte{width:auto;max-width:250px;padding:10px 12px;font-size:10.5px}
+  .legende-carte{width:auto;max-width:250px;padding:12px 12px;font-size:10.5px}
   .legende-carte .toggle-legende{display:none!important}
   .legende-carte .contenu-legende{display:block!important}
   .leaflet-control-layers{font-size:11px}
@@ -501,7 +545,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
     backdrop-filter:blur(16px);border:1px solid var(--bord);border-radius:var(--r);
     box-shadow:var(--ombre-haute);overflow:hidden}
   .navigation-mobile a,.navigation-mobile button{min-height:58px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:3px;background:transparent;color:var(--txt2);
+    align-items:center;justify-content:center;gap:4px;background:transparent;color:var(--txt2);
     font-size:11px;font-weight:600;text-decoration:none}
   .navigation-mobile a:hover,.navigation-mobile button:hover{color:var(--txt)}
   .navigation-mobile .primaire{color:#fff;background:rgba(255,59,48,.18)}
@@ -545,7 +589,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
   <section id="vueAccueil" hidden>
     <div class="carte pad accueil-hero">
       <h2>Recevez une alerte avant de voir la fumée</h2>
-      <p class="promesse" style="margin:0">
+      <p class="promesse m-0">
         Consultez gratuitement les feux détectés en France. Créez ensuite une alerte
         autour de votre domicile, de vos proches ou de votre exploitation.
       </p>
@@ -556,21 +600,21 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
       <div id="blocInscription">
       <label for="nom">Votre prénom (facultatif)</label>
       <input id="nom" placeholder="Quentin" autocomplete="given-name">
-      <p class="note" style="margin:16px 0 0">
+      <p class="note mt-4">
         <b>À savoir.</b> Meteosat apporte une première détection en environ 25 minutes
         avec une résolution de 3 km ; VIIRS/MODIS confirment généralement en 2 à 3 h,
         avec une résolution de 375 m à 1 km. Un feu petit, très récent ou masqué par
         les nuages peut rester invisible.
         Ce service complète <b>FR-Alert</b> et ne remplace jamais le <b>18</b> ou le <b>112</b>.
       </p>
-      <label class="consentement" style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px">
-        <input type="checkbox" id="consentement" style="width:auto;margin-top:2px">
+      <label class="consentement rangee-libre haut mt-4">
+        <input type="checkbox" id="consentement" class="case">
         <span>J’ai lu et j’accepte les
           <a href="./confidentialite.html" target="_blank" rel="noopener">informations de confidentialité,
           les durées de conservation et les limites du service</a>.
         </span>
       </label>
-      <button class="btn p pleine" style="margin-top:14px" id="btnCommencer" disabled>
+      <button class="btn p pleine mt-4" id="btnCommencer" disabled>
         Créer mon espace d’alerte
       </button>
       </div>
@@ -611,7 +655,6 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
           <button class="btn sm" type="button" id="btnActionResume">Créer une alerte</button>
         </div>
         <div class="barre-carte" aria-label="Commandes de la carte">
-          <button class="btn sm" type="button" id="btnFiltres" aria-expanded="false">Sources et méthode</button>
           <div class="controle-segmente" aria-label="Période">
             <button type="button" data-heures="1" aria-pressed="false">1 h</button>
             <button type="button" data-heures="6" aria-pressed="false">6 h</button>
@@ -622,16 +665,20 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
             <button type="button" data-confiance="probable" aria-pressed="false">Plus fiables</button>
             <button type="button" data-confiance="corrobore" aria-pressed="false">Plusieurs sources</button>
           </div>
-          <button class="btn sm" type="button" id="btnActualiser">Actualiser</button>
-          <button class="btn sm" type="button" id="btnInstaller" hidden>Installer</button>
-          <span class="mode-economie" id="modeEconomie" hidden>Mode données réduites</span>
+          <div class="barre-temporelle" id="barreTemporelle" aria-label="Animation temporelle de la carte">
+            <button type="button" class="btn sm" id="btnLectureTimeline"
+                    aria-label="Rejouer les 24 dernières heures">▶</button>
+            <input type="range" id="sliderTimeline" min="1" max="24" value="24" step="1"
+                   aria-label="Plage horaire de détection">
+            <span id="labelTimeline">24 h</span>
+          </div>
+          <div class="barre-carte-fin">
+            <button class="btn sm g" type="button" id="btnFiltres" aria-expanded="false">Sources et méthode</button>
+            <button class="btn sm g" type="button" id="btnActualiser">Actualiser</button>
+            <button class="btn sm" type="button" id="btnInstaller" hidden>Installer</button>
+            <span class="mode-economie" id="modeEconomie" hidden>Données réduites</span>
+          </div>
         </div>
-        <div class="barre-temporelle" id="barreTemporelle" aria-label="Animation temporelle de la carte">
-          <button type="button" class="btn sm" id="btnLectureTimeline">▶ Animer 24h</button>
-          <input type="range" id="sliderTimeline" min="1" max="24" value="24" step="1" aria-label="Plage horaire de détection">
-          <span id="labelTimeline" style="font-size:12px;font-weight:650;min-width:85px">Dernières 24h</span>
-        </div>
-        <div class="legende-interactive-barre" id="legendeInteractiveBarre" aria-label="Légende visuelle et filtres de la carte"></div>
         <div class="filtres-sources panneau-filtres" id="filtresSources"
              aria-label="Filtres des sources de la carte">
           <label class="filtre-source">
@@ -664,9 +711,9 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
           </div>
         </div>
         <div class="liste-feux" id="listeFeuxVisibles" aria-live="polite"></div>
-        <div class="pad" data-prive style="border-top:1px solid var(--bord)">
+        <div class="pad separe" data-prive>
           <button class="btn pleine" id="btnSignaler">Signaler un départ de feu</button>
-          <p style="margin:10px 0 0;font-size:12px;color:var(--txt3);line-height:1.55">
+          <p class="mt-3 txt-petit txt-faible">
             Un compte avec les notifications actives sur au moins un appareil est obligatoire
             pour créer ou contester un signalement.
             Un signalement est confirmé quand deux personnes sur deux réseaux distincts,
@@ -685,7 +732,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
           <input id="rechCommune" placeholder="Commune ou code postal" autocomplete="postal-code">
           <div class="sugg" id="sugg" hidden></div>
         </div>
-        <p class="note" style="margin:10px 0 0">
+        <p class="note mt-3">
           Le réglage recommandé surveille automatiquement la commune, ses voisines et 3 km autour.
         </p>
         <details class="details-avances">
@@ -728,13 +775,13 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
       <div class="carte" id="listeCanaux"></div>
       <div class="carte pad">
         <button class="btn p pleine" id="btnPush">Activer les notifications sur cet appareil</button>
-        <p class="note" style="margin:10px 0 0">
+        <p class="note mt-3">
           Répétez cette action sur chaque téléphone ou ordinateur qui doit être averti.
           Aucun e-mail ni messagerie externe n’est nécessaire.
         </p>
-        <button class="btn pleine" style="margin-top:12px" id="btnTest">Envoyer une alerte de test</button>
+        <button class="btn pleine mt-3" id="btnTest">Envoyer une alerte de test</button>
       </div>
-      <p class="note" style="margin-top:10px" id="noteIos" hidden>
+      <p class="note mt-3" id="noteIos" hidden>
         <b>Sur iPhone / iPad.</b> Les notifications exigent d’installer l’application :
         bouton Partager, puis « Sur l’écran d’accueil ». Ouvrez-la ensuite depuis l’icône
         et réessayez.
@@ -754,32 +801,32 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
             </select>
           </div>
           <div>
-            <label>Heures silencieuses <span style="color:var(--txt3)">(sauf critique)</span></label>
-            <div style="display:flex;gap:8px;align-items:center">
+            <label>Heures silencieuses <span class="txt-faible">(sauf critique)</span></label>
+            <div class="rangee-libre">
               <input type="time" id="qStart" placeholder="23:00">
-              <span style="color:var(--txt3)">→</span>
+              <span class="txt-faible">→</span>
               <input type="time" id="qEnd" placeholder="07:00">
             </div>
           </div>
         </div>
-        <div style="margin-top:14px">
+        <div class="mt-4">
           <label for="refLibelle">Calculer la distance depuis un lieu précis
-            <span style="color:var(--txt3)">(facultatif)</span></label>
-          <p class="note" style="margin:2px 0 8px">
+            <span class="txt-faible">(facultatif)</span></label>
+          <p class="note mt-1">
             Les alertes indiquent aujourd’hui la distance au centre de la commune.
             Avec un point de référence, elles donnent la distance à cet endroit précis.
             Cette position ne quitte jamais votre compte.
           </p>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="refLibelle" placeholder="la maison, l’exploitation…" maxlength="40"
-                   style="flex:1;min-width:150px">
+          <div class="rangee-libre">
+            <input class="pleine-largeur" id="refLibelle" placeholder="la maison, l’exploitation…" maxlength="40"
+                  >
             <button class="btn g" id="btnRefIci" type="button">Utiliser ma position</button>
             <button class="btn g" id="btnRefCarte" type="button">Pointer sur la carte</button>
             <button class="btn g" id="btnRefEffacer" type="button">Effacer</button>
           </div>
-          <p class="note" id="refEtat" style="margin-top:6px"></p>
+          <p class="note mt-2" id="refEtat"></p>
         </div>
-        <button class="btn pleine" style="margin-top:14px" id="btnReglages">Enregistrer</button>
+        <button class="btn pleine mt-4" id="btnReglages">Enregistrer</button>
       </div>
     </section>
 
@@ -796,11 +843,11 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
     <section id="sectionCompte" data-prive>
       <h2>Mes données</h2>
       <div class="carte pad">
-        <p class="note" style="margin-top:0">
+        <p class="note mt-0">
           Vous pouvez télécharger les données rattachées à ce jeton ou supprimer
           définitivement le compte et ses informations personnelles.
         </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="rangee-libre">
           <button class="btn" id="btnExporter">Télécharger mes données</button>
           <button class="btn g" id="btnSupprimerCompte">Supprimer mon compte</button>
           <a class="btn g" href="./confidentialite.html" target="_blank" rel="noopener">
@@ -813,7 +860,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
     <section>
       <details class="carte pad details-avances">
         <summary>Comprendre les sources et les limites</summary>
-      <p class="note" style="margin:10px 0 0">
+      <p class="note mt-3">
         <b>Sources.</b> Trois niveaux indépendants qui se corroborent :
         <b>signalements de témoins</b> (instantanés, non vérifiés) ;
         <b>Meteosat / LSA SAF</b>, géostationnaire, environ 25 minutes de latence pour
@@ -829,7 +876,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
       </details>
     </section>
 
-    <section style="text-align:center" data-prive>
+    <section class="centre" data-prive>
       <button class="btn g" id="btnJeton">Afficher mon jeton d’accès</button>
     </section>
     </div>
@@ -866,7 +913,7 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
     <p>Conservez cette clé privée pour retrouver vos alertes sur un autre appareil.</p>
     <label for="champJeton">Clé d’accès personnelle</label>
     <input id="champJeton" readonly>
-    <p class="note" style="margin:10px 0 0">Ne la partagez pas : elle donne accès à vos réglages.</p>
+    <p class="note mt-3">Ne la partagez pas : elle donne accès à vos réglages.</p>
     <div class="dialog-actions">
       <button class="btn g" type="button" id="btnFermerJeton">Fermer</button>
       <button class="btn p" type="button" id="btnCopierJeton">Copier la clé</button>
@@ -944,16 +991,16 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
           <label for="sigObserveAt">Heure de l’observation</label>
           <input id="sigObserveAt" type="datetime-local" required>
         </div>
-        <label style="display:flex;gap:9px;align-items:center;margin-top:24px">
-          <input id="sigHabitations" type="checkbox" style="width:auto">
+        <label class="rangee-libre mt-6">
+          <input id="sigHabitations" type="checkbox" class="case">
           <span>Habitations à proximité</span>
         </label>
       </div>
-      <label for="sigCommentaire" style="margin-top:12px">Précision utile (facultatif)</label>
+      <label class="mt-3" for="sigCommentaire">Précision utile (facultatif)</label>
       <input id="sigCommentaire" maxlength="280"
              placeholder="Aspect de la fumée, végétation, évolution visible…">
-      <p class="note" id="sigPosition" style="margin:10px 0 0"></p>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <p class="note mt-3" id="sigPosition"></p>
+      <div class="dialog-actions">
         <button class="btn g" type="button" id="btnAnnulerSignalement">Annuler</button>
         <button class="btn p" type="submit">Envoyer le signalement</button>
       </div>
@@ -1254,7 +1301,7 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
           <span>Témoignage non vérifié</span>
           <span class="badge-compteur" id="cntSignalement">0</span>
         </div>
-        <span class="aide" style="font-size:11px;color:var(--txt3);margin-top:8px;display:block">
+        <span class="aide txt-min txt-faible mt-2">
           Cliquez sur un niveau pour filtrer la carte.<br>
           <a href="https://meteofrance.com/meteo-des-forets" target="_blank" rel="noopener">Météo des forêts officielle</a>
           · <a href="https://forest-fire.emergency.copernicus.eu/apps/effis_current_situation/" target="_blank" rel="noopener">Contexte EFFIS</a>
@@ -1272,36 +1319,10 @@ function initCarte(centre = [46.6, 2.5], zoom = 5) {
   };
   legende.addTo(carte);
 
-  const elBarre = $('#legendeInteractiveBarre');
-  if (elBarre) {
-    elBarre.innerHTML = `
-      <b>Légende :</b>
-      <div class="ligne-legende" data-filtre-legende="corrobore" title="Filtrer feux corroborés">
-        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.corrobore, 24, 'corrobore')}</span>
-        <span>Corroborés</span>
-        <span class="badge-compteur" id="cntCorroboreB">0</span>
-      </div>
-      <div class="ligne-legende" data-filtre-legende="probable" title="Filtrer signaux forts">
-        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.probable, 20, 'probable')}</span>
-        <span>Signaux forts</span>
-        <span class="badge-compteur" id="cntProbableB">0</span>
-      </div>
-      <div class="ligne-legende" data-filtre-legende="indice" title="Filtrer indices isolés">
-        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.indice, 18, 'indice')}</span>
-        <span>Indices isolés</span>
-        <span class="badge-compteur" id="cntIndiceB">0</span>
-      </div>
-      <div class="ligne-legende" data-filtre-legende="citoyen" title="Filtrer témoins vérifiés">
-        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.citoyen, 20, 'citoyen')}</span>
-        <span>Témoins vérifiés</span>
-        <span class="badge-compteur" id="cntCitoyenB">0</span>
-      </div>
-      <div class="ligne-legende" data-filtre-legende="signalement" title="Filtrer témoins non vérifiés">
-        <span class="symbole">${svgFlamme(COULEUR_NIVEAU.signalement, 18, 'indice')}</span>
-        <span>Non vérifiés</span>
-        <span class="badge-compteur" id="cntSignalementB">0</span>
-      </div>`;
-  }
+  // La barre de légende sous la carte dupliquait exactement la légende
+  // flottante : mêmes cinq entrées, mêmes compteurs, une bande de hauteur en
+  // moins pour la carte. Une seule légende, sur la carte, comme le veut la
+  // charte.
   majEtatLegende();
 
   coucheZones = L.layerGroup().addTo(carte);
@@ -1600,17 +1621,17 @@ function rendreResumeCarte() {
   const nCit = feuxCarte.filter((f) => (f.origine === 'citoyen' || f.niveau === 'temoins')).length;
   const nSig = signalements.filter((s) => !s.confirme).length;
 
-  const el1 = $('#cntCorrobore'); if (el1) el1.textContent = nCor;
-  const el2 = $('#cntProbable'); if (el2) el2.textContent = nPro;
-  const el3 = $('#cntIndice'); if (el3) el3.textContent = nInd;
-  const el4 = $('#cntCitoyen'); if (el4) el4.textContent = nCit;
-  const el5 = $('#cntSignalement'); if (el5) el5.textContent = nSig;
-
-  const b1 = $('#cntCorroboreB'); if (b1) b1.textContent = nCor;
-  const b2 = $('#cntProbableB'); if (b2) b2.textContent = nPro;
-  const b3 = $('#cntIndiceB'); if (b3) b3.textContent = nInd;
-  const b4 = $('#cntCitoyenB'); if (b4) b4.textContent = nCit;
-  const b5 = $('#cntSignalementB'); if (b5) b5.textContent = nSig;
+  const compteurs = {
+    cntCorrobore: nCor,
+    cntProbable: nPro,
+    cntIndice: nInd,
+    cntCitoyen: nCit,
+    cntSignalement: nSig,
+  };
+  for (const [id, n] of Object.entries(compteurs)) {
+    const cible = document.getElementById(id);
+    if (cible) cible.textContent = n;
+  }
 
   const maj = derniereMajCarte ? `Actualisé ${relatif(derniereMajCarte)}` : 'Actualisation en cours';
   const bouton = $('#btnActionResume');
@@ -1715,16 +1736,16 @@ function ouvrirIncident(f) {
         <div><b>${f.resolution_m ? `${Number(f.resolution_m).toLocaleString('fr-FR')} m` : '—'}</b><small>meilleure résolution</small></div>
       </div>
     </details>
-    <h4 style="margin-top:14px">Vent au point du feu</h4>
-    <div class="incident-grille" id="blocMeteoVent" style="margin-top:10px;background:var(--fond3);padding:10px;border-radius:10px;border:1px solid var(--bord)">
+    <h4 class="mt-4">Vent au point du feu</h4>
+    <div class="incident-grille encart mt-3" id="blocMeteoVent">
       <div><b id="valVentVitesse">Chargement…</b><small>vent au sol (10 m)</small></div>
       <div><b id="valVentDirection">—</b><small>propagation probable</small></div>
     </div>
-    <div class="incident-grille" id="blocCalculsAvances" style="margin-top:10px;background:var(--fond3);padding:10px;border-radius:10px;border:1px solid var(--bord)">
+    <div class="incident-grille encart mt-3" id="blocCalculsAvances">
       <div><b id="valPenteIGN">Calcul…</b><small>pente terrain (IGN)</small></div>
       <div><b id="valPersistance">—</b><small>durée d’activité observée</small></div>
     </div>
-    <p class="note" style="font-size:11px;margin-top:6px">
+    <p class="note txt-min mt-2">
       Ces observations ne décrivent ni la vitesse, ni le sens de propagation :
       aucune source disponible ici ne les mesure.
     </p>
@@ -1733,13 +1754,13 @@ function ouvrirIncident(f) {
       Le marqueur représente le centre d’un regroupement d’observations à 2 km.
       Il ne décrit ni le périmètre, ni la direction du feu, ni la surface brûlée.
     </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+    <div class="rangee-libre mt-4">
       <button class="btn p" type="button" data-centrer-incident="${html(f._cle || cleFeu(f))}">Voir sur la carte</button>
       <button class="btn" type="button" data-partager-incident="${html(f._cle || cleFeu(f))}">Partager</button>
       <a class="btn" target="_blank" rel="noopener"
          href="https://www.google.com/maps?q=${Number(f.lat)},${Number(f.lon)}">Ouvrir dans Plans</a>
     </div>
-    <p class="alerte-secours" style="margin-top:14px">
+    <p class="alerte-secours mt-4">
       <b>Vous voyez directement un départ de feu ? Appelez le 18 ou le 112.</b>
       La carte ne remplace pas les consignes officielles ni FR-Alert.
     </p>`;
@@ -1807,20 +1828,20 @@ function chargerContexteLocal(f, hote, limite) {
     .then((data) => {
       const mentions = (data?.mentions || []).filter((m) => /^https:\/\//i.test(m.url || ''));
       if (!mentions.length) return;
-      hote.innerHTML = '<h4 style="margin-top:14px">Informations locales associées</h4>' +
+      hote.innerHTML = '<h4 class="mt-4">Informations locales associées</h4>' +
         mentions.slice(0, limite).map((m) => `
-          <div style="background:var(--fond3);padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--bord)">
-            <div style="font-size:11px;color:var(--txt3);display:flex;justify-content:space-between;gap:8px">
+          <div class="encart mention-contexte">
+            <div class="entete-mention">
               <span>${html(m.attribution || m.source_nom)}</span>
               <span>${m.date_publication ? relatif(m.date_publication) : ''}</span>
             </div>
             <a href="${html(m.url)}" target="_blank" rel="noopener"
-               style="font-weight:650;font-size:13px;display:block;margin:4px 0">${html(m.titre)}</a>
-            <small style="color:var(--txt3);font-size:11px">
+               class="titre-mention">${html(m.titre)}</a>
+            <small class="txt-faible txt-min">
               Contexte, pas une preuve · ${html((m.raisons || []).join(' · ') || 'lien vérifié')}
             </small>
           </div>`).join('') +
-        '<p class="note" style="font-size:11px">Ces publications n’augmentent ni le score, ' +
+        '<p class="note txt-min">Ces publications n’augmentent ni le score, ' +
         'ni la sévérité de l’incident.</p>';
       hote.hidden = false;
     })
@@ -1864,16 +1885,16 @@ function creerMarqueurFeu(f) {
   const idSec = String(f.id || f._cle || '').replace(/[^a-zA-Z0-9]/g, '_');
   const contenuPopup = `
     <div class="popup-actualites-feu">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div class="rangee-libre entete-popup">
         <span>${svgFlamme(aspect.couleur, 24, aspect.type)}</span>
         <div>
-          <b style="font-size:14px;color:#fff;display:block">${html(f.commune || aspect.libelle)}</b>
+          <b>${html(f.commune || aspect.libelle)}</b>
           <small style="color:${aspect.couleur}">${html(aspect.libelle)}</small>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">Dernier indice : ${relatif(f.dernier_at)} · ${Number(f.nb_observations) || 1} obs.</div>
+      <div class="meta">Dernier indice : ${relatif(f.dernier_at)} · ${Number(f.nb_observations) || 1} obs.</div>
       <div class="liste-actu" id="actuPopup_${idSec}" hidden></div>
-      <button type="button" class="btn sm p" style="margin-top:8px;width:100%" data-voir-incident="${html(f._cle || cleFeu(f))}">Fiche complète & preuves</button>
+      <button type="button" class="btn sm p" class="mt-2 pleine" data-voir-incident="${html(f._cle || cleFeu(f))}">Fiche complète & preuves</button>
     </div>`;
 
   marker.bindPopup(contenuPopup, { maxWidth: 300, className: 'popup-feu-glass' });
@@ -1889,11 +1910,11 @@ function creerMarqueurFeu(f) {
         if (!el) return;
         const mentions = (data?.mentions || []).filter((m) => /^https:\/\//i.test(m.url || ''));
         if (!mentions.length) return;
-        el.innerHTML = '<b style="font-size:11px;color:var(--txt2)">Contexte local publié :</b>' +
+        el.innerHTML = '<b class="titre-actu">Contexte local publié :</b>' +
           mentions.slice(0, 2).map((m) => `
-            <div style="margin-top:4px;font-size:11px">
-              <span style="color:var(--txt3)">${html(m.attribution || m.source_nom)}</span><br>
-              <a href="${html(m.url)}" target="_blank" rel="noopener" style="color:#79c0ff;font-weight:600">${html(m.titre)}</a>
+            <div class="mt-1 txt-min">
+              <span class="txt-faible">${html(m.attribution || m.source_nom)}</span><br>
+              <a href="${html(m.url)}" target="_blank" rel="noopener" class="lien-contexte">${html(m.titre)}</a>
             </div>`).join('');
         el.hidden = false;
       })
@@ -1998,9 +2019,9 @@ function dessinerSignalements() {
       `<div class="popup-actualites-feu">
          <h4 style="color:${c}">${svgFlamme(c, 18, 'indice')} Signalement citoyen non vérifié</h4>
          <div class="meta">${html(s.commune || 'Localisation déclarée')} · ${relatif(s.dernier_at)}</div>
-         <p style="margin:4px 0 6px">${Number(s.nb_personnes) || 1} personne(s) — ${html((s.natures || []).join(', '))}</p>
-         <small style="color:var(--txt3);font-size:11px">Une confirmation indépendante supplémentaire est nécessaire.</small>
-         ${jeton ? `<br><button class="btn sm" data-contester="${html(s.id)}" style="margin-top:8px">Signaler comme erroné</button>` : ''}
+         <p class="mt-1">${Number(s.nb_personnes) || 1} personne(s) — ${html((s.natures || []).join(', '))}</p>
+         <small class="txt-faible txt-min">Une confirmation indépendante supplémentaire est nécessaire.</small>
+         ${jeton ? `<br><button class="btn sm mt-2" data-contester="${html(s.id)}">Signaler comme erroné</button>` : ''}
        </div>`, { maxWidth: 280, className: 'popup-feu-glass' });
   }
 }
@@ -2087,7 +2108,7 @@ function dessinerCarte() {
       style: { color: '#e0453c', weight: 1.6, opacity: .75, fillColor: '#e0453c', fillOpacity: .07 },
     }).addTo(coucheZones);
     l.bindPopup(`<b>${html(z.nom)}</b><br>${Number(z.surface_km2) || 0} km² surveillés<br>
-      <span style="color:#a09892">${z.limitrophes.length} commune(s) limitrophe(s)${z.buffer_m ? ` + ${z.buffer_m / 1000} km de marge` : ''}</span>`);
+      <span class="txt-faible">${z.limitrophes.length} commune(s) limitrophe(s)${z.buffer_m ? ` + ${z.buffer_m / 1000} km de marge` : ''}</span>`);
     bornes.push(l.getBounds());
   }
 
@@ -2181,7 +2202,7 @@ function rendre() {
             ${e.dans_commune ? `Sur la commune surveillée` : `À ${(e.distance_m / 1000).toFixed(1)} km du centre de ${html(e.zone)}`}
             · ${e.nb_detections} point(s) chaud(s)${e.frp_max ? ` · max ${(+e.frp_max).toFixed(1)} MW` : ''}<br>
             ${heure(e.debut_ts)} · ${relatif(e.debut_ts)} · ${html((e.sources || []).join(', '))}
-            ${e.notifiee ? '· <span style="color:var(--vert)">notifié</span>' : ''}
+            ${e.notifiee ? '· <span class="txt-ok">notifié</span>' : ''}
           </div>
         </div>
         <a class="btn sm" target="_blank" rel="noopener"
@@ -2519,7 +2540,7 @@ const labelTL = $('#labelTimeline');
 if (sliderTL) {
   sliderTL.oninput = () => {
     heuresCarte = Number(sliderTL.value);
-    if (labelTL) labelTL.textContent = heuresCarte === 24 ? 'Dernières 24h' : `Dernières ${heuresCarte}h`;
+    if (labelTL) labelTL.textContent = `${heuresCarte} h`;
     chargerFeuxCarte();
   };
 }
@@ -2529,14 +2550,16 @@ if (btnTL) {
     if (timerTimeline) {
       clearInterval(timerTimeline);
       timerTimeline = null;
-      btnTL.textContent = '▶ Animer 24h';
+      btnTL.textContent = '▶';
+      btnTL.setAttribute('aria-label', 'Rejouer les 24 dernières heures');
       return;
     }
-    btnTL.textContent = '⏸ Pause';
+    btnTL.textContent = '⏸';
+    btnTL.setAttribute('aria-label', 'Mettre l’animation en pause');
     let h = 1;
     if (sliderTL) sliderTL.value = h;
     heuresCarte = h;
-    if (labelTL) labelTL.textContent = `Dernières 1h`;
+    if (labelTL) labelTL.textContent = '1 h';
     chargerFeuxCarte();
     timerTimeline = setInterval(() => {
       h += 2;
@@ -2544,11 +2567,14 @@ if (btnTL) {
         h = 24;
         clearInterval(timerTimeline);
         timerTimeline = null;
-        if (btnTL) btnTL.textContent = '▶ Animer 24h';
+        if (btnTL) {
+          btnTL.textContent = '▶';
+          btnTL.setAttribute('aria-label', 'Rejouer les 24 dernières heures');
+        }
       }
       if (sliderTL) sliderTL.value = h;
       heuresCarte = h;
-      if (labelTL) labelTL.textContent = h === 24 ? 'Dernières 24h' : `Dernières ${h}h`;
+      if (labelTL) labelTL.textContent = `${h} h`;
       chargerFeuxCarte();
     }, 1500);
   };

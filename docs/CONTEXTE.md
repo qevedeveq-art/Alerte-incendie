@@ -80,6 +80,15 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   la rose des vents du serveur (`secteurVent`) et annonce « vers le … ».
 - La console de modération suit la même charte : elle n'est pas un outil de
   seconde classe, et un écart de palette suffit à faire douter de ce qu'on y lit.
+- **Densité et rythme.** L'espacement suit une échelle de 4 px
+  (`--e1`…`--e7`) : le fichier comptait 22 valeurs distinctes entre 2 et 20 px.
+  Le markup ne pose plus de marges à la main — 62 attributs `style` sont
+  devenus 5, tous réellement dynamiques. Trois bandes ont disparu autour de la
+  carte : la barre de légende dupliquait la légende flottante à l'identique,
+  compteurs compris, et la frise temporelle a rejoint la barre de commandes.
+  Au-delà de 1200 px, le panneau latéral suit le défilement. Deux tests
+  gardent ces invariants : aucune valeur d'espacement hors échelle, aucun
+  style en ligne statique.
 - **La publication de la PWA est désormais subordonnée aux tests.** Le workflow
   « Publier la PWA » ne se déclenchait que sur `web/**` et n'exécutait aucun
   test, tandis que les tests d'interface vivent dans `supabase/functions/_tests`
