@@ -126,8 +126,10 @@
     technique du service ; elle ne constitue pas un avis juridique.
   </p>
 </main>
+<script src="./config.js"></script>
 <script>
-const API = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api/informations';
+const API = ((window.CONFIG_ALERTE && window.CONFIG_ALERTE.base) ||
+  'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1') + '/api/informations';
 const CONTACT_PUBLIC = 'qevedeveq@gmail.com';
 fetch(API).then((r) => r.json()).then((j) => {
   const responsable = j.responsable_traitement || CONTACT_PUBLIC;

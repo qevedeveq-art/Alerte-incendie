@@ -135,7 +135,7 @@ input,select{background:var(--fond3);border:1px solid var(--bord);color:var(--tx
   transition:border-color .14s ease}
 input::placeholder{color:var(--txt3)}
 input:focus,select:focus{outline:0;border-color:var(--bord-clair)}
-label{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 8px 4px}
+label,.etiquette-groupe{display:block;font-size:12.5px;color:var(--txt2);margin:0 0 8px 4px}
 .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
 /* ---------- boîtes de dialogue ---------- */
@@ -806,6 +806,13 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
         </p>
         <button class="btn pleine mt-3" id="btnTest">Envoyer une alerte de test</button>
       </div>
+      <p class="note mt-3" id="noteContexte" hidden>
+        <b>Cette page est ouverte depuis un fichier local.</b> Les notifications,
+        l’installation et le mode hors ligne exigent une adresse <b>https</b> :
+        les navigateurs les refusent depuis <code>file://</code>. Ouvrez
+        <a href="https://qevedeveq-art.github.io/Alerte-incendie/">la version en
+        ligne</a>, ou servez le dossier <code>web/</code> par un serveur local.
+      </p>
       <p class="note mt-3" id="noteIos" hidden>
         <b>Sur iPhone et iPad, une étape est obligatoire.</b> Safari ne permet les
         notifications que si l’application est installée : bouton Partager, puis
@@ -828,11 +835,14 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
             </select>
           </div>
           <div>
-            <label>Heures silencieuses <span class="txt-faible">(sauf critique)</span></label>
-            <div class="rangee-libre">
-              <input type="time" id="qStart" placeholder="23:00">
-              <span class="txt-faible">→</span>
-              <input type="time" id="qEnd" placeholder="07:00">
+            <span class="etiquette-groupe" id="libelleSilence">Heures silencieuses
+              <span class="txt-faible">(sauf critique)</span></span>
+            <div class="rangee-libre" role="group" aria-labelledby="libelleSilence">
+              <input type="time" id="qStart" placeholder="23:00"
+                     aria-label="Début des heures silencieuses">
+              <span class="txt-faible" aria-hidden="true">→</span>
+              <input type="time" id="qEnd" placeholder="07:00"
+                     aria-label="Fin des heures silencieuses">
             </div>
           </div>
         </div>
@@ -1035,6 +1045,7 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
   </form>
 </dialog>
 
+<script src="./config.js"></script>
 <script src="./vendor/leaflet/leaflet.js"></script>
 <script>
 /* =====================================================================
@@ -1042,8 +1053,13 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
    Toute la logique métier est côté serveur (Supabase Edge Functions).
    Ce client ne détient qu’un jeton d’abonné, conservé en localStorage.
    ===================================================================== */
-const API = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/api';
-const API_SIG = 'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1/signalement';
+/* Base des fonctions Edge : lue depuis config.js, avec un repli sur la
+ * valeur historique pour qu'une page servie sans ce fichier continue de
+ * fonctionner. */
+const BASE_API = (window.CONFIG_ALERTE && window.CONFIG_ALERTE.base) ||
+  'https://xpcsnxyhjrpvcvsqmaxd.supabase.co/functions/v1';
+const API = `${BASE_API}/api`;
+const API_SIG = `${BASE_API}/signalement`;
 const CLE_JETON = 'alerte-incendie:jeton';
 
 let jeton = localStorage.getItem(CLE_JETON);
@@ -2196,7 +2212,12 @@ function rendre() {
   if (avert) {
     const titre = $('#titreCouverture');
     const detail = $('#detailCouverture');
-    if (!canalFait) {
+    if (!contexteSecurise()) {
+      titre.textContent = 'Aucune alerte possible depuis un fichier local';
+      detail.textContent = 'Les navigateurs réservent les notifications aux pages ' +
+        'servies en https. Ouvrez la version en ligne pour activer un appareil.';
+      avert.hidden = false;
+    } else if (!canalFait) {
       titre.textContent = 'Vous ne recevrez aucune alerte';
       detail.textContent = estIOS && !estInstallee()
         ? 'Aucun appareil n’est encore vérifié. Sur iPhone et iPad, installez ' +
@@ -2326,7 +2347,30 @@ const estIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
 const estInstallee = () =>
   window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
+/* Un service worker, les notifications et Web Push exigent un contexte
+ * sécurisé : https, ou localhost. Une page ouverte directement depuis le
+ * disque (file://) est rejetée par le navigateur avant même d'atteindre
+ * notre code — d'où le message « Script URL's scheme is not 'http' or
+ * 'https' », incompréhensible pour qui teste le fichier local.
+ *
+ * On préfère le dire nous-mêmes, dans les mots de l'utilisateur. */
+function contexteSecurise() {
+  if (window.isSecureContext === false) return false;
+  return location.protocol === 'https:' || location.protocol === 'http:';
+}
+
 async function activerPush() {
+  if (!contexteSecurise()) {
+    const el = $('#noteContexte');
+    if (el) {
+      el.hidden = false;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return toast(
+      'Cette page est ouverte depuis un fichier local : les notifications exigent une adresse https.',
+      true,
+    );
+  }
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     $('#noteIos').hidden = false;
     $('#noteIos').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2929,8 +2973,13 @@ document.addEventListener('change', (e) => {
 
 /* ---------- démarrage ---------- */
 (async function () {
-  if ('serviceWorker' in navigator) {
+  // Hors contexte sécurisé, l'enregistrement échoue avec un message
+  // technique du navigateur. On l'évite et on explique la cause.
+  if ('serviceWorker' in navigator && contexteSecurise()) {
     navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+  } else if (!contexteSecurise()) {
+    const el = $('#noteContexte');
+    if (el) el.hidden = false;
   }
   const ios = /iP(hone|ad|od)/.test(navigator.userAgent);
   const installee = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;

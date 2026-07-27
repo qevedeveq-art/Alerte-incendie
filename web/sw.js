@@ -1,5 +1,5 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v9';
+const CACHE = 'alerte-incendie-v10';
 const CACHE_TUILES = 'alerte-incendie-tuiles-v2';
 const MAX_TUILES = 450;
 
@@ -11,6 +11,7 @@ const STATIQUE = [
   './',
   './index.html',
   './confidentialite.html',
+  './config.js',
   './manifest.webmanifest',
   './icone-192.png',
   './icone-512.png',

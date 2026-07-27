@@ -314,6 +314,38 @@ Deno.test("le service ne promet pas une alerte qu’il ne peut pas délivrer", (
   assert(pwa.includes("installez d’abord l’application sur l’écran d’accueil"));
 });
 
+Deno.test("une page ouverte en file:// explique pourquoi rien ne marchera", () => {
+  // Le navigateur rejette l'enregistrement du service worker avec
+  // « Script URL's scheme is not 'http' or 'https' » — incompréhensible pour
+  // qui teste le fichier local. Ni notifications, ni installation, ni cache
+  // hors ligne ne sont possibles hors contexte sécurisé.
+  assert(pwa.includes("function contexteSecurise("));
+  assert(pwa.includes("window.isSecureContext === false"));
+  assert(pwa.includes('id="noteContexte"'));
+  assert(pwa.includes("ouverte depuis un fichier local"));
+  // L'enregistrement au démarrage est conditionné, plus tenté à l'aveugle.
+  assert(pwa.includes("if ('serviceWorker' in navigator && contexteSecurise())"));
+  const activer = pwa.slice(pwa.indexOf("async function activerPush()"));
+  const corps = activer.slice(0, activer.indexOf("\n}"));
+  assert(
+    corps.indexOf("contexteSecurise()") < corps.indexOf("serviceWorker.register"),
+    "le contexte doit être vérifié avant toute tentative d'enregistrement",
+  );
+});
+
+Deno.test("la configuration de déploiement sort du code applicatif", () => {
+  assert(pwa.includes('<script src="./config.js"></script>'));
+  assert(moderation.includes('<script src="./config.js"></script>'));
+  assert(pwa.includes("window.CONFIG_ALERTE"));
+  assert(serviceWorker.includes("./config.js"), "config.js doit être pré-caché");
+});
+
+Deno.test("les heures silencieuses portent un nom accessible", () => {
+  assert(pwa.includes('aria-label="Début des heures silencieuses"'));
+  assert(pwa.includes('aria-label="Fin des heures silencieuses"'));
+  assert(pwa.includes('aria-labelledby="libelleSilence"'));
+});
+
 Deno.test("dispatch rend la main avant d’être coupé en plein envoi", () => {
   assert(dispatch.includes("const BUDGET_MS"));
   assert(dispatch.includes("Date.now() - debut > BUDGET_MS"));
