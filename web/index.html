@@ -403,6 +403,8 @@ body.hors-ligne .bandeau-carte .fraicheur{color:var(--orange-clair)}
 .pleine-largeur{flex:1;min-width:150px}
 .centre{text-align:center}
 .separe{border-top:1px solid var(--bord)}
+.erreur{color:var(--rouge-clair);min-height:18px}
+.rattachement{padding-top:var(--e4)}
 .txt-ok{color:var(--vert)}
 .titre-actu{font-size:11px;color:var(--txt2)}
 /* Cases à cocher : elles héritaient sinon de la largeur pleine des champs. */
@@ -501,7 +503,12 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
   background:linear-gradient(110deg,rgba(255,149,0,.12),var(--fond2) 60%)}
 .avertissement-couverture b{display:block;font-family:'Outfit',sans-serif;font-size:15px;
   font-weight:700;color:var(--orange-clair)}
-.avertissement-couverture .note{background:transparent;border:0;padding:0}
+.avertissement-couverture .note,.bloc-anonyme .note{background:transparent;border:0;padding:0}
+/* Appareil non rattaché : la marche à suivre, pas un mur. */
+.bloc-anonyme{display:none}
+.anonyme .bloc-anonyme{display:block!important}
+.bloc-anonyme b{display:block;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700}
+.bloc-anonyme .accueil-actions{margin-bottom:0}
 .parcours-alerte{display:grid;gap:1px;background:var(--bord)}
 .etape-alerte{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;
   padding:12px 16px;background:var(--fond2)}
@@ -787,8 +794,24 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
       </div>
     </section>
 
-    <section id="sectionAlertes" data-prive>
+    <!-- La section n'est plus « privée » dans son ensemble : sur un appareil
+         vierge, tout était masqué, y compris le bouton d'activation. Or
+         ajouter un téléphone est précisément ce qu'on vient y faire. -->
+    <section id="sectionAlertes">
       <h2>Notifications sur vos appareils</h2>
+      <!-- Vue d'un appareil qui n'est rattaché à aucun compte. -->
+      <div class="carte pad bloc-anonyme">
+        <b>Recevoir les alertes sur cet appareil</b>
+        <p class="note mt-2 m-0">
+          Les notifications sont liées à un espace personnel, gratuit et sans
+          adresse e-mail. Créez-le, ou rattachez cet appareil à un espace que
+          vous avez déjà avec votre clé d’accès.
+        </p>
+        <div class="accueil-actions">
+          <button class="btn p pleine" type="button" id="btnCreerEspace">Créer mon espace</button>
+          <button class="btn pleine" type="button" id="btnSaisirCle">J’ai déjà une clé</button>
+        </div>
+      </div>
       <!-- Verdict sans détour : tant qu'aucun appareil n'est vérifié, le
            service ne préviendra personne. Le dire vaut mieux que le laisser
            découvrir le jour d'un feu. -->
@@ -796,9 +819,9 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
         <b id="titreCouverture">Vous ne recevrez aucune alerte</b>
         <p class="note mt-2 m-0" id="detailCouverture"></p>
       </div>
-      <div class="carte parcours-alerte" id="parcoursAlerte"></div>
-      <div class="carte" id="listeCanaux"></div>
-      <div class="carte pad">
+      <div class="carte parcours-alerte" id="parcoursAlerte" data-prive></div>
+      <div class="carte" id="listeCanaux" data-prive></div>
+      <div class="carte pad" data-prive>
         <button class="btn p pleine" id="btnPush">Activer les notifications sur cet appareil</button>
         <p class="note mt-3">
           Répétez cette action sur chaque téléphone ou ordinateur qui doit être averti.
@@ -944,16 +967,30 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
   <div class="dialog-corps" id="incidentCorps"></div>
 </dialog>
 
+<!-- Le dialogue affichait la clé sans jamais permettre de la saisir : on
+     pouvait quitter un appareil, jamais en rejoindre un. Il fait désormais
+     les deux, et la seconde moitié est la plus utile. -->
 <dialog id="dialogJeton" aria-labelledby="titreJeton">
-  <div class="dialog-entete"><h3 id="titreJeton">Retrouver mon espace</h3></div>
+  <div class="dialog-entete"><h3 id="titreJeton">Mon espace sur plusieurs appareils</h3></div>
   <div class="dialog-corps">
-    <p>Conservez cette clé privée pour retrouver vos alertes sur un autre appareil.</p>
-    <label for="champJeton">Clé d’accès personnelle</label>
-    <input id="champJeton" readonly>
-    <p class="note mt-3">Ne la partagez pas : elle donne accès à vos réglages.</p>
-    <div class="dialog-actions">
-      <button class="btn g" type="button" id="btnFermerJeton">Fermer</button>
-      <button class="btn p" type="button" id="btnCopierJeton">Copier la clé</button>
+    <div data-prive>
+      <p class="m-0">Conservez cette clé privée pour retrouver vos alertes sur un autre appareil.</p>
+      <label class="mt-3" for="champJeton">Clé d’accès de cet appareil</label>
+      <input id="champJeton" readonly>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="btnCopierJeton">Copier la clé</button>
+      </div>
+      <p class="note mt-3">Ne la partagez pas : elle donne accès à vos réglages.</p>
+    </div>
+    <div class="separe mt-4 rattachement">
+      <label for="champCleSaisie">Rattacher cet appareil à un espace existant</label>
+      <input id="champCleSaisie" autocomplete="off" spellcheck="false"
+             placeholder="Collez ici la clé affichée sur votre autre appareil">
+      <p class="erreur txt-min mt-2" id="erreurCle" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="btn g" type="button" id="btnFermerJeton">Fermer</button>
+        <button class="btn p" type="button" id="btnUtiliserCle">Utiliser cette clé</button>
+      </div>
     </div>
   </div>
 </dialog>
@@ -2789,9 +2826,52 @@ $('#btnReglages').onclick = async () => {
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
 };
 
-$('#btnJeton').onclick = () => {
-  $('#champJeton').value = jeton;
+function ouvrirDialogueJeton() {
+  $('#champJeton').value = jeton || '';
+  $('#champCleSaisie').value = '';
+  $('#erreurCle').textContent = '';
   $('#dialogJeton').showModal();
+}
+$('#btnJeton').onclick = ouvrirDialogueJeton;
+$('#btnSaisirCle').onclick = ouvrirDialogueJeton;
+$('#btnCreerEspace').onclick = () => {
+  document.body.classList.add('inscription-ouverte');
+  $('#vueAccueil').hidden = false;
+  $('#blocInscription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('#nom').focus();
+};
+
+/* Rattacher cet appareil à un espace existant.
+ *
+ * La clé est vérifiée auprès du serveur AVANT d'être enregistrée : une clé
+ * fausse ou expirée laissait sinon l'application dans un état de connexion
+ * apparent, sans aucune alerte derrière — exactement la promesse non tenue
+ * que le reste de l'interface s'attache à éviter. */
+$('#btnUtiliserCle').onclick = async () => {
+  const saisie = $('#champCleSaisie').value.trim();
+  const erreur = $('#erreurCle');
+  const bouton = $('#btnUtiliserCle');
+  erreur.textContent = '';
+  if (saisie.length < 32 || saisie.length > 128) {
+    erreur.textContent = 'Cette clé n’a pas le bon format. Copiez-la entière depuis l’autre appareil.';
+    return;
+  }
+  bouton.disabled = true;
+  try {
+    const r = await fetch(`${API}/etat`, { headers: { 'x-token': saisie } });
+    if (!r.ok) throw new Error(r.status === 401 ? 'inconnue' : `HTTP ${r.status}`);
+    localStorage.setItem(CLE_JETON, saisie);
+    jeton = saisie;
+    $('#dialogJeton').close();
+    toast('Appareil rattaché à votre espace. Activez les notifications ici.');
+    setTimeout(() => location.reload(), 700);
+  } catch (e) {
+    erreur.textContent = String(e).includes('inconnue')
+      ? 'Clé inconnue ou révoquée. Vérifiez-la sur l’appareil d’origine.'
+      : 'Vérification impossible pour l’instant. Réessayez dans un instant.';
+  } finally {
+    bouton.disabled = false;
+  }
 };
 $('#btnFermerJeton').onclick = () => $('#dialogJeton').close();
 $('#btnCopierJeton').onclick = async () => {

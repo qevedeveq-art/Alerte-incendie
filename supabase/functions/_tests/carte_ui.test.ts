@@ -301,6 +301,34 @@ Deno.test("l’application ne dépend d’aucun CDN tiers pour s’afficher", ()
   assert(moderation.includes('href="./vendor/polices/polices.css"'));
 });
 
+Deno.test("un appareil vierge peut rejoindre un espace existant", () => {
+  // Deux défauts se combinaient sur le cas « second téléphone » : la section
+  // des notifications portait data-prive, donc invisible sans compte, et le
+  // dialogue de clé était en lecture seule — on pouvait quitter un appareil,
+  // jamais en rejoindre un.
+  assertEquals(pwa.includes('<section id="sectionAlertes" data-prive>'), false);
+  assert(pwa.includes('<section id="sectionAlertes">'));
+  assert(pwa.includes('class="carte pad bloc-anonyme"'));
+  assert(pwa.includes('id="btnCreerEspace"'));
+  assert(pwa.includes('id="btnSaisirCle"'));
+  // Le champ de saisie existe et n'est pas en lecture seule.
+  assert(pwa.includes('id="champCleSaisie"'));
+  assert(pwa.includes('id="btnUtiliserCle"'));
+  const champ = pwa.slice(pwa.indexOf('id="champCleSaisie"'));
+  assertEquals(champ.slice(0, champ.indexOf(">")).includes("readonly"), false);
+  // La clé est vérifiée auprès du serveur avant d'être enregistrée : une clé
+  // fausse laisserait sinon une connexion apparente sans aucune alerte.
+  const bloc = pwa.slice(pwa.indexOf("$('#btnUtiliserCle').onclick"));
+  const corps = bloc.slice(0, bloc.indexOf("$('#btnFermerJeton')"));
+  assert(corps.includes("`${API}/etat`"), "la clé doit être validée côté serveur");
+  assert(
+    corps.indexOf("fetch(") < corps.indexOf("localStorage.setItem"),
+    "aucune clé ne doit être enregistrée avant vérification",
+  );
+  // Le bouton d'activation reste, lui, réservé à un compte.
+  assert(pwa.includes('<div class="carte pad" data-prive>'));
+});
+
 Deno.test("le service ne promet pas une alerte qu’il ne peut pas délivrer", () => {
   // Sans appareil vérifié, l'abonné ne reçoit rien : e-mail et Telegram ont
   // été retirés, et sur iOS les notifications exigent l'installation.

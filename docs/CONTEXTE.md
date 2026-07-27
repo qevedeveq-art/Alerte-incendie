@@ -12,6 +12,21 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `48ad8d2` sur `main`.
 - Schéma du dépôt : migrations **01 à 41**.
+- **Un appareil vierge peut désormais rejoindre un espace existant.** Deux
+  défauts se combinaient sur le cas « second téléphone », le plus important du
+  produit puisque les alertes sont par appareil :
+  1. `#sectionAlertes` portait `data-prive` et disparaissait donc entièrement
+     pour un visiteur sans jeton — y compris le bouton « Activer les
+     notifications sur cet appareil », qui est précisément ce qu'on vient y
+     faire. Seuls les blocs réellement privés portent maintenant l'attribut ;
+     un encart explique la marche à suivre aux autres.
+  2. Le dialogue de clé était en **lecture seule** : on pouvait afficher sa
+     clé, jamais en saisir une. Il était donc possible de quitter un appareil,
+     jamais d'en rejoindre un — un second téléphone ne pouvait que créer un
+     compte distinct, sans les zones du premier. Le dialogue accepte
+     maintenant une clé, et la vérifie auprès de `/api/etat` **avant** de
+     l'enregistrer : une clé fausse laisserait sinon une connexion apparente
+     sans aucune alerte derrière.
 - La migration 41 corrige un défaut visible dès la mise en production : tous
   les groupes de `/api/carte` avaient `commune: null`. `feux_carte_v29` ne
   consultait jamais la table `communes` — pour un amas satellite, le nom venait
