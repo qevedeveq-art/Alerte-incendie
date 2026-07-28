@@ -12,6 +12,17 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 - Branche de référence : `main`.
 - État fonctionnel publié : commit `48ad8d2` sur `main`.
 - Schéma du dépôt : migrations **01 à 41**.
+- **Le parcours multi-appareils est complet dans les deux sens.** Trois manques
+  se répondaient : on ne voyait pas le bouton d'activation sans compte, on ne
+  pouvait pas saisir une clé existante, et on ne pouvait pas détacher un
+  appareil une fois rattaché. Un utilisateur pouvait entrer, jamais sortir.
+  `#btnDetacher` coupe l'abonnement push de ce navigateur **avant** d'oublier
+  la clé — sinon l'appareil continuerait de recevoir les alertes — et laisse
+  l'espace et les autres appareils intacts.
+- **La clé est montrée à la création du compte.** Elle n'existe que dans le
+  stockage local de ce navigateur : vider les données du site, changer de
+  téléphone ou de navigateur suffisait à tout perdre sans recours. Le dialogue
+  s'ouvre au seul moment où l'utilisateur peut encore la mettre à l'abri.
 - **Un appareil vierge peut désormais rejoindre un espace existant.** Deux
   défauts se combinaient sur le cas « second téléphone », le plus important du
   produit puisque les alertes sont par appareil :

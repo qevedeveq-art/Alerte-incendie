@@ -909,11 +909,17 @@ input.case,input[type="checkbox"]{width:auto;min-height:0;margin-top:var(--e1);a
         </p>
         <div class="rangee-libre">
           <button class="btn" id="btnExporter">Télécharger mes données</button>
+          <button class="btn" id="btnDetacher">Détacher cet appareil</button>
           <button class="btn g" id="btnSupprimerCompte">Supprimer mon compte</button>
           <a class="btn g" href="./confidentialite.html" target="_blank" rel="noopener">
             Confidentialité
           </a>
         </div>
+        <p class="note mt-3 txt-min">
+          <b>Détacher</b> retire votre espace de ce navigateur sans rien supprimer :
+          vos autres appareils continuent d’être alertés, et vous pourrez revenir
+          ici avec votre clé. <b>Supprimer</b> efface définitivement le compte.
+        </p>
       </div>
     </section>
 
@@ -2679,6 +2685,11 @@ $('#btnCommencer').onclick = async () => {
       lieuAActiver = null;
     }
     await recharger();
+    // La clé n'existe que dans le stockage de ce navigateur. Vider les
+    // données du site, changer de téléphone ou de navigateur suffisait à tout
+    // perdre sans recours. On la montre au seul moment où l'utilisateur peut
+    // encore la mettre à l'abri : maintenant.
+    ouvrirDialogueJeton();
     const cible = etat.zones.length ? $('#sectionAlertes') : $('#rechCommune');
     cible.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (!etat.zones.length) toast('Espace créé. Choisissez maintenant la commune à surveiller.');
@@ -2896,6 +2907,34 @@ $('#btnExporter').onclick = async () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Export téléchargé.');
   } catch (e) { toast(String(e).replace('Error: ', ''), true); }
+};
+
+/* Détacher cet appareil.
+ *
+ * On pouvait rattacher un appareil à son espace, jamais l'en retirer : saisir
+ * sa clé sur le téléphone d'un proche était sans retour, sauf à supprimer le
+ * compte entier. On coupe donc d'abord l'abonnement push de CE navigateur —
+ * sinon il continuerait de recevoir les alertes — puis on oublie la clé. */
+$('#btnDetacher').onclick = async () => {
+  const confirmation = await demanderAction({
+    titre: 'Détacher cet appareil',
+    message: 'Cet appareil cessera de recevoir les alertes et oubliera votre clé. ' +
+      'Votre espace et vos autres appareils ne sont pas touchés. ' +
+      'Gardez votre clé pour revenir ici plus tard.',
+    bouton: 'Détacher',
+  });
+  if (!confirmation) return;
+  try {
+    if ('serviceWorker' in navigator && contexteSecurise()) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = await reg?.pushManager?.getSubscription();
+      if (sub) await sub.unsubscribe();
+    }
+  } catch { /* l'essentiel est d'oublier la clé */ }
+  localStorage.removeItem(CLE_JETON);
+  jeton = null;
+  toast('Appareil détaché. Vos autres appareils restent alertés.');
+  setTimeout(() => location.reload(), 800);
 };
 
 $('#btnSupprimerCompte').onclick = async () => {

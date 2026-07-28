@@ -329,6 +329,32 @@ Deno.test("un appareil vierge peut rejoindre un espace existant", () => {
   assert(pwa.includes('<div class="carte pad" data-prive>'));
 });
 
+Deno.test("on peut quitter un appareil, et la clé est montrée à temps", () => {
+  // Rattacher un appareil était sans retour : saisir sa clé sur le téléphone
+  // d'un proche ne pouvait s'annuler qu'en supprimant le compte entier.
+  assert(pwa.includes('id="btnDetacher"'));
+  const bloc = pwa.slice(pwa.indexOf("$('#btnDetacher').onclick"));
+  const corps = bloc.slice(0, bloc.indexOf("$('#btnSupprimerCompte')"));
+  // L'abonnement push local est coupé avant d'oublier la clé, sinon
+  // l'appareil continuerait de recevoir les alertes.
+  assert(corps.includes("sub.unsubscribe()"));
+  assert(
+    corps.indexOf("unsubscribe") < corps.indexOf("removeItem"),
+    "couper la réception avant d'oublier la clé",
+  );
+  assert(corps.includes("demanderAction"), "une action irréversible se confirme");
+
+  // La clé n'existe que dans ce navigateur : elle est montrée au seul moment
+  // où l'utilisateur peut encore la mettre à l'abri.
+  const creation = pwa.slice(pwa.indexOf("localStorage.setItem(CLE_JETON, jeton)"));
+  assert(
+    creation.slice(0, creation.indexOf("$('#formSignalement')")).includes(
+      "ouvrirDialogueJeton()",
+    ),
+    "la clé doit être présentée à la création du compte",
+  );
+});
+
 Deno.test("le service ne promet pas une alerte qu’il ne peut pas délivrer", () => {
   // Sans appareil vérifié, l'abonné ne reçoit rien : e-mail et Telegram ont
   // été retirés, et sur iOS les notifications exigent l'installation.
