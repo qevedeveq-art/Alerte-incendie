@@ -1,5 +1,10 @@
 # Alerte Incendie
 
+**→ [qevedeveq-art.github.io/Alerte-incendie](https://qevedeveq-art.github.io/Alerte-incendie/)**
+
+La carte est consultable sans compte. Les notifications exigent une adresse
+`https` : elles ne fonctionnent pas depuis un fichier ouvert localement.
+
 Projet de service gratuit destiné au public français : alertes autour de
 localisations choisies, carte nationale zoomable et signalements citoyens,
 complétés par la détection satellite. Les alertes utilisent les
