@@ -10,10 +10,10 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié connu avant cette passe : commit `663457a` sur `main`.
-- Schéma du dépôt : migrations **01 à 43**. Les migrations 42 et 43 et les corrections
-  du 29 juillet doivent passer par CI avant déploiement ; leur présence dans le
-  dépôt ne vaut pas confirmation de production.
+- État fonctionnel et schéma publiés : commit `cfedca6` sur `main`, workflow
+  Supabase `30452933329` réussi le 29 juillet 2026.
+- Schéma de production : migrations **01 à 43** appliquées ; les 12 Edge
+  Functions sont redéployées.
 - **Passe globale du 29 juillet 2026.** La migration 42 corrige deux invariants
   qui étaient annoncés mais pas réellement garantis :
   1. `reserver_alertes()` prend un bail transactionnel avec
@@ -27,6 +27,9 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   La migration 43 corrige la construction du tableau des raisons de
   `score_association_contexte()` avec `array_append`, sans ambiguïté de
   transtypage PostgreSQL.
+  Contrôles externes après déploiement : `/api/sante-publique`, `/api/carte`
+  et la PWA répondent HTTP 200 ; la santé est `operationnel` et la carte
+  restitue son origine `cache` ainsi que son âge.
   La même passe impose les méthodes HTTP, refuse les jetons dans l'URL, ferme
   les quotas en cas d'erreur, sépare les emprises ultramarines, vérifie la
   résolution DNS et chaque redirection des flux RSS, et répare les actions des
