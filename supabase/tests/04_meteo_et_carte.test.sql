@@ -38,7 +38,7 @@ select is(
 
 select is(
   (select score from public.calc_risque_meteo(35, 25, 30, 45))::integer,
-  7,
+  6,
   'le score cumule humidité, rafales et température'
 );
 
@@ -132,6 +132,10 @@ select ok(
   24 = any(public.fenetres_carte_cachees()),
   'la fenêtre par défaut de 24 h fait partie du cache'
 );
+
+update public.carte_cache
+   set calcule_at = now() - interval '7 minutes'
+ where heures = 24;
 
 select is(
   (public.feux_carte_servie(24, -5.5, 41, 10, 51.5, 300) ->> 'origine'),

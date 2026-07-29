@@ -263,7 +263,7 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   42 migrations SQL — schéma, moteur, cron et conformité
+supabase/migrations/   43 migrations SQL — schéma, moteur, cron et conformité
 supabase/functions/    12 Edge Functions Deno + module partagé + tests
 supabase/tests/        suites pgTAP — sévérité, quorum, invariants de sécurité
 web/vendor/            Leaflet et polices, servis par le dépôt

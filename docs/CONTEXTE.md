@@ -11,7 +11,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 
 - Branche de référence : `main`.
 - État fonctionnel publié connu avant cette passe : commit `663457a` sur `main`.
-- Schéma du dépôt : migrations **01 à 42**. La migration 42 et les corrections
+- Schéma du dépôt : migrations **01 à 43**. Les migrations 42 et 43 et les corrections
   du 29 juillet doivent passer par CI avant déploiement ; leur présence dans le
   dépôt ne vaut pas confirmation de production.
 - **Passe globale du 29 juillet 2026.** La migration 42 corrige deux invariants
@@ -24,6 +24,9 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
      `reconfigurer_zone_abonne()` déplace uniquement le lien du compte. Ajouter
      ou régler une commune ne change plus la sensibilité ou la géométrie d'un
      autre abonné.
+  La migration 43 corrige la construction du tableau des raisons de
+  `score_association_contexte()` avec `array_append`, sans ambiguïté de
+  transtypage PostgreSQL.
   La même passe impose les méthodes HTTP, refuse les jetons dans l'URL, ferme
   les quotas en cas d'erreur, sépare les emprises ultramarines, vérifie la
   résolution DNS et chaque redirection des flux RSS, et répare les actions des
