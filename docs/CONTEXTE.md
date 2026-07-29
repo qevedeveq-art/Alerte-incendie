@@ -1,6 +1,6 @@
 # Contexte technique et mémoire du projet
 
-Dernière revue globale : **26 juillet 2026, en soirée**.
+Dernière revue globale : **29 juillet 2026**.
 
 Ce fichier est la mémoire technique maintenue du projet. Il décrit l'état
 réel du dépôt, les invariants à ne pas casser et les points qui doivent être
@@ -10,8 +10,24 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
 ## État de livraison connu
 
 - Branche de référence : `main`.
-- État fonctionnel publié : commit `48ad8d2` sur `main`.
-- Schéma du dépôt : migrations **01 à 41**.
+- État fonctionnel publié connu avant cette passe : commit `663457a` sur `main`.
+- Schéma du dépôt : migrations **01 à 42**. La migration 42 et les corrections
+  du 29 juillet doivent passer par CI avant déploiement ; leur présence dans le
+  dépôt ne vaut pas confirmation de production.
+- **Passe globale du 29 juillet 2026.** La migration 42 corrige deux invariants
+  qui étaient annoncés mais pas réellement garantis :
+  1. `reserver_alertes()` prend un bail transactionnel avec
+     `FOR UPDATE SKIP LOCKED` avant tout Web Push ; deux `dispatch` concurrents
+     ne peuvent plus envoyer la même ligne, et les baux abandonnés sont repris
+     après cinq minutes ;
+  2. la sensibilité appartient à la clé de configuration d'une zone et
+     `reconfigurer_zone_abonne()` déplace uniquement le lien du compte. Ajouter
+     ou régler une commune ne change plus la sensibilité ou la géométrie d'un
+     autre abonné.
+  La même passe impose les méthodes HTTP, refuse les jetons dans l'URL, ferme
+  les quotas en cas d'erreur, sépare les emprises ultramarines, vérifie la
+  résolution DNS et chaque redirection des flux RSS, et répare les actions des
+  notifications.
 - **Le parcours multi-appareils est complet dans les deux sens.** Trois manques
   se répondaient : on ne voyait pas le bouton d'activation sans compte, on ne
   pouvait pas saisir une clé existante, et on ne pouvait pas détacher un
@@ -64,19 +80,19 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   désormais constant. Le cache est ignoré au-delà de six minutes d'âge, et son
   âge est restitué à l'appelant : un cron arrêté ne fige pas la carte.
 - Une suite **pgTAP** (`supabase/tests/`) vérifie le moteur et les invariants
-  de sécurité après le rejeu des migrations : 51 assertions sur la sévérité,
-  le quorum citoyen, le barème de contexte, la RLS, les droits et le
-  `search_path` des fonctions `SECURITY DEFINER`. Le rejeu des migrations ne
-  contrôlait que la syntaxe.
+  de sécurité après le rejeu des migrations : 77 assertions sur la sévérité,
+  le quorum citoyen, le barème de contexte, l'isolation des zones, la
+  réservation des alertes, la RLS, les droits et le `search_path` des fonctions
+  `SECURITY DEFINER`. Le rejeu des migrations ne contrôlait que la syntaxe.
 - **Leaflet et les polices sont servis par le dépôt** (`web/vendor/`). Les
   empreintes SHA-256 des copies correspondent aux attributs d'intégrité qui
   figuraient dans la page. Plus aucune dépendance CDN : une panne d'unpkg ne
   rend plus la carte inaffichable pour un nouveau visiteur, et aucune adresse
   IP ne part vers Google Fonts. Sous-ensemble latin seul, 324 ko.
-- `dispatch` dispose d'un **budget de temps** de 50 s : au-delà, il rend la
-  main et les alertes restantes repartent au passage suivant, sans tentative
-  consommée. Une exécution coupée en plein milieu d'une vague ne laissait
-  aucune trace exploitable.
+- `dispatch` dispose d'un **budget de temps** de 50 s : au-delà, il libère les
+  réservations restantes et rend la main, sans tentative consommée. Une
+  exécution coupée conserve au maximum un bail de cinq minutes, ensuite
+  récupérable automatiquement.
 - La PWA **avertit quand elle ne peut rien délivrer**. Sans appareil vérifié,
   un encart l'annonce sans détour ; sur iOS non installé, il explique que
   Safari réserve les notifications aux applications ajoutées à l'écran
@@ -155,12 +171,12 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   l'utilisateur. Chaque ligne masque maintenant son niveau, l'état est exposé
   par `aria-pressed` et l'opacité, et le message reflète l'état réel.
 - La fraîcheur de la carte est affichée en surimpression
-  (`majFraicheurCarte`). Le voyant passe en rouge dès que la vue provient du
-  cache : une carte muette qui a l'air à jour est le pire cas pour un service
-  d'alerte.
-- Le vent de la fiche incident affichait `wind_direction_10m` brut sous le
-  libellé « direction propagation », soit l'inverse du sens réel. La PWA reprend
-  la rose des vents du serveur (`secteurVent`) et annonce « vers le … ».
+  (`majFraicheurCarte`). La PWA consomme réellement `origine` et
+  `age_secondes` : le voyant passe en avertissement dès que la vue provient du
+  cache.
+- Le vent de la fiche incident reste une mesure météorologique : vitesse,
+  secteur d'origine et direction vers laquelle souffle l'air. Il n'est plus
+  présenté comme un sens de propagation du feu, qu'aucune source ne mesure.
 - La console de modération suit la même charte : elle n'est pas un outil de
   seconde classe, et un écart de palette suffit à faire douter de ce qu'on y lit.
 - **Densité et rythme.** L'espacement suit une échelle de 4 px
@@ -199,7 +215,7 @@ revérifiés lors d'une reprise. Le README reste la présentation fonctionnelle,
   rattrapage sur le même écran. Les deux tests sont corrigés et le job
   `verifier` bloque maintenant l'envoi vers Pages.
 - La PWA intègre un slider temporel 24 h avec animation Play/Pause pour rejouer
-  la propagation des détections, la mise en cache hors-ligne des tuiles (IGN, OSM, CARTO)
+  la chronologie des détections, la mise en cache hors-ligne des tuiles (IGN, OSM, CARTO)
   dans `web/sw.js` (MAX_TUILES=450), l'affichage du vecteur vent au sol (Open-Meteo API)
   et les notifications push actionnables (`voir`, `confirmer`).
 - La migration 38 (`sources_rss_regionales_et_nationales.sql`) peuple le

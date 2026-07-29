@@ -1,5 +1,5 @@
 /* Service worker : reception des notifications Web Push et cache applicatif minimal. */
-const CACHE = 'alerte-incendie-v10';
+const CACHE = 'alerte-incendie-v11';
 const CACHE_TUILES = 'alerte-incendie-tuiles-v2';
 const MAX_TUILES = 450;
 
@@ -104,10 +104,18 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const cible = new URL(e.notification.data && e.notification.data.url || './', self.location.href).href;
+  const cibleUrl = new URL(
+    e.notification.data && e.notification.data.url || './',
+    self.location.href,
+  );
+  if (e.action === 'confirmer') cibleUrl.searchParams.set('action', 'confirmer');
+  const cible = cibleUrl.href;
   e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((liste) => {
-      for (const c of liste) if ('focus' in c) return c.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (liste) => {
+      for (const c of liste) {
+        if ('navigate' in c) await c.navigate(cible);
+        if ('focus' in c) return c.focus();
+      }
       return self.clients.openWindow(cible);
     }),
   );

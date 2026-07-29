@@ -42,6 +42,7 @@ function entrees(html: string): string[] {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   if (!await autoriserOperation(req, "probe-mtg")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("probe-mtg");

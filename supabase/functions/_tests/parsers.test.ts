@@ -6,7 +6,11 @@
 //  deux sources d'erreur silencieuse les plus courantes.
 // =====================================================================
 import { assertEquals } from "./assert.ts";
-import { empriseFranceEtZones } from "../_shared/format.ts";
+import {
+  adresseReseauInterdite,
+  empriseFranceEtZones,
+  positionEnFrance,
+} from "../_shared/format.ts";
 import { horodatage, nombreOuNull, normaliserConfiance, parserCsv } from "../poll-firms/parsers.ts";
 
 const CSV_VIIRS = [
@@ -85,4 +89,20 @@ Deno.test("emprise nationale — conserve une zone ultramarine", () => {
     empriseFranceEtZones({ sud: 14.3, nord: 14.9, ouest: -61.3, est: -60.7 }),
     { sud: 14.3, nord: 51.5, ouest: -61.3, est: 10 },
   );
+});
+
+Deno.test("périmètre citoyen — couvre les territoires français sans englober un continent", () => {
+  assertEquals(positionEnFrance(43.6, 1.4), true);
+  assertEquals(positionEnFrance(4.9, -52.3), true); // Guyane
+  assertEquals(positionEnFrance(-21.1, 55.5), true); // La Réunion
+  assertEquals(positionEnFrance(14.7, -17.4), false); // Sénégal
+  assertEquals(positionEnFrance(-3.1, -60), false); // Brésil
+});
+
+Deno.test("anti-SSRF — refuse les adresses privées après résolution DNS", () => {
+  for (const ip of ["127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1", "::1", "fd00::1"]) {
+    assertEquals(adresseReseauInterdite(ip), true);
+  }
+  assertEquals(adresseReseauInterdite("1.1.1.1"), false);
+  assertEquals(adresseReseauInterdite("2606:4700:4700::1111"), false);
 });

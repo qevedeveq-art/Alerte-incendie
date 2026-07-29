@@ -148,7 +148,12 @@ export async function quota(cle: string, max: number, secondes: number): Promise
     p_max: max,
     p_fenetre: `${secondes} seconds`,
   });
-  if (error) return true; // en cas de panne du compteur, on ne bloque pas le service
+  // Un compteur en panne ne doit pas transformer silencieusement une route
+  // publique en surface illimitée, surtout pour les écritures et les envois.
+  if (error) {
+    console.error("quota indisponible", cle.split(":")[0], error.message);
+    return false;
+  }
   return data !== false;
 }
 
@@ -157,10 +162,12 @@ export const TROP_DE_REQUETES = { erreur: "trop de requêtes, patientez quelques
 // Utilitaires purs : définis dans format.ts (sans dépendance à Supabase,
 // donc testables hors environnement), réexportés ici par commodité.
 export {
+  adresseReseauInterdite,
   aUnCanalVerifie,
   comparerSecret,
   empriseFranceEtZones,
   fetchRetry,
   normaliserAbonnementPush,
+  positionEnFrance,
   secteurVent,
 } from "./format.ts";

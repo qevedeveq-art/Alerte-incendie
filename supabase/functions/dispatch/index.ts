@@ -98,7 +98,9 @@ async function envoyerPush(cfg: Record<string, any>, dest: any, p: Payload, type
     titre: c.sujet,
     corps: c.texte,
     severite: type === "fin" ? "info" : (p?.severite ?? "info"),
-    url: `./?evt=${p?.evenement_id ?? ""}`,
+    url: `./?evt=${encodeURIComponent(String(p?.evenement_id ?? ""))}` +
+      `&lat=${encodeURIComponent(String(p?.lat ?? ""))}` +
+      `&lon=${encodeURIComponent(String(p?.lon ?? ""))}`,
     lat: p?.lat,
     lon: p?.lon,
   });
@@ -112,10 +114,13 @@ async function envoyerPush(cfg: Record<string, any>, dest: any, p: Payload, type
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   await req.json().catch(() => ({}));
   if (!await autoriserOperation(req, "dispatch")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("dispatch");
+  let lotId: string | null = null;
+  let idsReserves: string[] = [];
   const stats = {
     traitees: 0,
     envoyees: 0,
@@ -127,11 +132,13 @@ Deno.serve(async (req) => {
   try {
     const cfg = await config(true);
 
-    // La file prête à l'envoi est définie en base : péremption des alertes
-    // incendie à 2 h, temporisation, priorité au critique.
-    const { data: file, error } = await sb.rpc("alertes_a_envoyer", { p_limite: 200 });
+    // La sélection et la réservation sont une seule transaction SQL. L'index
+    // unique protège la file ; ce bail protège l'effet externe Web Push.
+    const { data: file, error } = await sb.rpc("reserver_alertes", { p_limite: 200 });
     if (error) throw new Error(error.message);
     const alertes = (file ?? []) as Array<Record<string, any>>;
+    lotId = alertes[0]?.claim_id ?? null;
+    idsReserves = alertes.map((a) => String(a.id));
 
     const idsCanaux = [...new Set(alertes.map((a) => a.canal_id).filter(Boolean))];
     const { data: canauxData } = idsCanaux.length
@@ -145,7 +152,9 @@ Deno.serve(async (req) => {
         sent_at: new Date().toISOString(),
         tentatives: (a.tentatives ?? 0) + 1,
         erreur: null,
-      }).eq("id", a.id);
+        claim_id: null,
+        claimed_at: null,
+      }).eq("id", a.id).eq("claim_id", lotId).eq("statut", "en_cours");
       await sb.from("canaux").update({
         last_ok_at: new Date().toISOString(),
         echecs: 0,
@@ -171,7 +180,9 @@ Deno.serve(async (req) => {
         tentatives: nbTentatives,
         prochaine_tentative_at: new Date(Date.now() + attenteMin * 60_000).toISOString(),
         erreur: msg,
-      }).eq("id", a.id);
+        claim_id: null,
+        claimed_at: null,
+      }).eq("id", a.id).eq("claim_id", lotId).eq("statut", "en_cours");
       await sb.from("canaux").update({
         echecs: nbEchecs,
         last_error: msg,
@@ -186,8 +197,12 @@ Deno.serve(async (req) => {
       const canal = canaux.get(a.canal_id);
       stats.traitees++;
       if (!canal) {
-        await sb.from("alertes").update({ statut: "echec", erreur: "canal supprimé" })
-          .eq("id", a.id);
+        await sb.from("alertes").update({
+          statut: "echec",
+          erreur: "canal supprimé",
+          claim_id: null,
+          claimed_at: null,
+        }).eq("id", a.id).eq("claim_id", lotId).eq("statut", "en_cours");
         stats.echecs++;
         return;
       }
@@ -205,14 +220,22 @@ Deno.serve(async (req) => {
 
     const debut = Date.now();
     let reportees = 0;
+    let idsReportees: string[] = [];
     for (let i = 0; i < alertes.length; i += CONCURRENCE) {
       if (Date.now() - debut > BUDGET_MS) {
-        // Reste de la file laissé en l'état : « en_attente », sans tentative
-        // consommée. Le passage suivant le reprendra dans deux minutes.
+        // Le reste du lot est libéré sans tentative consommée.
         reportees = alertes.length - i;
+        idsReportees = alertes.slice(i).map((a) => String(a.id));
         break;
       }
       await Promise.all(alertes.slice(i, i + CONCURRENCE).map(traiter));
+    }
+    if (lotId && idsReportees.length) {
+      const { error: erreurLiberation } = await sb.rpc("liberer_alertes", {
+        p_lot: lotId,
+        p_ids: idsReportees,
+      });
+      if (erreurLiberation) throw new Error(`libération alertes: ${erreurLiberation.message}`);
     }
 
     const bilan = { ...stats, reportees, duree_ms: Date.now() - debut };
@@ -222,6 +245,13 @@ Deno.serve(async (req) => {
     await fermerRun(runId, true, bilan);
     return json({ ok: true, stats: bilan });
   } catch (e) {
+    if (lotId && idsReserves.length) {
+      try {
+        await sb.rpc("liberer_alertes", { p_lot: lotId, p_ids: idsReserves });
+      } catch {
+        // Le bail de cinq minutes reste le dernier filet de récupération.
+      }
+    }
     await fermerRun(runId, false, stats, String(e));
     return json({ ok: false, erreur: String(e), stats }, 500);
   }

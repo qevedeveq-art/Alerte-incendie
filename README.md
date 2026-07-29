@@ -154,7 +154,8 @@ explicitement d'enregistrer un point de référence.
 ### Le vent, pour rendre l'alerte actionnable
 
 « Feu à 4 km » ne dit pas s'il vient vers vous. Les alertes portent désormais le
-vent relevé au point du feu — secteur, vitesse, sens de propagation probable —
+vent relevé au point du feu — secteur, vitesse et direction de l'air, jamais
+présentée comme une propagation du feu —
 depuis **Open-Meteo**.
 
 La météo sert aussi à **durcir automatiquement la détection** les jours à risque :
@@ -262,7 +263,7 @@ industrielles.
 ## Dépôt
 
 ```
-supabase/migrations/   41 migrations SQL — schéma, moteur, cron et conformité
+supabase/migrations/   42 migrations SQL — schéma, moteur, cron et conformité
 supabase/functions/    12 Edge Functions Deno + module partagé + tests
 supabase/tests/        suites pgTAP — sévérité, quorum, invariants de sécurité
 web/vendor/            Leaflet et polices, servis par le dépôt

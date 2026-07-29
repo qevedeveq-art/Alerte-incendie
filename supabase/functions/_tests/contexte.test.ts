@@ -210,11 +210,11 @@ Deno.test("la fiche incident ne replie ni le vent, ni le rappel des secours", ()
   }
 });
 
-Deno.test("le vent affiche le sens de propagation, pas celui d'où il vient", () => {
+Deno.test("le vent décrit l’air sans prétendre mesurer la propagation du feu", () => {
   assert(pwa.includes("function secteurVent("));
   assert(pwa.includes("(deg + 180) % 360"));
-  assert(pwa.includes("propagation probable"));
-  assertEquals(pwa.includes("direction propagation"), false);
+  assert(pwa.includes("direction vers laquelle souffle le vent"));
+  assertEquals(pwa.includes("<small>propagation probable</small>"), false);
   // Même rose des vents que le serveur, pour éviter deux récits différents.
   for (const secteur of ["nord-est", "sud-ouest", "nord-ouest"]) {
     assert(pwa.includes(`'${secteur}'`), `secteur absent : ${secteur}`);

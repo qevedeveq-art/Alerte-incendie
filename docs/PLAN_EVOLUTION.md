@@ -255,7 +255,7 @@ elles viennent d'une action délibérée, pas d'un rafraîchissement automatique
 
 ### Tests pgTAP du moteur — `supabase/tests/`
 
-51 assertions branchées dans le workflow Supabase, après le rejeu des
+77 assertions branchées dans le workflow Supabase, après le rejeu des
 migrations :
 
 - **Sévérité** (22) : la règle de résolution, les seuils de FRP, les familles
@@ -268,6 +268,10 @@ migrations :
   policy, aucun droit pour `anon` ou `authenticated`, `search_path` figé sur
   toute fonction `SECURITY DEFINER`. Ces règles étaient énoncées dans
   `SECURITE.md` et vérifiées à la main.
+- **Météo et carte** (18) : fraîcheur des mesures, origine des valeurs
+  restituées et absence d'indicateur de propagation non mesuré.
+- **Isolation et dispatch** (8) : configuration indépendante des abonnés et
+  réservation atomique des alertes concurrentes.
 
 pgTAP est chargé dans la transaction de test et retiré par le `ROLLBACK` : la
 base de production n'en porte pas la trace.

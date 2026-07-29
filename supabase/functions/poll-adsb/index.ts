@@ -57,6 +57,7 @@ function lireEtat(s: unknown[]) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   if (!await autoriserOperation(req, "poll-adsb")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-adsb");

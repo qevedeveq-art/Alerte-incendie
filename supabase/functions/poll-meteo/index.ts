@@ -37,6 +37,7 @@ const API = "https://api.open-meteo.com/v1/forecast";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   if (!await autoriserOperation(req, "poll-meteo")) return json({ erreur: "non autorisé" }, 401);
 
   const runId = await ouvrirRun("poll-meteo");

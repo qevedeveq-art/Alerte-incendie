@@ -27,6 +27,7 @@ const DEPARTEMENTS_FRANCE = [
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   if (!await autoriserOperation(req, "load-communes")) {
     return json({ erreur: "non autorisé" }, 401);
   }

@@ -30,7 +30,7 @@ export async function fetchRetry(
     try {
       const r = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
       // 4xx : inutile d'insister, la requête elle-même est en cause.
-      if (r.ok || (r.status >= 400 && r.status < 500)) return r;
+      if (r.ok || (r.status >= 300 && r.status < 500)) return r;
       derniere = new Error(`HTTP ${r.status}`);
     } catch (e) {
       derniere = e;
@@ -45,6 +45,49 @@ export function secteurVent(deg: number | null | undefined): string | null {
   if (deg == null || !Number.isFinite(deg)) return null;
   const s = ["nord", "nord-est", "est", "sud-est", "sud", "sud-ouest", "ouest", "nord-ouest"];
   return s[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}
+
+/** Appartenance à une emprise française.
+ *
+ * Les territoires ultramarins sont volontairement décrits par boîtes
+ * séparées. Une seule boîte allant de la Guyane à La Réunion accepterait
+ * aussi une grande partie de l'Afrique et de l'Amérique du Sud. */
+export function positionEnFrance(lat: number, lon: number): boolean {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+  const emprises = [
+    [41, 51.5, -5.5, 10], // métropole et Corse
+    [15.7, 16.6, -61.9, -60.9], // Guadeloupe
+    [14.3, 15, -61.3, -60.7], // Martinique
+    [2, 6, -54.7, -51.4], // Guyane
+    [-21.5, -20.8, 55.1, 55.9], // La Réunion
+    [-13.1, -12.5, 44.9, 45.4], // Mayotte
+    [46.7, 47.2, -56.6, -56], // Saint-Pierre-et-Miquelon
+    [17.8, 18.2, -63.2, -62.7], // Saint-Martin et Saint-Barthélemy
+    [-14.5, -13, -178.3, -175.8], // Wallis-et-Futuna
+    [-28, -7, -155, -134], // Polynésie française
+    [-23.2, -19.4, 163.5, 168.2], // Nouvelle-Calédonie
+    [10.1, 10.4, -109.4, -109.1], // Clipperton
+  ] as const;
+  return emprises.some(([sud, nord, ouest, est]) =>
+    lat >= sud && lat <= nord && lon >= ouest && lon <= est
+  );
+}
+
+/** Adresse réseau impropre à une requête sortante vers une source publique. */
+export function adresseReseauInterdite(adresse: string): boolean {
+  const ip = adresse.toLowerCase();
+  if (
+    ip === "::" || ip === "::1" || ip.startsWith("fc") || ip.startsWith("fd") ||
+    ip.startsWith("fe8") || ip.startsWith("fe9") || ip.startsWith("fea") ||
+    ip.startsWith("feb")
+  ) {
+    return true;
+  }
+  const ipv4 = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  return ipv4.startsWith("127.") || ipv4.startsWith("10.") ||
+    ipv4.startsWith("192.168.") || ipv4.startsWith("169.254.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ipv4) || ipv4 === "0.0.0.0" ||
+    /^22[4-9]\.|^23\d\./.test(ipv4);
 }
 
 /** Valide et réduit un PushSubscription fourni par le navigateur.

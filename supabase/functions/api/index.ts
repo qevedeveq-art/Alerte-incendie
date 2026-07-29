@@ -46,6 +46,28 @@ const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CONDITIONS_VERSION = "2026-07-26";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const METHODES: Record<string, "GET" | "POST"> = {
+  vapid: "GET",
+  informations: "GET",
+  "sante-publique": "GET",
+  contexte: "GET",
+  "contexte-moderation": "GET",
+  "contexte-moderer": "POST",
+  carte: "GET",
+  communes: "GET",
+  inscription: "POST",
+  "telegram-webhook": "POST",
+  etat: "GET",
+  canal: "POST",
+  "canal-verifier": "POST",
+  "canal-supprimer": "POST",
+  zone: "POST",
+  "zone-supprimer": "POST",
+  reglages: "POST",
+  test: "POST",
+  "compte-exporter": "GET",
+  "compte-supprimer": "POST",
+};
 
 /** Empreinte d'acteur pour la trace de modération : jamais l'IP en clair. */
 async function acteurHash(req: Request, sel: unknown): Promise<string> {
@@ -55,7 +77,8 @@ async function acteurHash(req: Request, sel: unknown): Promise<string> {
 }
 
 async function abonneParJeton(req: Request) {
-  const t = req.headers.get("x-token") ?? new URL(req.url).searchParams.get("token");
+  // Un jeton dans l'URL fuit dans les historiques, journaux et Referer.
+  const t = req.headers.get("x-token");
   if (!t || t.length < 32 || t.length > 128) return null;
   const { data } = await sb.from("abonnes").select("*").eq("token", t).maybeSingle();
   if (data) {
@@ -91,13 +114,19 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const route = url.pathname.replace(/^\/api\/?/, "").replace(/\/$/, "") || "etat";
+  if (METHODES[route] && req.method !== METHODES[route]) {
+    return json({ erreur: "méthode non autorisée" }, 405);
+  }
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
   const ip = ipAppelant(req);
 
   try {
     const cfg = await config();
     // ---------- routes publiques ----------
-    if (route === "vapid") return json({ publicKey: cfg.vapid_public });
+    if (route === "vapid") {
+      if (!await quota(`vapid:${ip}`, 120, 60)) return json(TROP_DE_REQUETES, 429);
+      return json({ publicKey: cfg.vapid_public });
+    }
 
     if (route === "informations") {
       if (!await quota(`informations:${ip}`, 120, 3600)) return json(TROP_DE_REQUETES, 429);
@@ -286,6 +315,9 @@ Deno.serve(async (req) => {
     }
 
     if (route === "telegram-webhook") {
+      if (!await quota(`telegram-webhook:${ip}`, 60, 60)) {
+        return json(TROP_DE_REQUETES, 429);
+      }
       // Accuser réception évite les relances automatiques de Telegram tant que
       // l'ancien webhook n'a pas encore été supprimé côté fournisseur.
       return json({
@@ -444,21 +476,31 @@ Deno.serve(async (req) => {
       }
 
       if (body.zone_id) {
-        const zmaj: Record<string, unknown> = {};
-        if (["sensible", "equilibre", "conservateur"].includes(body.sensibilite)) {
-          zmaj.sensibilite = body.sensibilite;
-        }
-        if (body.buffer_m != null) {
-          zmaj.buffer_m = Math.min(50000, Math.max(0, Number(body.buffer_m) || 0));
-        }
-        if ("limitrophes" in body) zmaj.inclure_limitrophes = !!body.limitrophes;
-        if (Object.keys(zmaj).length) {
-          // on ne modifie qu'une zone a laquelle l'abonne est rattache
-          const { data: lien } = await sb.from("zone_abonnes").select("zone_id")
-            .eq("zone_id", body.zone_id).eq("abonne_id", ab.id).maybeSingle();
-          if (!lien) return json({ erreur: "zone non rattachée à cet abonné" }, 403);
-          await sb.from("zones").update(zmaj).eq("id", body.zone_id);
-          await sb.rpc("refresh_zone_geom", { p_zone_id: body.zone_id });
+        const sensibilite = ["sensible", "equilibre", "conservateur"].includes(body.sensibilite)
+          ? body.sensibilite
+          : null;
+        const buffer = body.buffer_m == null
+          ? null
+          : Math.min(50000, Math.max(0, Number(body.buffer_m) || 0));
+        const limitrophes = "limitrophes" in body ? !!body.limitrophes : null;
+        if (sensibilite !== null || buffer !== null || limitrophes !== null) {
+          // La RPC effectue une reconfiguration transactionnelle pour ce seul
+          // abonné. Une zone partagée par un autre compte reste inchangée.
+          const { data, error } = await sb.rpc("reconfigurer_zone_abonne", {
+            p_abonne: ab.id,
+            p_zone: body.zone_id,
+            p_limitrophes: limitrophes,
+            p_buffer_m: buffer,
+            p_sensibilite: sensibilite,
+          });
+          if (error) {
+            if (error.message.includes("non rattachee")) {
+              return json({ erreur: "zone non rattachée à cet abonné" }, 403);
+            }
+            throw new Error(error.message);
+          }
+          const zone = Array.isArray(data) ? data[0] : data;
+          return json({ ok: true, zone });
         }
       }
       return json({ ok: true });

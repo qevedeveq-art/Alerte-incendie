@@ -9,14 +9,14 @@ appliquent leurs propres contrôles.
 
 | Surface | Contrôle |
 |---|---|
-| `api` | jeton d'abonné aléatoire de 24 octets (`x-token`), portée limitée à ses propres zones et canaux |
+| `api` | jeton d'abonné aléatoire de 24 octets, accepté uniquement dans `x-token`, portée limitée à ses propres zones et canaux |
 | `signalement` | lecture publique limitée par IP ; écriture par `x-token`, appareil Web Push actif et quotas personne/réseau |
 | `signalement/moderation` | `x-admin-key`, audit de chaque lecture/décision, données agrégées sans identité |
 | `api/sante-publique` | lecture publique limitée ; fraîcheur agrégée sans secret, jeton ni donnée d'abonné |
 | `api/contexte` | lecture publique limitée (60 req/min/IP) ; exige un uuid d'évènement, ne restitue que `decision = 'associe'`, sans PII ni texte social brut |
 | `api/contexte-moderation`, `api/contexte-moderer` | `x-admin-key`, audit de chaque lecture et décision, motif obligatoire, acteur identifié par IP hachée |
 | collecteurs (`poll-*`), sondes et `dispatch` | `x-admin-key`, comparaison à temps constant, ou appel interne porteur du service role |
-| `poll-contexte` | anti-SSRF à deux niveaux : URL du flux et URL de chaque article vérifiées (https obligatoire, refus de `localhost`, `.local`, 10/8, 172.16/12, 192.168/16, 169.254/16 et IPv6 littérales) ; corps tronqué à 400 ko, 40 articles et 20 sources par passage ; balises et entités du flux mises à plat avant stockage |
+| `poll-contexte` | anti-SSRF : https obligatoire, résolution A/AAAA vérifiée avant chaque requête, refus des adresses privées/locales et validation de chaque redirection ; corps tronqué à 400 ko, 40 articles et 20 sources par passage |
 | `load-communes` | `x-admin-key`, ou service role pour le chargement à la demande depuis `api` |
 | Tables `public.*` | RLS active, zéro policy, `revoke all` sur `anon`/`authenticated` |
 | Fonctions `public.*` | `revoke all from public, anon, authenticated` — `service_role` uniquement |
@@ -57,7 +57,7 @@ comportement voulu, l'absence de policy **est** la protection.
 
 - Le **jeton d'abonné** est un porteur : quiconque l'obtient voit et modifie les
   zones et canaux de cet abonné. Il ne donne accès à aucune donnée d'un autre
-  abonné, ni à l'administration.
+  abonné, ni à l'administration. Il n'est jamais accepté dans l'URL.
 - La **clé d'administration** permet de déclencher la collecte et l'envoi
   d'alertes. Elle est acceptée uniquement dans l'en-tête `x-admin-key`, jamais
   dans l'URL. La faire tourner via
@@ -92,7 +92,9 @@ La protection existe à quatre niveaux :
 | `reglages` | abonné | 30 / heure |
 | `etat` | abonné | 120 / heure |
 | `informations` | IP | 120 / heure |
+| `vapid` | IP | 120 / minute |
 | `carte` (indices corrélés) | IP | 120 / minute |
+| `telegram-webhook` désactivé | IP | 60 / minute |
 | `compte-exporter` | abonné | 3 / 24 h |
 | `compte-supprimer` | abonné | 3 / 24 h |
 | carte des signalements | IP | 120 / minute |
@@ -109,10 +111,17 @@ d'abus.
 
 ### Autres durcissements
 
+- Chaque route déclare sa méthode (`GET` ou `POST`) et renvoie 405 pour toute
+  autre méthode. Les collecteurs et opérations mutantes sont `POST`.
+- Le compteur de quota échoue fermé : une erreur de la RPC refuse la requête
+  au lieu de rendre temporairement la route illimitée.
 - Les erreurs internes ne sont plus renvoyées au client (`erreur interne`), pour
   ne pas divulguer la structure de la base ; le détail va dans les logs.
-- `reglages` vérifie que la zone modifiée est bien rattachée à l'abonné, sinon
-  n'importe qui pouvait changer la sensibilité de la zone d'un autre.
+- `reglages` délègue à `reconfigurer_zone_abonne()` : la configuration cible
+  inclut la sensibilité et seul le lien du compte courant est déplacé. Une
+  zone identique peut être mutualisée, jamais modifiée sous les autres comptes.
+- `dispatch` réserve atomiquement ses lignes avec `FOR UPDATE SKIP LOCKED`,
+  leur attribue un bail et ne met à jour que les lignes de son propre lot.
 - Longueurs bornées sur toutes les entrées texte, jeton contrôlé en longueur
   avant requête.
 - Les libellés et erreurs renvoyés par le serveur sont échappés avant toute

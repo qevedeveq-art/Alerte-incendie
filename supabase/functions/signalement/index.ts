@@ -32,6 +32,7 @@ import {
   CORS,
   ipAppelant,
   json,
+  positionEnFrance,
   quota,
   sb,
   TROP_DE_REQUETES,
@@ -51,6 +52,12 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const route = url.pathname.replace(/^\/signalement\/?/, "").replace(/\/$/, "");
   const ip = ipAppelant(req);
+  const methodeAttendue = route === "" || route === "contester" || route === "moderer"
+    ? "POST"
+    : "GET";
+  if (req.method !== methodeAttendue) {
+    return json({ erreur: "méthode non autorisée" }, 405);
+  }
 
   try {
     // ---------- couche carte, publique ----------
@@ -163,12 +170,9 @@ Deno.serve(async (req) => {
     ) {
       return json({ erreur: "coordonnées invalides" }, 400);
     }
-    // Emprise France métropolitaine et outre-mer, large : hors de là, c'est
-    // forcément une erreur de saisie ou un abus.
-    const dansPerimetre = (lat > 41 && lat < 51.5 && lon > -5.5 && lon < 10) || // métropole
-      (lat > 41 && lat < 43.1 && lon > 8.4 && lon < 9.6) || // Corse
-      (lat > -21.5 && lat < 16.6 && lon > -63 && lon < 56); // outre-mer
-    if (!dansPerimetre) return json({ erreur: "position hors zone couverte" }, 400);
+    if (!positionEnFrance(lat, lon)) {
+      return json({ erreur: "position hors zone couverte" }, 400);
+    }
 
     const nature = NATURES.includes(body.nature) ? body.nature : "fumee";
     const commentaire = String(body.commentaire ?? "").trim().slice(0, 280) || null;

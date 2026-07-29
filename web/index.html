@@ -1112,6 +1112,7 @@ let signalements = [], feuxCarte = [], modeSignalement = false;
 let mesSignalements = [], signalementCible = null, santePublique = null;
 let heuresCarte = 24, confianceCarte = 'tous', positionUtilisateur = null;
 let demandeInstallation = null, derniereMajCarte = null;
+let origineCarte = null, ageCarteSecondes = null;
 let lieuReference = null, lieuAActiver = null, controleCarte = null, actionEnAttente = null;
 const donneesReduites = navigator.connection?.saveData === true;
 let actualisationEnCours = false;
@@ -1465,6 +1466,8 @@ async function chargerFeuxCarte() {
     // sert un résultat mis en cache jusqu'à quelques minutes. Afficher
     // « à l'instant » pour une donnée de cinq minutes serait faux.
     derniereMajCarte = j.calcule_at || new Date().toISOString();
+    origineCarte = j.origine || 'direct';
+    ageCarteSecondes = Number.isFinite(Number(j.age_secondes)) ? Number(j.age_secondes) : null;
     localStorage.setItem('alerte-incendie:derniere-maj-carte', derniereMajCarte);
     localStorage.setItem('alerte-incendie:feux-cache', JSON.stringify(feuxCarte.slice(0, 250)));
     const el = $('#etatCarteSources');
@@ -1478,6 +1481,8 @@ async function chargerFeuxCarte() {
     } catch {
       feuxCarte = [];
     }
+    origineCarte = 'hors-ligne';
+    ageCarteSecondes = null;
     const el = $('#etatCarteSources');
     if (el) el.textContent = feuxCarte.length && derniereMajCarte
       ? `Données hors ligne enregistrées ${relatif(derniereMajCarte)}.`
@@ -1503,8 +1508,18 @@ function majFraicheurCarte(enLigne) {
     const age = derniereMajCarte
       ? (Date.now() - new Date(derniereMajCarte).getTime()) / 60000
       : 0;
-    txt.textContent = age < 1.5 ? 'Actualisé à l’instant' : `Calculé ${relatif(derniereMajCarte)}`;
-    pt.className = 'point ok';
+    const ageLisible = ageCarteSecondes == null
+      ? relatif(derniereMajCarte)
+      : ageCarteSecondes < 90
+      ? 'il y a moins de 2 min'
+      : `il y a ${Math.round(ageCarteSecondes / 60)} min`;
+    if (origineCarte === 'cache') {
+      txt.textContent = `Cache calculé ${ageLisible}`;
+      pt.className = 'point ko';
+    } else {
+      txt.textContent = age < 1.5 ? 'Actualisé à l’instant' : `Calculé ${relatif(derniereMajCarte)}`;
+      pt.className = 'point ok';
+    }
   } else if (derniereMajCarte) {
     txt.textContent = `Données de ${relatif(derniereMajCarte)}`;
     pt.className = 'point ko';
@@ -1839,7 +1854,7 @@ function ouvrirIncident(f) {
     <h4 class="mt-4">Vent au point du feu</h4>
     <div class="incident-grille encart mt-3" id="blocMeteoVent">
       <div><b id="valVentVitesse">Chargement…</b><small>vent au sol (10 m)</small></div>
-      <div><b id="valVentDirection">—</b><small>propagation probable</small></div>
+      <div><b id="valVentDirection">—</b><small>direction vers laquelle souffle le vent</small></div>
     </div>
     <div class="incident-grille encart mt-3" id="blocCalculsAvances">
       <div><b id="valPenteIGN">Calcul…</b><small>pente terrain (IGN)</small></div>
@@ -1880,8 +1895,8 @@ function ouvrirIncident(f) {
           : 'non disponible';
       }
       // Convention météo : la direction fournie est celle d'OU VIENT le vent.
-      // L'afficher telle quelle sous le libellé « propagation » indiquait
-      // exactement le sens inverse. Le serveur inverse déjà pour les alertes.
+      // Son inverse décrit uniquement le déplacement de l'air. Il ne mesure
+      // jamais la propagation du feu.
       if (elD) {
         elD.textContent = Number.isFinite(deg)
           ? `vers le ${secteurVent((deg + 180) % 360)}`
@@ -3126,11 +3141,32 @@ document.addEventListener('change', (e) => {
   const cleDemandee = location.hash.startsWith('#feu=')
     ? decodeURIComponent(location.hash.slice(5))
     : null;
-  if (cleDemandee) {
-    const f = feuxCarte.find((x) => (x._cle || cleFeu(x)) === cleDemandee);
+  const paramsNotification = new URLSearchParams(location.search);
+  const evenementDemande = paramsNotification.get('evt');
+  if (cleDemandee || evenementDemande) {
+    const f = feuxCarte.find((x) =>
+      (cleDemandee && (x._cle || cleFeu(x)) === cleDemandee) ||
+      (evenementDemande && x.evenement_id === evenementDemande)
+    );
     if (f) {
       carte.setView([Number(f.lat), Number(f.lon)], 11);
-      ouvrirIncident(f);
+      if (paramsNotification.get('action') === 'confirmer') {
+        if (jeton) await signaler(Number(f.lat), Number(f.lon));
+        else toast('Rattachez cet appareil à votre compte avant de signaler.', true);
+      } else {
+        ouvrirIncident(f);
+      }
+    } else if (evenementDemande) {
+      const lat = Number(paramsNotification.get('lat'));
+      const lon = Number(paramsNotification.get('lon'));
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        carte.setView([lat, lon], 11);
+        if (paramsNotification.get('action') === 'confirmer' && jeton) {
+          await signaler(lat, lon);
+        } else {
+          toast('Incident centré sur la carte ; ses détails ne sont plus dans la fenêtre affichée.');
+        }
+      }
     }
   }
 })();

@@ -25,6 +25,7 @@
 //  Cadence : toutes les 30 minutes (pg_cron).
 // =====================================================================
 import {
+  adresseReseauInterdite,
   autoriserOperation,
   CORS,
   fermerRun,
@@ -76,6 +77,45 @@ export function urlAutorisee(urlStr: string | null | undefined): boolean {
   }
 }
 
+/** Vérifie aussi la résolution DNS avant chaque requête et redirection. */
+async function urlPubliqueResolue(urlStr: string): Promise<boolean> {
+  if (!urlAutorisee(urlStr)) return false;
+  const hote = new URL(urlStr).hostname;
+  try {
+    const [ipv4, ipv6] = await Promise.all([
+      Deno.resolveDns(hote, "A").catch(() => [] as string[]),
+      Deno.resolveDns(hote, "AAAA").catch(() => [] as string[]),
+    ]);
+    const adresses = [...ipv4, ...ipv6];
+    return adresses.length > 0 && adresses.every((ip) => !adresseReseauInterdite(ip));
+  } catch {
+    return false;
+  }
+}
+
+async function chargerFlux(urlInitiale: string): Promise<Response> {
+  let courante = urlInitiale;
+  for (let redirections = 0; redirections <= 3; redirections++) {
+    if (!await urlPubliqueResolue(courante)) {
+      throw new Error("URL de flux non publique");
+    }
+    const res = await fetchRetry(
+      courante,
+      {
+        headers: { accept: "application/rss+xml, application/atom+xml, application/xml" },
+        redirect: "manual",
+      },
+      2,
+      TIMEOUT_FLUX_MS,
+    );
+    if (res.status < 300 || res.status >= 400) return res;
+    const destination = res.headers.get("location");
+    if (!destination) throw new Error("redirection sans destination");
+    courante = new URL(destination, courante).toString();
+  }
+  throw new Error("trop de redirections");
+}
+
 async function purger(): Promise<void> {
   const { error } = await sb.rpc("purger_contexte_local");
   if (error) console.error("poll-contexte purge", error.message);
@@ -83,6 +123,7 @@ async function purger(): Promise<void> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ erreur: "méthode non autorisée" }, 405);
   if (!await autoriserOperation(req, "poll-contexte")) {
     return json({ erreur: "non autorisé" }, 401);
   }
@@ -135,12 +176,7 @@ Deno.serve(async (req) => {
 
       let xml: string;
       try {
-        const res = await fetchRetry(
-          source.url_flux as string,
-          { headers: { accept: "application/rss+xml, application/atom+xml, application/xml" } },
-          2,
-          TIMEOUT_FLUX_MS,
-        );
+        const res = await chargerFlux(source.url_flux as string);
         if (!res.ok) {
           bilan.sources_en_echec++;
           continue;

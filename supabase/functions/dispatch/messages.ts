@@ -124,8 +124,8 @@ function localisation(p: Payload): string {
     : `À ${km(p.distance_m)} km du centre de ${p.zone}, sur ${p.commune}.`;
 }
 
-/** Le vent est la seule information qui rend l'alerte actionnable :
- *  sans lui, « feu à 4 km » ne dit pas s'il vient vers vous. */
+/** Mesure météorologique disponible au point observé.
+ *  Le vent ne suffit jamais à déduire le déplacement réel du feu. */
 export function phraseVent(m: Meteo | null | undefined): string | null {
   if (!m) return null;
   const v = m.rafales_kmh ?? m.vent_kmh;
@@ -133,9 +133,7 @@ export function phraseVent(m: Meteo | null | undefined): string | null {
   if (v == null || secteur == null) return null;
   // Convention météo : la direction est celle d'où vient le vent.
   const vers = secteurVent(((m.vent_deg ?? 0) + 180) % 360);
-  return `Vent de secteur ${secteur}, ${
-    Math.round(v)
-  } km/h — propagation probable vers le ${vers}.`;
+  return `Vent de secteur ${secteur}, ${Math.round(v)} km/h — souffle vers le ${vers}.`;
 }
 
 export function titre(p: Payload) {

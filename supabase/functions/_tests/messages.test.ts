@@ -103,7 +103,7 @@ Deno.test("corpsTexte — la distance personnelle prime sur celle du centre comm
   assertStringIncludes(t, "0.8 km de la maison");
 });
 
-Deno.test("phraseVent — donne le secteur d'origine et le sens de propagation", () => {
+Deno.test("phraseVent — donne le secteur et le déplacement de l’air seulement", () => {
   const v = phraseVent({
     vent_kmh: 20,
     rafales_kmh: 45,
@@ -114,7 +114,8 @@ Deno.test("phraseVent — donne le secteur d'origine et le sens de propagation",
   });
   assertStringIncludes(v!, "secteur ouest");
   assertStringIncludes(v!, "45 km/h");
-  assertStringIncludes(v!, "vers le est");
+  assertStringIncludes(v!, "souffle vers le est");
+  assertEquals(v!.includes("propagation"), false);
 });
 
 Deno.test("phraseVent — absente si la météo manque", () => {

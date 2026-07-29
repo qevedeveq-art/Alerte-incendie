@@ -410,6 +410,13 @@ Deno.test("dispatch rend la main avant d’être coupé en plein envoi", () => {
   assertEquals(corps.includes("tentatives"), false);
 });
 
+Deno.test("dispatch réserve atomiquement son lot et libère les lignes reportées", () => {
+  assert(dispatch.includes('sb.rpc("reserver_alertes"'));
+  assert(dispatch.includes('sb.rpc("liberer_alertes"'));
+  assert(dispatch.includes('.eq("claim_id", lotId)'));
+  assertEquals(dispatch.includes('sb.rpc("alertes_a_envoyer"'), false);
+});
+
 Deno.test("la carte est servie depuis un cache, sans mentir sur son âge", () => {
   assert(api.includes('sb.rpc("feux_carte_servie"'));
   assert(api.includes("age_secondes"));
@@ -417,6 +424,28 @@ Deno.test("la carte est servie depuis un cache, sans mentir sur son âge", () =>
   // Le client affiche la date de calcul du serveur, pas celle de son fetch.
   assert(pwa.includes("derniereMajCarte = j.calcule_at"));
   assert(pwa.includes("Calculé ${relatif(derniereMajCarte)}"));
+  assert(pwa.includes("origineCarte = j.origine"));
+  assert(pwa.includes("Cache calculé ${ageLisible}"));
+});
+
+Deno.test("les notifications ouvrent l’incident et distinguent l’action de signalement", () => {
+  assert(dispatch.includes("?evt=${encodeURIComponent"));
+  assert(serviceWorker.includes("e.action === 'confirmer'"));
+  assert(serviceWorker.includes("await c.navigate(cible)"));
+  assert(pwa.includes("x.evenement_id === evenementDemande"));
+  assert(pwa.includes("paramsNotification.get('action') === 'confirmer'"));
+});
+
+Deno.test("aucune direction de vent n’est présentée comme propagation du feu", () => {
+  assert(pwa.includes("direction vers laquelle souffle le vent"));
+  assertEquals(pwa.includes("<small>propagation probable</small>"), false);
+});
+
+Deno.test("l’API refuse les jetons en URL et impose les méthodes mutantes", () => {
+  assertEquals(api.includes('searchParams.get("token")'), false);
+  assert(api.includes('test: "POST"'));
+  assert(api.includes('"compte-supprimer": "POST"'));
+  assert(api.includes('return json({ erreur: "méthode non autorisée" }, 405)'));
 });
 
 Deno.test("la recherche publique localise une commune sans créer de compte", () => {
